@@ -1,18 +1,19 @@
-name: Supreme Court cause-list fetch (multi-wave)
+name: Supreme Court cause-list fetch
 
-# The court publishes MAIN lists days ahead and SUPPLEMENTARY lists the evening
-# before (often 8-9 PM, sometimes later). So we run several times through the
-# day and evening, and each run checks a rolling window of upcoming days.
-# GitHub cron is in UTC; IST = UTC + 5:30.
 on:
   schedule:
-    - cron: "30 3  * * 1-6"   # 09:00 IST - morning
-    - cron: "30 8  * * 1-6"   # 14:00 IST - midday (Thu/Fri main lists appear)
-    - cron: "30 13 * * 1-6"   # 19:00 IST - early evening
-    - cron: "30 14 * * 1-6"   # 20:00 IST - supplementary window
-    - cron: "30 15 * * 1-6"   # 21:00 IST - late supplementary
-    - cron: "30 16 * * 1-6"   # 22:00 IST - final catch for late lists
-  workflow_dispatch:           # manual run button
+    - cron: "30 3  * * 1-6"   # 09:00 IST
+    - cron: "30 8  * * 1-6"   # 14:00 IST
+    - cron: "30 13 * * 1-6"   # 19:00 IST
+    - cron: "30 14 * * 1-6"   # 20:00 IST
+    - cron: "30 15 * * 1-6"   # 21:00 IST
+    - cron: "30 16 * * 1-6"   # 22:00 IST
+  workflow_dispatch:
+    inputs:
+      test_date:
+        description: "Optional: check ONE specific date (YYYY-MM-DD), e.g. 2026-07-03. Leave blank for the normal upcoming-days run."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -25,10 +26,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install PDF reader
-        run: pip install pdfplumber
-      - name: Fetch upcoming cause lists (main + supplementary)
-        run: python fetch_causelist.py
+      - run: pip install pdfplumber
+      - name: Fetch cause lists
+        env:
+          BOT_EMAIL: ${{ secrets.BOT_EMAIL }}
+          BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
+        run: |
+          if [ -n "${{ github.event.inputs.test_date }}" ]; then
+            python fetch_causelist.py "${{ github.event.inputs.test_date }}"
+          else
+            python fetch_causelist.py
+          fi
       - name: Commit results if changed
         run: |
           git config user.name  "causelist-bot"
@@ -40,3 +48,4 @@ jobs:
             git commit -m "Cause-list refresh $(date -u +'%Y-%m-%d %H:%M')"
             git push
           fi
+
