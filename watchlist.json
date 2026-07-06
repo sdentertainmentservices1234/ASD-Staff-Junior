@@ -2,9 +2,9 @@
   "_instructions": "This is the list the fetcher matches against each morning. Keep it current. For names, add EVERY spelling/initials variant that might appear in the printed list — the more variants, the fewer misses. Case and diary numbers can be written naturally; the matcher ignores spaces, dots and slashes. Remove the lines starting with an underscore if you like; they are ignored.",
 
   "advocate_names": [
-    "Satish Deshmukh",
-    "S. Deshmukh",
-    "Satish B. Deshmukh"
+    "Deshmukh Adith Satish",
+    "Adith Satish Deshmukh",
+    "Deshmukh Adith Satish"
   ],
 
   "parties": [
@@ -14,12 +14,12 @@
   ],
 
   "case_numbers": [
-    "SLP(C) 12345/2026",
+    "SLP(C) 22381/2026",
     "W.P.(C) 678/2026"
   ],
 
   "diary_numbers": [
-    "34530/2026",
+    "37773/2026",
     "18234/2026"
   ]
 }
