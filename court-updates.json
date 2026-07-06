@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-07-06T17:45:34.461375Z",
+  "window": [
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-14",
+    "2026-07-15"
+  ],
+  "by_date": {
+    "2026-07-06": {
+      "lists_found": [
+        "Miscellaneous - Main",
+        "Miscellaneous - Supplementary"
+      ],
+      "has_supplementary": true,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-07-07": {
+      "lists_found": [
+        "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
+        "Registrar - Main"
+      ],
+      "has_supplementary": true,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-07-08": {
+      "lists_found": [
+        "Miscellaneous - Main",
+        "Regular / Final - Main"
+      ],
+      "has_supplementary": false,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-07-09": {
+      "lists_found": [
+        "Miscellaneous - Main",
+        "Regular / Final - Main"
+      ],
+      "has_supplementary": false,
+      "match_count": 0,
+      "matches": []
+    }
+  },
+  "match_count": 0,
+  "note": "Drafting aid only. The court's published lists are authoritative. Main lists publish days ahead; supplementary lists the evening before (sometimes late) - this file is refreshed several times a day."
+}
