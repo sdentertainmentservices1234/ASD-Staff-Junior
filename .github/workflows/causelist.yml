@@ -1,0 +1,42 @@
+name: Supreme Court cause-list fetch (multi-wave)
+
+# The court publishes MAIN lists days ahead and SUPPLEMENTARY lists the evening
+# before (often 8-9 PM, sometimes later). So we run several times through the
+# day and evening, and each run checks a rolling window of upcoming days.
+# GitHub cron is in UTC; IST = UTC + 5:30.
+on:
+  schedule:
+    - cron: "30 3  * * 1-6"   # 09:00 IST - morning
+    - cron: "30 8  * * 1-6"   # 14:00 IST - midday (Thu/Fri main lists appear)
+    - cron: "30 13 * * 1-6"   # 19:00 IST - early evening
+    - cron: "30 14 * * 1-6"   # 20:00 IST - supplementary window
+    - cron: "30 15 * * 1-6"   # 21:00 IST - late supplementary
+    - cron: "30 16 * * 1-6"   # 22:00 IST - final catch for late lists
+  workflow_dispatch:           # manual run button
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PDF reader
+        run: pip install pdfplumber
+      - name: Fetch upcoming cause lists (main + supplementary)
+        run: python fetch_causelist.py
+      - name: Commit results if changed
+        run: |
+          git config user.name  "causelist-bot"
+          git config user.email "actions@github.com"
+          git add court-updates.json
+          if git diff --staged --quiet; then
+            echo "No change."
+          else
+            git commit -m "Cause-list refresh $(date -u +'%Y-%m-%d %H:%M')"
+            git push
+          fi
