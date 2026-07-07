@@ -1,6 +1,6 @@
 {
  "schema": 2,
- "generated_at": "2026-07-07T13:09:55.139347Z",
+ "generated_at": "2026-07-07T17:03:16.386312Z",
  "matters_count": 1,
  "days": {
   "2026-07-07": {
@@ -9,31 +9,31 @@
      "suffix": "M_J_1",
      "supplementary": false,
      "items_parsed": 133,
-     "fetched_at": "2026-07-07T13:08:49.763337Z"
+     "fetched_at": "2026-07-07T17:01:53.820804Z"
     },
     {
      "suffix": "M_J_2",
      "supplementary": true,
      "items_parsed": 31,
-     "fetched_at": "2026-07-07T13:08:57.383558Z"
+     "fetched_at": "2026-07-07T17:02:01.949448Z"
     },
     {
      "suffix": "F_J_1",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:08:58.396871Z"
+     "fetched_at": "2026-07-07T17:02:03.200573Z"
     },
     {
      "suffix": "F_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:08:59.417764Z"
+     "fetched_at": "2026-07-07T17:02:03.969412Z"
     },
     {
      "suffix": "M_R_1",
      "supplementary": false,
      "items_parsed": 38,
-     "fetched_at": "2026-07-07T13:09:06.818513Z"
+     "fetched_at": "2026-07-07T17:02:12.489290Z"
     }
    ],
    "matches": []
@@ -44,31 +44,31 @@
      "suffix": "M_J_1",
      "supplementary": false,
      "items_parsed": 77,
-     "fetched_at": "2026-07-07T13:09:14.583458Z"
+     "fetched_at": "2026-07-07T17:02:20.514402Z"
     },
     {
      "suffix": "M_J_2",
-     "supplementary": false,
-     "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:15.635514Z"
+     "supplementary": true,
+     "items_parsed": 46,
+     "fetched_at": "2026-07-07T17:02:28.246706Z"
     },
     {
      "suffix": "F_J_1",
      "supplementary": false,
      "items_parsed": 141,
-     "fetched_at": "2026-07-07T13:09:23.800485Z"
+     "fetched_at": "2026-07-07T17:02:37.081336Z"
     },
     {
      "suffix": "F_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:24.566172Z"
+     "fetched_at": "2026-07-07T17:02:37.862867Z"
     },
     {
      "suffix": "M_R_1",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:25.373223Z"
+     "fetched_at": "2026-07-07T17:02:38.861467Z"
     }
    ],
    "matches": []
@@ -79,31 +79,31 @@
      "suffix": "M_J_1",
      "supplementary": false,
      "items_parsed": 80,
-     "fetched_at": "2026-07-07T13:09:33.095002Z"
+     "fetched_at": "2026-07-07T17:02:47.157723Z"
     },
     {
      "suffix": "M_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:33.860510Z"
+     "fetched_at": "2026-07-07T17:02:48.155480Z"
     },
     {
      "suffix": "F_J_1",
      "supplementary": false,
      "items_parsed": 117,
-     "fetched_at": "2026-07-07T13:09:42.208919Z"
+     "fetched_at": "2026-07-07T17:02:55.725268Z"
     },
     {
      "suffix": "F_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:42.972779Z"
+     "fetched_at": "2026-07-07T17:02:56.505406Z"
     },
     {
      "suffix": "M_R_1",
      "supplementary": false,
      "items_parsed": 32,
-     "fetched_at": "2026-07-07T13:09:50.951303Z"
+     "fetched_at": "2026-07-07T17:03:04.407196Z"
     }
    ],
    "matches": []
@@ -113,32 +113,32 @@
     {
      "suffix": "M_J_1",
      "supplementary": false,
-     "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:51.721003Z"
+     "items_parsed": 126,
+     "fetched_at": "2026-07-07T17:03:12.543664Z"
     },
     {
      "suffix": "M_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:52.771646Z"
+     "fetched_at": "2026-07-07T17:03:13.313616Z"
     },
     {
      "suffix": "F_J_1",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:53.552712Z"
+     "fetched_at": "2026-07-07T17:03:14.326147Z"
     },
     {
      "suffix": "F_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:54.333320Z"
+     "fetched_at": "2026-07-07T17:03:15.576289Z"
     },
     {
      "suffix": "M_R_1",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T13:09:55.139304Z"
+     "fetched_at": "2026-07-07T17:03:16.386260Z"
     }
    ],
    "matches": []
