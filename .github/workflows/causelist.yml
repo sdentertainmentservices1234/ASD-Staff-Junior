@@ -1,51 +1,65 @@
-name: Supreme Court cause-list fetch
+name: Court updates (cause lists + orders + status)
 
 on:
   schedule:
-    - cron: "30 3  * * 1-6"   # 09:00 IST
-    - cron: "30 8  * * 1-6"   # 14:00 IST
-    - cron: "30 13 * * 1-6"   # 19:00 IST
-    - cron: "30 14 * * 1-6"   # 20:00 IST
-    - cron: "30 15 * * 1-6"   # 21:00 IST
-    - cron: "30 16 * * 1-6"   # 22:00 IST
-  workflow_dispatch:
-    inputs:
-      test_date:
-        description: "Optional: check ONE specific date (YYYY-MM-DD), e.g. 2026-07-03. Leave blank for the normal upcoming-days run."
-        required: false
-        default: ""
+    # Multi-wave (UTC; IST = UTC+5:30). Adjust to your existing cadence if
+    # you prefer — these give: early morning, mid-morning, post-lunch,
+    # evening (supplementary window), and two night sweeps.
+    - cron: '0 2 * * 1-6'    # 07:30 IST
+    - cron: '30 4 * * 1-6'   # 10:00 IST
+    - cron: '30 8 * * 1-6'   # 14:00 IST
+    - cron: '30 12 * * 1-6'  # 18:00 IST — supplementary usually up by evening
+    - cron: '30 14 * * 1-6'  # 20:00 IST
+    - cron: '30 16 * * 1-6'  # 22:00 IST
+  workflow_dispatch: {}      # manual "Run workflow" button
 
 permissions:
   contents: write
+
+concurrency:
+  group: court-updates
+  cancel-in-progress: false
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install pdfplumber
+
+      - name: Install poppler (pdftotext) + pytest
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q poppler-utils
+          pip install pytest -q
+
+      # GATE: golden-file regression tests run BEFORE any fetch. A parser
+      # regression fails here and nothing is fetched or committed.
+      - name: Parser regression tests
+        run: python -m pytest test_parsers.py -q
+
       - name: Fetch cause lists
         env:
-          BOT_EMAIL: ${{ secrets.BOT_EMAIL }}
-          BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
-        run: |
-          if [ -n "${{ github.event.inputs.test_date }}" ]; then
-            python fetch_causelist.py "${{ github.event.inputs.test_date }}"
-          else
-            python fetch_causelist.py
-          fi
-      - name: Commit results if changed
-        run: |
-          git config user.name  "causelist-bot"
-          git config user.email "actions@github.com"
-          git add court-updates.json
-          if git diff --staged --quiet; then
-            echo "No change."
-          else
-            git commit -m "Cause-list refresh $(date -u +'%Y-%m-%d %H:%M')"
-            git push
-          fi
+          FIREBASE_API_KEY:    ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          BOT_EMAIL:           ${{ secrets.BOT_EMAIL }}
+          BOT_PASSWORD:        ${{ secrets.BOT_PASSWORD }}
+        run: python fetch_causelist.py
 
+      - name: Fetch orders / judgments / case status
+        if: always()   # run even if cause-list step flagged anomalies
+        env:
+          FIREBASE_API_KEY:    ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          BOT_EMAIL:           ${{ secrets.BOT_EMAIL }}
+          BOT_PASSWORD:        ${{ secrets.BOT_PASSWORD }}
+        run: python fetch_orders.py
+
+      - name: Commit updates
+        if: always()
+        run: |
+          git config user.name  "asd-court-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add court-updates.json orders-updates.json || true
+          git diff --cached --quiet && echo "No changes." && exit 0
+          git commit -m "court updates $(date -u +'%Y-%m-%d %H:%M')Z"
+          git push
