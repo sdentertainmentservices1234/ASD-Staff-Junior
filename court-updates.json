@@ -1,6 +1,6 @@
 {
  "schema": 2,
- "generated_at": "2026-07-07T21:50:12.898692Z",
+ "generated_at": "2026-07-08T10:33:00.357269Z",
  "matters_count": 1,
  "days": {
   "2026-07-07": {
@@ -41,22 +41,22 @@
   "2026-07-08": {
    "lists": [
     {
-     "suffix": "M_J_2",
-     "supplementary": true,
-     "items_parsed": 46,
-     "fetched_at": "2026-07-07T21:49:02.986015Z"
+     "suffix": "F_J_1",
+     "supplementary": false,
+     "items_parsed": 141,
+     "fetched_at": "2026-07-08T10:32:13.444374Z"
     },
     {
      "suffix": "F_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:49:35.065229Z"
+     "fetched_at": "2026-07-08T10:32:14.539018Z"
     },
     {
      "suffix": "M_R_1",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:49:36.401399Z"
+     "fetched_at": "2026-07-08T10:32:16.319181Z"
     }
    ],
    "matches": []
@@ -67,31 +67,31 @@
      "suffix": "M_J_1",
      "supplementary": false,
      "items_parsed": 80,
-     "fetched_at": "2026-07-07T21:49:44.579443Z"
+     "fetched_at": "2026-07-08T10:32:23.934727Z"
     },
     {
      "suffix": "M_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:49:45.981336Z"
+     "fetched_at": "2026-07-08T10:32:25.025527Z"
     },
     {
      "suffix": "F_J_1",
      "supplementary": false,
      "items_parsed": 117,
-     "fetched_at": "2026-07-07T21:49:53.591176Z"
+     "fetched_at": "2026-07-08T10:32:32.484513Z"
     },
     {
      "suffix": "F_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:49:54.509176Z"
+     "fetched_at": "2026-07-08T10:32:33.308422Z"
     },
     {
      "suffix": "M_R_1",
      "supplementary": false,
      "items_parsed": 32,
-     "fetched_at": "2026-07-07T21:50:01.597343Z"
+     "fetched_at": "2026-07-08T10:32:41.618177Z"
     }
    ],
    "matches": []
@@ -102,31 +102,66 @@
      "suffix": "M_J_1",
      "supplementary": false,
      "items_parsed": 126,
-     "fetched_at": "2026-07-07T21:50:08.973166Z"
+     "fetched_at": "2026-07-08T10:32:50.351285Z"
     },
     {
      "suffix": "M_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:50:10.352991Z"
+     "fetched_at": "2026-07-08T10:32:51.715380Z"
     },
     {
      "suffix": "F_J_1",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:50:11.202822Z"
+     "fetched_at": "2026-07-08T10:32:52.848681Z"
     },
     {
      "suffix": "F_J_2",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:50:12.090154Z"
+     "fetched_at": "2026-07-08T10:32:53.633375Z"
     },
     {
      "suffix": "M_R_1",
      "supplementary": false,
      "items_parsed": 0,
-     "fetched_at": "2026-07-07T21:50:12.898648Z"
+     "fetched_at": "2026-07-08T10:32:54.479711Z"
+    }
+   ],
+   "matches": []
+  },
+  "2026-07-11": {
+   "lists": [
+    {
+     "suffix": "M_J_1",
+     "supplementary": false,
+     "items_parsed": 0,
+     "fetched_at": "2026-07-08T10:32:55.606163Z"
+    },
+    {
+     "suffix": "M_J_2",
+     "supplementary": false,
+     "items_parsed": 0,
+     "fetched_at": "2026-07-08T10:32:56.925387Z"
+    },
+    {
+     "suffix": "F_J_1",
+     "supplementary": false,
+     "items_parsed": 0,
+     "fetched_at": "2026-07-08T10:32:58.018441Z"
+    },
+    {
+     "suffix": "F_J_2",
+     "supplementary": false,
+     "items_parsed": 0,
+     "fetched_at": "2026-07-08T10:32:59.497772Z"
+    },
+    {
+     "suffix": "M_R_1",
+     "supplementary": false,
+     "items_parsed": 0,
+     "fetched_at": "2026-07-08T10:33:00.357214Z"
     }
    ],
    "matches": []
