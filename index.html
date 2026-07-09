@@ -5408,7 +5408,7 @@ function _loadCourtUpdates(){
         box.innerHTML=`<div class="cu-wrap"><div class="cu-top">Supreme Court listings<span>updated ${esc(cu.when)}</span></div>
           <div style="font-size:11.5px;color:var(--muted);margin:2px 0 8px">Tap <b>+</b> to add a listing to that matter, or create a matter from it.</div>${html}
           <div class="cu-foot">Drafting aid — verify against the court's official list.
-          <a href="https://www.sci.gov.in/latest-orders/" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;color:var(--seal);font-weight:600;text-decoration:none">View latest orders on the Supreme Court website ↗</a></div></div>`;
+          <a href="https://www.sci.gov.in/daily-order-case-no/" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;color:var(--seal);font-weight:600;text-decoration:none">Look up a case's orders on the Supreme Court website ↗</a></div></div>`;
       }
     })
     .catch(()=>{ box.style.display="none"; });
@@ -5436,7 +5436,7 @@ function _fillHomeCourtCard(){
           <div class="s">${esc((m.coram||"").replace(/hon'?ble/gi,"").trim())}</div></div>
           <div class="it">Item<b>${esc(m.item)}</b></div></div>`).join("")
       : "";
-    const ordersLink=`<a href="https://www.sci.gov.in/latest-orders/" target="_blank" rel="noopener" class="cu-orderlink">Latest orders on SC website ↗</a>`;
+    const ordersLink=`<a href="https://www.sci.gov.in/daily-order-case-no/" target="_blank" rel="noopener" class="cu-orderlink">Look up case orders on SC website ↗</a>`;
     if(!listRows){ el.innerHTML=`<div class="cu-embed">${ordersLink}</div>`; return; }
     el.innerHTML=`<div class="cu-embed">
       <div class="cu-sub">${esc(sub)}</div>${listRows}
@@ -9375,8 +9375,11 @@ function _scOpen(kind, matterId){
   const byCase ="https://www.sci.gov.in/case-status-case-no/";
   let url, numToCopy, label;
   if(kind==="orders"){
-    url = caseNo ? "https://www.sci.gov.in/daily-order-case-no/" : "https://www.sci.gov.in/latest-orders/";
-    numToCopy = caseNo || diary; label="Daily orders";
+    // Orders BY CASE NUMBER: the SC "Daily Orders (case-no.-wise)" page — enter the number and
+    // see every order in the matter. A diary-only (pre-registration) matter has no case-no. page,
+    // so use the case-status page, which lists that matter's orders too. Never the generic firehose.
+    url = caseNo ? "https://www.sci.gov.in/daily-order-case-no/" : byDiary;
+    numToCopy = caseNo || diary; label="Orders for this case";
   } else if(kind==="office"){
     url = diary ? byDiary : byCase; numToCopy = diary || caseNo;
     label="Case status (the office report / defects show here)";
