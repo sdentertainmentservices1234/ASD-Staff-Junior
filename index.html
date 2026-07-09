@@ -9394,15 +9394,13 @@ function _scLinksCard(m){
   if(!_isSCMatter(m)) return "";
   return `<div class="card">
     <div class="card-head"><div><h2>Supreme Court</h2>
-      <div class="hint">Live status, orders &amp; office report on the SC site. Tap a link — this matter's number is copied for you to paste (the SC search asks for a one-time CAPTCHA).</div></div></div>
+      <div class="hint">Open this matter's <b>case status</b> on the SC site — stage, next date, <b>orders</b> and the <b>office report / defects</b> are all there. This matter's number is copied for you to paste (the SC search asks for a one-time CAPTCHA).</div></div></div>
     <div class="tpl-dl">
       ${m.diaryNo?`<div class="row"><span class="k" style="min-width:96px">Diary No.</span><b class="mono">${esc(m.diaryNo)}</b></div>`:""}
       ${m.caseNo?`<div class="row"><span class="k" style="min-width:96px">Case No.</span><b class="mono">${esc(m.caseNo)}</b></div>`:""}
     </div>
-    <div class="btn-row" style="margin-top:10px;flex-wrap:wrap;gap:8px">
-      <button class="btn ghost sm" onclick="_scOpen('status','${m.id}')">Case status ↗</button>
-      <button class="btn ghost sm" onclick="_scOpen('orders','${m.id}')">Orders ↗</button>
-      <button class="btn ghost sm" onclick="_scOpen('office','${m.id}')">Office report ↗</button>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn seal sm" onclick="_scOpen('status','${m.id}')">Open case status ↗</button>
     </div>
   </div>`;
 }
