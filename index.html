@@ -9404,6 +9404,41 @@ function _scLinksCard(m){
     </div>
   </div>`;
 }
+// ===== WhatsApp client update: one tap to message the client about their matter =====
+function _waNumber(raw){
+  let d=String(raw||"").replace(/\D/g,"");
+  if(!d) return "";
+  if(d.length===10) d="91"+d;                              // bare Indian mobile
+  else if(d.length===11&&d[0]==="0") d="91"+d.slice(1);    // leading 0
+  return d;                                                 // 91XXXXXXXXXX or already-coded
+}
+function _waDefaultMsg(m){
+  const s=DB.settings||{};
+  const who=(m.client||"").trim();
+  const ref=(m.caseNo||m.diaryNo||m.code||"your matter");
+  const parties=m.parties?` (${m.parties})`:"";
+  let body = m.nextDate
+    ? `Dear ${who||"Sir/Madam"},\n\nYour matter ${ref}${parties} is listed before the ${m.court||"Court"} on ${fmtDate(m.nextDate)}.`
+    : `Dear ${who||"Sir/Madam"},\n\nRegarding your matter ${ref}${parties}:`;
+  return body+`\n\nRegards,\n${s.advName||s.chamberName||"Chamber"}`;
+}
+function messageClient(matterId){
+  const m=matterById(matterId); if(!m) return;
+  const num=_waNumber(m.contact);
+  if(!num){ toast("No client mobile number on this matter — add one via Edit.",true); return; }
+  openModal("Message client on WhatsApp", `
+    <div class="hint" style="margin-bottom:10px">To <b>${esc(m.client||"client")}</b> · ${esc(m.contact||"")}. Edit if you like, then open WhatsApp to send.</div>
+    <textarea class="in" id="waMsg" style="min-height:150px">${esc(_waDefaultMsg(m))}</textarea>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_waSend('${num}')">Open WhatsApp ↗</button>
+    </div>`);
+}
+function _waSend(num){
+  const t=(document.getElementById("waMsg")||{}).value||"";
+  try{ window.open("https://wa.me/"+num+"?text="+encodeURIComponent(t),"_blank","noopener"); }catch(e){}
+  closeModal();
+}
 function renderMatterDetail(){
   const m = DB.matters.find(x=>x.id===_currentMatterId);
   const back = isStaffView() ? "staffGo('matters')" : "shellGo('matters')";
@@ -9437,7 +9472,7 @@ function renderMatterDetail(){
     <div class="card">
       <div class="card-head">
         <div><h2>${esc(m.client||"—")}</h2>${m.parties?`<div class="hint">${esc(m.parties)}</div>`:""}</div>
-        <button class="btn ghost sm" onclick="editMatter('${m.id}')">Edit</button>
+        <div style="display:flex;gap:6px">${m.contact?`<button class="btn ghost sm" onclick="messageClient('${m.id}')" title="Message the client on WhatsApp">WhatsApp</button>`:""}<button class="btn ghost sm" onclick="editMatter('${m.id}')">Edit</button></div>
       </div>
       <div class="tpl-dl" style="margin-top:6px">
         ${m.caseNo?`<div class="row"><span class="k" style="min-width:96px">Case No.</span><b>${esc(m.caseNo)}</b></div>`:""}
@@ -9455,7 +9490,7 @@ function renderMatterDetail(){
         <button class="btn ghost sm" onclick="_afterHearing('${m.id}')" style="margin-right:6px">After hearing</button>
         <button class="btn ghost sm" onclick="_limCalc('${m.id}')" style="margin-right:6px">Limitation</button>
         <button class="btn seal sm" onclick="addDate('${m.id}')">+ Add date</button></div>
-      ${(Array.isArray(m.dates)&&m.dates.length)?`<div class="lrows">${m.dates.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(d=>{const fut=d.date>=todayISO();return `<div class="lrow"><div class="l"><div class="t">${fmtDate(d.date)}${fut?` <span class="tag active">upcoming</span>`:""}</div><div class="s">${esc(d.reason||"")}${d.note?" · "+esc(d.note):""}${d.createdBy?" · "+esc(d.createdBy):""}</div></div><div style="display:flex;gap:6px"><button class="row-act" onclick="editDate('${m.id}','${d.id}')">Edit</button><button class="row-act" onclick="delDate('${m.id}','${d.id}')">Delete</button></div></div>`;}).join("")}</div>`:`<div class="empty" style="padding:12px">No dates recorded. Add the first hearing date.</div>`}
+      ${(Array.isArray(m.dates)&&m.dates.length)?`<div class="lrows">${m.dates.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(d=>{const fut=d.date>=todayISO();return `<div class="lrow"><div class="l"><div class="t">${fmtDate(d.date)}${fut?` <span class="tag active">upcoming</span>`:""}</div><div class="s">${esc(d.reason||"")}${d.note?" · "+esc(d.note):""}${d.createdBy?" · "+esc(d.createdBy):""}</div></div><div style="display:flex;gap:6px">${fut?`<button class="row-act" onclick="addHearingToCal('${m.id}','${d.id}')" title="Add to my phone calendar with a reminder">＋Cal</button>`:""}<button class="row-act" onclick="editDate('${m.id}','${d.id}')">Edit</button><button class="row-act" onclick="delDate('${m.id}','${d.id}')">Delete</button></div></div>`;}).join("")}</div>`:`<div class="empty" style="padding:12px">No dates recorded. Add the first hearing date.</div>`}
     </div>
 
     <div class="card">
@@ -10416,6 +10451,106 @@ function _eventsOn(iso){
   return ev;
 }
 var _calSelected=null;
+// ===== Calendar sync (.ics): put hearings, meetings, deadlines & reminders into the phone calendar =====
+function _icsEsc(s){ return String(s==null?"":s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n"); }
+function _icsStamp(){ return new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,""); } // YYYYMMDDTHHMMSSZ
+function _icsDay(iso){ return String(iso||"").replace(/-/g,""); }
+function _icsNextDay(iso){ const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+1); return _icsDay(d.toISOString().slice(0,10)); }
+function _icsLocalDT(iso,hhmm){ const m=/^(\d{1,2}):(\d{2})/.exec(hhmm||"10:00"); const h=(m?m[1]:"10").padStart(2,"0"); const mi=m?m[2]:"00"; return _icsDay(iso)+"T"+h+mi+"00"; }
+function _icsPlusHour(hhmm){ const m=/^(\d{1,2}):(\d{2})/.exec(hhmm||"10:00"); let h=m?+m[1]:10; const mi=m?m[2]:"00"; h=(h+1)%24; return String(h).padStart(2,"0")+":"+mi; }
+function _icsFold(line){ if(line.length<=73) return line; let out=""; while(line.length>73){ out+=line.slice(0,73)+"\r\n "; line=line.slice(73); } return out+line; }
+function _icsEvent(e){
+  const L=["BEGIN:VEVENT","UID:"+_icsEsc(e.uid)+"@asdc","DTSTAMP:"+_icsStamp()];
+  if(e.time){ L.push("DTSTART:"+_icsLocalDT(e.date,e.time)); L.push("DTEND:"+_icsLocalDT(e.date,e.endTime||_icsPlusHour(e.time))); }
+  else { L.push("DTSTART;VALUE=DATE:"+_icsDay(e.date)); L.push("DTEND;VALUE=DATE:"+_icsNextDay(e.date)); }
+  L.push("SUMMARY:"+_icsEsc(e.summary));
+  if(e.desc) L.push("DESCRIPTION:"+_icsEsc(e.desc));
+  if(e.location) L.push("LOCATION:"+_icsEsc(e.location));
+  // reminder: 1h before a timed event; 6pm the evening before an all-day one
+  L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+_icsEsc(e.summary),"TRIGGER:"+(e.time?"-PT1H":"-PT6H"),"END:VALARM");
+  L.push("END:VEVENT");
+  return L.map(_icsFold).join("\r\n");
+}
+function _icsCalendar(events,name){
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//ASDC Chamber//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:"+_icsEsc(name||"Chamber")]
+    .concat(events.map(_icsEvent)).concat(["END:VCALENDAR"]).join("\r\n");
+}
+function _downloadICS(text,filename){
+  try{ const blob=new Blob([text],{type:"text/calendar;charset=utf-8"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(e){ toast("Could not create the calendar file.",true); }
+}
+function _hearingToEvent(m,de){
+  const date=de?de.date:m.nextDate; if(!date) return null;
+  const time=(de&&(de.specialTime||de.time))||"";
+  const parts=[];
+  if(de&&de.courtNo) parts.push("Court "+de.courtNo); if(de&&de.itemNo) parts.push("Item "+de.itemNo);
+  if(de&&de.coram) parts.push(de.coram); if(m.caseNo) parts.push(m.caseNo); if(de&&de.reason) parts.push(de.reason);
+  return { kind:"hearing", uid:"hearing-"+m.id+"-"+((de&&de.id)||date), date, time,
+    summary:(m.code?m.code+" — ":"")+(m.parties||m.client||"Hearing"),
+    desc:parts.join(" · "), location:m.court||"Supreme Court of India", matterId:m.id };
+}
+function _gatherUpcomingEvents(fromISO){
+  const from=fromISO||todayISO(); const out=[];
+  (DB.matters||[]).forEach(m=>{ if(isVoided(m)) return; const seen={};
+    (Array.isArray(m.dates)?m.dates:[]).forEach(de=>{ if(de.date&&de.date>=from){ const ev=_hearingToEvent(m,de); if(ev){ out.push(ev); seen[de.date]=1; } } });
+    if(m.nextDate&&m.nextDate>=from&&!seen[m.nextDate]){ const ev=_hearingToEvent(m,null); if(ev) out.push(ev); }
+  });
+  try{ (_allApptsForMe()||[]).forEach(a=>{ if(a.date&&a.date>=from) out.push({ kind:(a.kind==="personal"?"personal":"meeting"), uid:"appt-"+(a.id||a.date), date:a.date, time:a.time||"", summary:(a.kind==="personal"?"":"Meeting: ")+(a.title||"Appointment"), desc:a.createdBy?("by "+a.createdBy):"", location:a.location||"", matterId:a.matterId||"" }); }); }catch(e){}
+  (DB.todos||[]).forEach(t=>{ if(t.due&&t.due>=from&&t.status!=="resolved"){ const mt=t.matterId?matterById(t.matterId):null; out.push({ kind:"deadline", uid:"todo-"+(t.id||t.due), date:t.due, time:t.time||"", summary:"Deadline: "+(t.text||"task"), desc:mt?mt.code:"", location:"", matterId:t.matterId||"" }); } });
+  (DB.reminders||[]).forEach(r=>{ if(r.date&&r.date>=from&&r.status!=="done"){ out.push({ kind:"reminder", uid:"rem-"+(r.id||r.date), date:r.date, time:r.time||"", summary:"Reminder: "+(r.text||""), desc:r.forWho||"", location:"" }); } });
+  out.sort((a,b)=>(a.date+"T"+(a.time||"99")).localeCompare(b.date+"T"+(b.time||"99")));
+  return out;
+}
+function addHearingToCal(matterId,dateId){
+  const m=matterById(matterId); if(!m) return;
+  const de=(Array.isArray(m.dates)?m.dates:[]).find(d=>d.id===dateId)||null;
+  const ev=_hearingToEvent(m,de); if(!ev){ toast("No date to add.",true); return; }
+  _downloadICS(_icsCalendar([ev],(m.code||"Hearing")), "hearing-"+(m.code||"matter")+"-"+ev.date+".ics");
+  toast("Calendar file ready — open it to add the hearing (with a reminder).");
+}
+function exportUpcomingToCal(){
+  const events=_gatherUpcomingEvents(todayISO());
+  if(!events.length){ toast("No upcoming hearings, meetings or deadlines to add."); return; }
+  _downloadICS(_icsCalendar(events,(DB.settings&&DB.settings.chamberName)||"Chamber"), "chamber-calendar.ics");
+  toast(events.length+" event(s) ready — open the file to add them to your calendar.");
+}
+// ===== Deadlines dashboard: one urgency-sorted view of everything time-sensitive =====
+function _gatherAllDeadlines(){
+  const today=todayISO();
+  const evs=_gatherUpcomingEvents(today);   // today onward
+  // plus OVERDUE, still-open task deadlines & reminders
+  (DB.todos||[]).forEach(t=>{ if(t.due&&t.due<today&&t.status!=="resolved"){ const mt=t.matterId?matterById(t.matterId):null; evs.push({kind:"deadline",uid:"todo-"+(t.id||t.due),date:t.due,time:t.time||"",summary:"Deadline: "+(t.text||"task"),desc:mt?mt.code:"",location:"",matterId:t.matterId||""}); } });
+  (DB.reminders||[]).forEach(r=>{ if(r.date&&r.date<today&&r.status!=="done"){ evs.push({kind:"reminder",uid:"rem-"+(r.id||r.date),date:r.date,time:r.time||"",summary:"Reminder: "+(r.text||""),desc:r.forWho||"",location:""}); } });
+  evs.sort((a,b)=>(a.date+"T"+(a.time||"99")).localeCompare(b.date+"T"+(b.time||"99")));
+  return evs;
+}
+function openDeadlines(){
+  const evs=_gatherAllDeadlines();
+  const grp={overdue:[],today:[],tomorrow:[],week:[],later:[]};
+  evs.forEach(e=>{ const b=(typeof _dateBucket==="function")?_dateBucket(e.date):"later"; (grp[b]||grp.later).push(e); });
+  const icon={hearing:"⚖️",meeting:"👥",personal:"👤",deadline:"⏳",reminder:"🔔"};
+  const chip="flex:none;margin-left:8px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap";
+  const row=(e)=>{
+    const n=_daysUntil(e.date);
+    const when=n<0?`${Math.abs(n)}d ago`:n===0?"Today":n===1?"Tomorrow":`in ${n}d`;
+    const col=n<0?"background:#f6e2e2;color:var(--seal)":n===0?"background:#fbeee0;color:#8a5a12":n===1?"background:#e7efe8;color:var(--green)":"background:var(--line2);color:var(--muted)";
+    const click=e.matterId?`onclick="closeModal();openMatterDetail('${e.matterId}')" style="cursor:pointer"`:"";
+    return `<div class="lrow" ${click}>
+      <div class="l"><div class="t">${icon[e.kind]||"•"} ${esc(e.summary)}</div>
+        <div class="s">${fmtDate(e.date)}${e.time?" · "+esc(e.time):""}${e.desc?" · "+esc(e.desc):""}</div></div>
+      <span style="${chip};${col}">${when}</span></div>`;
+  };
+  const sec=(title,arr)=> arr.length?`<div style="margin-top:14px"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px">${title} · ${arr.length}</div>${arr.map(row).join("")}</div>`:"";
+  const body=evs.length
+    ? sec("Overdue",grp.overdue)+sec("Today",grp.today)+sec("Tomorrow",grp.tomorrow)+sec("This week",grp.week)+sec("Later",grp.later)
+    : `<div class="empty" style="padding:24px">Nothing due — you're all caught up.</div>`;
+  openModal("Deadlines & dates", `
+    <div class="hint" style="margin-bottom:6px">Everything time-sensitive across your matters — hearings, task deadlines, reminders &amp; meetings, soonest first.</div>
+    ${body}
+    <div class="btn-row" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Close</button>${evs.length?`<button class="btn seal" onclick="exportUpcomingToCal()">📅 Add all to calendar</button>`:""}</div>`);
+}
 function renderCalendar(staffBack){
   const panel=document.getElementById("panel-calendar");
   const staff=isStaffView();
@@ -10456,6 +10591,7 @@ function renderCalendar(staffBack){
       <div class="cal-legend"><span><span class="cal-lg-sched"></span>Has something</span><span><span class="cal-lg-today"></span>Today</span>${scOn?`<span><span class="sc-swatch sc-sw-hol"></span>Court holiday</span><span><span class="sc-swatch sc-sw-part"></span>Partial day</span>`:""}</div>
       <div class="cal-grid-h">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i)=>`<div${(i===0||i===6)?' class="we"':''}>${d}</div>`).join("")}</div>
       <div class="cal-grid">${cells}</div>
+      <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" onclick="exportUpcomingToCal()">📅 Add upcoming to my calendar</button></div>
     </div>
     <div id="calDay"></div>`;
   _calDayView(_calSelected);
@@ -13741,6 +13877,7 @@ function renderHome(){
     </div>`;
   const openGrid=`<div class="grp-h">Open</div>
     <div class="appgrid">
+      <button class="app" onclick="openDeadlines()"><span class="ic">${HOME_ICONS.calendar}</span><span class="t">Deadlines</span></button>
       <button class="app" onclick="openSub('todos')"><span class="ic">${HOME_ICONS.reminder}</span><span class="t">Tasks &amp; reminders</span></button>
       <button class="app" onclick="openAppointments()"><span class="ic">${HOME_ICONS.appointment}</span><span class="t">Appointments</span></button>
       <button class="app" onclick="openSub('exadv')"><span class="ic">${HOME_ICONS.expense}</span><span class="t">Expenses</span></button>
