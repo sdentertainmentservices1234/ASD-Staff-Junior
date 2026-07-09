@@ -1,8 +1,20 @@
 {
-  "_comment": "Who/what to look for in the SC cause lists. Regenerate anytime from the app: Cause list → Copy auto-fetch watch-list.",
-  "advocate_names": ["Adith Satish Deshmukh", "Adith Deshmukh"],
-  "aor_codes": ["4096"],
-  "parties": ["Santosh Kavale"],
-  "case_numbers": ["SLP (C) No. 22381 / 2026", "22381/2026"],
-  "diary_numbers": ["37773/2026"]
+  "_comment": "Who/what to look for in the Supreme Court cause lists. Keep this current: the fetcher only finds matters that match something here. The app's Cause-list screen has a 'Copy watch-list' button that regenerates this from your matters + chamber details - paste the result here whenever your cases change.",
+  "advocate_names": [
+    "Adith Satish Deshmukh",
+    "Adith Deshmukh"
+  ],
+  "aor_codes": [
+    "4096"
+  ],
+  "parties": [
+    "Santosh Kavale"
+  ],
+  "case_numbers": [
+    "SLP (C) No. 22381 / 2026",
+    "22381/2026"
+  ],
+  "diary_numbers": [
+    "37773/2026"
+  ]
 }

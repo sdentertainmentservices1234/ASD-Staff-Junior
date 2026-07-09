@@ -33,7 +33,7 @@ jobs:
       - name: Install PDF reader
         run: pip install pdfplumber
       - name: Fetch upcoming cause lists (advance + main + supplementary)
-        run: python causelist/fetch_causelist.py
+        run: python fetch_causelist.py
       - name: Commit court-updates.json if changed
         run: |
           git config user.name  "causelist-bot"

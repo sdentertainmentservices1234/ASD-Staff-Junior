@@ -5230,7 +5230,7 @@ function _buildCauseWatchlist(){
   });
   const uniq=a=>[...new Set(a.filter(Boolean))];
   return {
-    _comment:"Regenerated from your matters + chamber details. Paste into causelist/watchlist.json in your GitHub Pages repo (replace its contents) whenever your cases change, then commit.",
+    _comment:"Regenerated from your matters + chamber details. Paste into watchlist.json in your GitHub Pages repo (replace its contents) whenever your cases change, then commit.",
     advocate_names:uniq(names), aor_codes:uniq(aor),
     parties:uniq(parties), case_numbers:uniq(caseNos), diary_numbers:uniq(diaryNos)
   };
@@ -5239,7 +5239,7 @@ function copyCauseWatchlist(){
   const json=JSON.stringify(_buildCauseWatchlist(),null,2);
   try{ if(navigator.clipboard) navigator.clipboard.writeText(json); }catch(e){}
   openModal("Auto-fetch watch-list", `
-    <div class="hint" style="margin-bottom:10px">Generated from your matters &amp; chamber details, and copied to your clipboard. Paste it into <b>causelist/watchlist.json</b> in your GitHub Pages repo (replace the file's contents) and commit. Do this whenever your cases change.</div>
+    <div class="hint" style="margin-bottom:10px">Generated from your matters &amp; chamber details, and copied to your clipboard. Paste it into <b>watchlist.json</b> in your GitHub Pages repo (replace the file's contents) and commit. Do this whenever your cases change.</div>
     <textarea class="in mono" style="min-height:220px" readonly onclick="this.select()">${esc(json)}</textarea>
     <div class="btn-row" style="margin-top:12px"><button class="btn seal" onclick="closeModal()">Done</button></div>`);
 }
