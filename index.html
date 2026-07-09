@@ -5272,15 +5272,20 @@ function copyCauseWatchlist(){
 function openCauseList(){
   const t=new Date(); t.setDate(t.getDate()+1);
   const tomorrow=t.toISOString().slice(0,10);
+  // Default the date to the day the home card is showing (soonest day with your matters), so
+  // printing matches what's on screen instead of defaulting to an empty tomorrow.
+  let defDate=window.__hcDay;
+  if(!defDate && window.__cuCache){ const d=(window.__cuCache.days||[]).find(x=>x.matches&&x.matches.length); if(d) defDate=d.date; }
+  defDate=defDate||tomorrow;
   window.__clGo=(bw)=>{
-    const iso=(document.getElementById("clDate")||{}).value||tomorrow;
+    const iso=(document.getElementById("clDate")||{}).value||defDate;
     const mtg=!!(document.getElementById("clMeetings")||{}).checked;
     const incF=!!(document.getElementById("clIncFetched")||{}).checked;
     printCauseList(iso, mtg, {bw:bw, includeFetched:incF});
   };
   openModal("Cause list", `
     <label class="fld">Cause list for which day?</label>
-    <input class="in" type="date" id="clDate" value="${tomorrow}">
+    <input class="in" type="date" id="clDate" value="${defDate}">
     <label class="checkline" style="margin-top:12px"><input type="checkbox" id="clMeetings" checked> Include Meetings &amp; Conferences below the table</label>
     <label class="checkline" style="margin-top:8px"><input type="checkbox" id="clIncFetched" checked> Include Supreme Court listings found for this day <span style="color:var(--muted)">(from the auto-fetch — verify before relying)</span></label>
     <div class="hint" style="margin-top:8px">Shows every case with a hearing on the chosen day. Fill each case's cause-list details (court no., coram, timings, sequence) from its <b>Add date</b> screen for the fullest list.</div>
@@ -5494,7 +5499,7 @@ function _renderHomeCourt(){
   el.innerHTML=`<div class="cu-embed">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
       ${nav(-1, idx<=0)}
-      <div class="cu-sub" style="margin:0;flex:1;text-align:center">${sub}${!isToday?` · <span onclick="_hcToday()" style="color:var(--seal);cursor:pointer;font-weight:600">Today</span>`:""}</div>
+      <div class="cu-sub" style="margin:0;flex:1;text-align:center">${sub}</div>
       ${nav(1, idx>=days.length-1)}
     </div>
     ${listRows}
@@ -13860,11 +13865,12 @@ function todayWidgetHTML(){
     const moreN=ev.length-4;
     const more=moreN>0? `<button class="tw-more" onclick="_calDayView('${dayIso}')">+ ${moreN} more ›</button>` : "";
     const body = ev.length ? shown+more : `<div class="tw-empty-day">${emptyText}</div>`;
-    return `<div class="tw-daysec"><div class="tw-dayh">${label}</div>${body}</div>`;
+    const clk = label==="Today" ? ` onclick="_hcToday()" style="cursor:pointer" title="Show today's Supreme Court list below"` : "";
+    return `<div class="tw-daysec"><div class="tw-dayh"${clk}>${label}</div>${body}</div>`;
   };
   // Tomorrow section only appears when it actually has something (keeps it calm).
   const tmrSection = tmrEv.length ? section("Tomorrow", tmrEv, tIso, "") : "";
-  return `<div class="hcard"><div class="hcard-h"><div class="eyebrow">Today · ${dstr}</div>
+  return `<div class="hcard"><div class="hcard-h"><div class="eyebrow" onclick="_hcToday()" style="cursor:pointer" title="Show today's Supreme Court list below">Today · ${dstr}</div>
       <button class="seeall" onclick="shellGo('calendar')">Calendar ›</button></div>
     ${section("Today", todayEv, iso, "Nothing scheduled today.")}
     ${tmrSection}
