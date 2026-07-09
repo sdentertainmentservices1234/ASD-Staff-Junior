@@ -5386,7 +5386,7 @@ function _loadCourtUpdates(){
             const rows=courts[c]; const coram=shortCoram(rows[0].coram);
             const tot=rows[0].tot, fr=rows[0].fresh;
             html+=`<tr class="cu-court"><td colspan="3">
-              <span class="cu-cno">Court ${esc(c)}</span>${coram?`<span class="cu-coram">${esc(coram)}</span>`:""}${(tot||fr)?`<span class="cu-tally">${tot?esc(tot):"—"}${fr?` · ${esc(fr)} fr.`:""}</span>`:""}
+              <span class="cu-cno">${(c&&c!=="—")?"Court "+esc(c):"In Chamber"}</span>${coram?`<span class="cu-coram">${esc(coram)}</span>`:""}${(tot||fr)?`<span class="cu-tally">${tot?esc(tot):"—"}${fr?` · ${esc(fr)} fr.`:""}</span>`:""}
             </td></tr>`;
             rows.forEach(m=>{
               const info=_parseListing(m.title);
@@ -5431,7 +5431,7 @@ function _fillHomeCourtCard(){
     }
     const listRows=(day&&day.matches.length)
       ? day.matches.slice(0,4).map(m=>`<div class="row">
-          <div class="ct"><b>${esc(m.court)}</b>Court</div>
+          <div class="ct">${(m.court&&m.court!=="—")?`<b>${esc(m.court)}</b>Court`:`<b style="font-size:13px">Ch.</b>Chamber`}</div>
           <div class="m"><div class="t">${esc(String(m.title||"").replace(/^\s*\d+\s*/,""))}</div>
           <div class="s">${esc((m.coram||"").replace(/hon'?ble/gi,"").trim())}</div></div>
           <div class="it">Item<b>${esc(m.item)}</b></div></div>`).join("")
@@ -9548,8 +9548,8 @@ function renderMatterDetail(){
     <div class="subnav"><button class="subnav-back" onclick="${back}">‹</button><span style="align-self:center;font-weight:600;color:var(--seal)">${esc(m.code||"Matter")}</span></div>
     <div class="card">
       <div class="card-head">
-        <div><h2>${esc(m.client||"—")}</h2>${m.parties?`<div class="hint">${esc(m.parties)}</div>`:""}</div>
-        <div style="display:flex;gap:6px">${m.contact?`<button class="btn ghost sm" onclick="messageClient('${m.id}')" title="Message the client on WhatsApp">WhatsApp</button>`:""}<button class="btn ghost sm" onclick="editMatter('${m.id}')">Edit</button></div>
+        <div style="min-width:0;flex:1"><h2>${esc(m.client||"—")}</h2>${(m.parties&&m.parties!==m.client)?`<div class="hint">${esc(m.parties)}</div>`:""}</div>
+        <div style="display:flex;gap:6px;flex:none">${m.contact?`<button class="btn ghost sm" onclick="messageClient('${m.id}')" title="Message the client on WhatsApp">WhatsApp</button>`:""}<button class="btn ghost sm" onclick="editMatter('${m.id}')">Edit</button></div>
       </div>
       <div class="tpl-dl" style="margin-top:6px">
         ${m.caseNo?`<div class="row"><span class="k" style="min-width:96px">Case No.</span><b>${esc(m.caseNo)}</b></div>`:""}
