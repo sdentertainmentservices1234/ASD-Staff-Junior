@@ -1,0 +1,155 @@
+{
+  "generated_at": "2026-07-09T10:10:18.278106Z",
+  "window": [
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-14",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17",
+    "2026-07-20"
+  ],
+  "by_date": {
+    "2026-07-09": {
+      "lists_found": [
+        "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
+        "Regular / Final - Main",
+        "Regular / Final - Supplementary",
+        "Registrar - Main"
+      ],
+      "has_supplementary": true,
+      "has_advance": false,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-07-10": {
+      "lists_found": [
+        "Miscellaneous - Main"
+      ],
+      "has_supplementary": false,
+      "has_advance": false,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-07-13": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "match_count": 5,
+      "matches": [
+        {
+          "for_date": "2026-07-13",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1419",
+          "coram": "Hon'ble Judge in Chamber.",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1419 SLP(Crl) No. 6256/2026 NARESH TUDU DESHMUKH ADITH SATISH"
+        },
+        {
+          "for_date": "2026-07-13",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1563",
+          "coram": "Hon'ble Judge in Chamber.",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1563 SLP(Crl) No. 8841/2026 FAVAS RAHIMT DESHMUKH ADITH SATISH"
+        },
+        {
+          "for_date": "2026-07-13",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1648",
+          "coram": "Hon'ble Judge in Chamber.",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "URMILA RATTANLAL SUD DESHMUKH ADITH"
+        },
+        {
+          "for_date": "2026-07-13",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "is_supplementary": false,
+          "court": "11",
+          "item": "2073",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "2073 Diary No. 67086-2025 SADASHIV DESHMUKH ADITH SATISH"
+        },
+        {
+          "for_date": "2026-07-13",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "is_supplementary": false,
+          "court": "11",
+          "item": "2170",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "2170 SLP(C) No. RAJEEVAN M DESHMUKH ADITH SATISH"
+        }
+      ]
+    },
+    "2026-07-14": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-07-14",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1620",
+          "coram": "HON'BLE THE CHIEF JUSTICE",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "MEERA VISHWANATHAN AND ORS. DESHMUKH ADITH SATISH,"
+        }
+      ]
+    }
+  },
+  "match_count": 6,
+  "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
+}
