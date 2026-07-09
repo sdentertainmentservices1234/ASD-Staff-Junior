@@ -258,6 +258,8 @@ def scan_family(base, lists, date_str, wl, day):
             day["has_supp"] = True
         if kind == "advance":
             day["has_advance"] = True
+        if kind == "main":
+            day["has_main"] = True
         text = pdf_to_text(data)
         if not text.strip():
             continue
@@ -278,10 +280,12 @@ def main():
 
     by_date = {}
     for date_str in dates:
-        day = {"matches": [], "lists_found": [], "has_supp": False, "has_advance": False}
-        scan_family(ADVANCE_BASE, ADVANCE_LISTS, date_str, wl, day)
+        day = {"matches": [], "lists_found": [], "has_supp": False, "has_advance": False, "has_main": False}
+        # Scan the DAILY (main + supplementary) lists FIRST so that on de-dup the authoritative
+        # daily copy of a matter wins over its advance-list copy.
         scan_family(DAILY_BASE, DAILY_LISTS, date_str, wl, day)
-        # de-dup matches that appear in both advance and daily lists (same court+item)
+        scan_family(ADVANCE_BASE, ADVANCE_LISTS, date_str, wl, day)
+        # de-dup matches that appear in both advance and daily lists (same court+item) — keeps first
         seen, deduped = set(), []
         for m in day["matches"]:
             k = (m["court"], m["item"], m["is_supplementary"])
@@ -290,11 +294,16 @@ def main():
             seen.add(k)
             deduped.append(m)
         day["matches"] = deduped
+        # Once the MAIN daily list for a date is published, the advance list is superseded: an
+        # advance-listed matter may not have materialised. Drop advance-only matches so we show
+        # only what's actually in the main/supplementary lists.
+        if day["has_main"]:
+            day["matches"] = [m for m in day["matches"] if m.get("kind") != "advance"]
         if day["lists_found"] or day["matches"]:
             by_date[date_str] = day
-            print("  {}: {} match(es){}{}".format(
-                date_str, len(day["matches"]),
-                " [advance]" if day["has_advance"] else "",
+            status = "[main list out — advance dropped]" if day["has_main"] else ("[advance only]" if day["has_advance"] else "")
+            print("  {}: {} match(es) {}{}".format(
+                date_str, len(day["matches"]), status,
                 " [supp]" if day["has_supp"] else ""))
 
     all_matches = []
@@ -309,6 +318,7 @@ def main():
             "lists_found": by_date[d]["lists_found"],
             "has_supplementary": by_date[d]["has_supp"],
             "has_advance": by_date[d]["has_advance"],
+            "has_main": by_date[d]["has_main"],
             "match_count": len(by_date[d]["matches"]),
             "matches": by_date[d]["matches"],
         } for d in by_date},

@@ -5321,7 +5321,7 @@ function _normCourtUpdates(data){
       tot:m.court_total||"", fresh:m.court_fresh||"",
       conf:m.confidence||"", on:m.matched_on||[]
     }));
-    out.days.push({date:d, suppOut, matches});
+    out.days.push({date:d, suppOut, hasMain:!!day.has_main, matches});
   });
   return out;
 }
@@ -5449,34 +5449,57 @@ function _fillHomeCourtCard(){
   const el=document.getElementById("homeCourtCard");
   if(!el) return;
   fetch("court-updates.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-  .then((rawCU)=>{
-    const cu=_normCourtUpdates(rawCU);
-    window.__cuCache=cu;   // cache so the cause-list print can fold in these listings
-    const iso=todayISO?todayISO():new Date().toISOString().slice(0,10);
-    let day=cu.days.find(d=>d.date===iso);
-    let sub="Supreme Court";
-    if((!day || !day.matches.length)){
-      const nxt=cu.days.find(d=>d.date>iso && d.matches.length);
-      if(nxt){ day=nxt; sub="Supreme Court — "+new Date(nxt.date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}); }
-    }
-    const listRows=(day&&day.matches.length)
-      ? day.matches.slice(0,4).map(m=>{
-          const info=_parseListing(m.title);                      // strips your own AOR name
-          const cn=info.caseNo||info.diaryNo||"";                 // case / diary number
-          const title=info.party||cn||String(m.title||"").replace(/^\s*\d+\s*/,"");
-          return `<div class="row">
-            <div class="ct">${(m.court&&m.court!=="—")?`<b>${esc(m.court)}</b>Court`:`<b style="font-size:13px">Ch.</b>Chamber`}</div>
-            <div class="m"><div class="t">${esc(title||"—")}</div>${(info.party&&cn)?`<div class="s mono">${esc(cn)}</div>`:""}</div>
-            <div class="it">Item<b>${esc(m.item)}</b></div></div>`;
-        }).join("")
-      : "";
-    const ordersLink=`<a href="https://www.sci.gov.in/daily-order-case-no/" target="_blank" rel="noopener" class="cu-orderlink">Look up case orders on SC website ↗</a>`;
-    if(!listRows){ el.innerHTML=`<div class="cu-embed">${ordersLink}</div>`; return; }
-    el.innerHTML=`<div class="cu-embed">
-      <div class="cu-sub">${esc(sub)}</div>${listRows}
-      ${ordersLink}
-    </div>`;
-  });
+  .then((rawCU)=>{ window.__cuCache=_normCourtUpdates(rawCU); _renderHomeCourt(); });
+}
+// Move the home cause-list view to the previous / next day that has data in the fetched window.
+function _hcShift(delta){
+  const cu=window.__cuCache; if(!cu||!cu.days.length) return;
+  const days=cu.days.map(d=>d.date);
+  let i=days.indexOf(window.__hcDay); if(i<0) i=0;
+  i=Math.max(0,Math.min(days.length-1,i+delta));
+  window.__hcDay=days[i]; _renderHomeCourt();
+}
+function _hcToday(){ const iso=todayISO?todayISO():new Date().toISOString().slice(0,10); const days=(window.__cuCache&&window.__cuCache.days||[]).map(d=>d.date); window.__hcDay = days.indexOf(iso)>=0 ? iso : null; _renderHomeCourt(); }
+function _renderHomeCourt(){
+  const el=document.getElementById("homeCourtCard"); if(!el) return;
+  const cu=window.__cuCache;
+  const ordersLink=`<a href="https://www.sci.gov.in/daily-order-case-no/" target="_blank" rel="noopener" class="cu-orderlink">Look up case orders on SC website ↗</a>`;
+  if(!cu||!cu.days.length){ el.innerHTML=`<div class="cu-embed">${ordersLink}</div>`; return; }
+  const days=cu.days.map(d=>d.date);
+  const iso=todayISO?todayISO():new Date().toISOString().slice(0,10);
+  // default day: today if it has matters, else the next day with matters, else today/first
+  if(!window.__hcDay || days.indexOf(window.__hcDay)<0){
+    const todayHas=(cu.days.find(d=>d.date===iso)||{}).matches;
+    if(days.indexOf(iso)>=0 && todayHas && todayHas.length){ window.__hcDay=iso; }
+    else { const nxt=cu.days.find(d=>d.date>=iso && d.matches.length)||cu.days.find(d=>d.matches.length)||cu.days[0]; window.__hcDay=nxt.date; }
+  }
+  const sel=window.__hcDay, idx=days.indexOf(sel);
+  const day=cu.days.find(d=>d.date===sel)||{matches:[]};
+  const isToday=sel===iso;
+  const dlabel=new Date(sel+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"});
+  const tentative = (day.hasMain===false && day.matches.length) ? ` <span style="font-size:9.5px;font-weight:700;color:var(--brass);border:1px solid var(--brass);border-radius:4px;padding:0 4px;vertical-align:middle" title="From the advance list — tentative until the main list is published">ADVANCE</span>` : "";
+  const sub=`Supreme Court — ${isToday?"Today":esc(dlabel)}${tentative}`;
+  const nav=(d,dis)=>`<button onclick="_hcShift(${d})" ${dis?"disabled":""} aria-label="${d<0?"Previous":"Next"} day" style="background:none;border:none;color:${dis?"var(--line)":"var(--seal)"};font-size:22px;line-height:1;cursor:${dis?"default":"pointer"};padding:0 8px;font-family:inherit">${d<0?"‹":"›"}</button>`;
+  const listRows=day.matches.length
+    ? day.matches.slice(0,6).map(m=>{
+        const info=_parseListing(m.title);
+        const cn=info.caseNo||info.diaryNo||"";
+        const title=info.party||cn||String(m.title||"").replace(/^\s*\d+\s*/,"");
+        return `<div class="row">
+          <div class="ct">${(m.court&&m.court!=="—")?`<b>${esc(m.court)}</b>Court`:`<b style="font-size:13px">Ch.</b>Chamber`}</div>
+          <div class="m"><div class="t">${esc(title||"—")}</div>${(info.party&&cn)?`<div class="s mono">${esc(cn)}</div>`:""}</div>
+          <div class="it">Item<b>${esc(m.item)}</b></div></div>`;
+      }).join("")
+    : `<div style="font-size:12px;color:var(--muted);padding:9px 2px">None of your matters listed on this day.</div>`;
+  el.innerHTML=`<div class="cu-embed">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
+      ${nav(-1, idx<=0)}
+      <div class="cu-sub" style="margin:0;flex:1;text-align:center">${sub}${!isToday?` · <span onclick="_hcToday()" style="color:var(--seal);cursor:pointer;font-weight:600">Today</span>`:""}</div>
+      ${nav(1, idx>=days.length-1)}
+    </div>
+    ${listRows}
+    ${ordersLink}
+  </div>`;
 }
 // Format a "HH:MM" time as a friendly 12-hour string, e.g. "14:00" -> "2:00 PM".
 function _cl12h(t){
