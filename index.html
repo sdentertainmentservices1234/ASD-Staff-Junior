@@ -5427,7 +5427,7 @@ function _loadCourtUpdates(){
                 : `<button style="${actStyle}" onclick="_listingAct(${idx})" title="Create a matter from this listing">+ Matter</button>`;
               html+=`<tr class="cu-row">
                 <td class="cu-item">${esc(m.item)}${m.supp?`<span class="cu-ms s">S</span>`:`<span class="cu-ms m">M</span>`}</td>
-                <td class="cu-title">${esc(shortTitle(m.title))}</td>
+                <td class="cu-title">${esc(info.party||shortTitle(m.title))}${(info.caseNo||info.diaryNo)?`<div style="font-size:10px;color:var(--muted);margin-top:1px">${esc(info.caseNo||info.diaryNo)}</div>`:""}</td>
                 <td style="width:84px;text-align:right;padding-left:6px;vertical-align:top">${act}</td>
               </tr>`;
             });
@@ -5662,7 +5662,7 @@ function printCauseList(iso, includeMeetings, opts){
   }
   const area=document.getElementById("receiptArea");
   area.innerHTML=`<div class="tpl-list cause-list${opts.bw?" bw":""}">${_causeListHeader("Cause List · "+dstr)}${tbl}${meetingsHtml}</div>`;
-  setTimeout(()=>_printAs("Cause List "+iso),150);
+  setTimeout(()=>_printAs("Cause list dated "+String(iso||"").split("-").reverse().join("-")),150);
 }
 function reprintSalarySlip(id){
   const slip=(DB.salarySlips||[]).find(x=>x.id===id); if(!slip) return;
