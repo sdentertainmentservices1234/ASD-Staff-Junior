@@ -1171,6 +1171,10 @@
   .app .t{font-size:10.5px;font-weight:600;color:var(--ink);text-align:center;line-height:1.15}
   .app.gold .ic{color:var(--brass)}
   body.desktop-view .appgrid{grid-template-columns:repeat(4,1fr)}
+  .appgrid.a3{grid-template-columns:repeat(3,1fr)}
+  body.desktop-view .appgrid.a3{grid-template-columns:repeat(3,1fr)}
+  @keyframes cgspin{to{transform:rotate(360deg)}}
+  .cg-spin{width:32px;height:32px;border:3px solid rgba(154,123,63,.28);border-top-color:#9a7b3f;border-radius:50%;margin:0 auto;animation:cgspin .8s linear infinite}
   /* counter breakdown modal */
   .cb-list{max-height:60vh;overflow-y:auto;margin:-4px -4px 0}
   .cb-grp{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);font-weight:700;margin:12px 4px 4px}
@@ -1769,9 +1773,14 @@
           ${_bCourt?`<div style="display:inline-block;font-size:11.5px;letter-spacing:.42em;text-transform:uppercase;color:#c9b47e;font-weight:700;margin-top:9px;padding-top:9px;position:relative">
             <span style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:34px;height:2px;border-radius:2px;background:#9a7b3f;opacity:.8"></span>${_esc(_bCourt)}</div>`:""}
         </div>` : "";
-    ov.innerHTML=`
-      <div style="max-width:470px;width:100%;container-type:inline-size">
-        ${_brand}
+    var _loadingCard = `
+        <div style="background:var(--paper2,#fffdf8);border-top:3px solid var(--brass,#9a7b3f);border-radius:18px;padding:36px 30px;width:100%;box-shadow:0 24px 60px rgba(12,4,4,.5);text-align:center">
+          <div class="cg-spin"></div>
+          <div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;color:var(--ink,#241f1a);font-size:16px;font-weight:700;margin-top:14px">Loading your chamber…</div>
+          <div id="cgMsg" style="margin-top:10px;font-size:13px;line-height:1.5;min-height:0"></div>
+          <div id="cgStatus" style="margin-top:4px;font-size:12px;color:var(--muted,#6d675e)">Signing you in securely…</div>
+        </div>`;
+    var _formCard = `
         <div style="background:var(--paper2,#fffdf8);border-top:3px solid var(--brass,#9a7b3f);border-radius:18px;padding:28px 30px;width:100%;box-shadow:0 24px 60px rgba(12,4,4,.5)">
           <div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;color:var(--ink,#241f1a);font-size:16px;font-weight:700;margin-bottom:3px;letter-spacing:.02em">${mode==="create"?"Create your login":"Chamber sign in"}</div>
           <div style="color:var(--muted,#6d675e);font-size:13px;margin-bottom:18px">${mode==="create"?"Staff: create your own login here. The chamber owner will approve you once, then you can start recording entries.":"Sign in with your email and password."}</div>
@@ -1784,7 +1793,11 @@
           <button onclick="window._cloudForgot()" style="width:100%;padding:9px;border:none;background:none;color:var(--muted,#6d675e);font-size:12.5px;cursor:pointer;margin-top:6px;font-family:inherit">Forgot password?</button>
           <div id="cgMsg" style="margin-top:14px;font-size:13px;line-height:1.5;min-height:18px"></div>
           <div id="cgStatus" style="margin-top:6px;font-size:11.5px;color:var(--muted,#6d675e);text-align:center"></div>
-        </div>
+        </div>`;
+    ov.innerHTML=`
+      <div style="max-width:470px;width:100%;container-type:inline-size">
+        ${_brand}
+        ${mode==="loading"?_loadingCard:_formCard}
       </div>`;
     ov._mode = mode;
     if(!FB){ setMsg("err","Cloud not reachable right now. Check your connection and reload."); }
@@ -1870,7 +1883,7 @@
 
   // ---------- SYNC ORCHESTRATION ----------
   async function onSignedIn(){
-    setMsg("ok","Signed in ✓"); setStatus("Loading…");
+    showCloudLogin("loading"); setStatus("Loading your records…");   // replace any sign-in form with the clean loading screen
     try{
       const myUid = FB.uid();
       const myEmail = FB.email();
@@ -2206,10 +2219,11 @@
         if(window.bootAfterCloud) window.bootAfterCloud();
         return;
       }
-      // FB present; auth state callback will drive login/boot
-      if(FB.user===null){ showCloudLogin("login"); }
-      else if(FB.user){ onSignedIn(); }
-      else { showCloudLogin("login"); }
+      // FB present; auth state callback will drive login/boot. Don't show the sign-in FORM
+      // yet — FB.user is null until the persisted session restores. Show a loading screen;
+      // onFirebaseAuth shows the form only if the user is genuinely signed out.
+      if(FB.user){ onSignedIn(); }
+      else { showCloudLogin("loading"); }
     });
   }
 
@@ -13946,14 +13960,13 @@ function renderHome(){
   </div>`;
 
   const createGrid=`<div class="grp-h">Create</div>
-    <div class="appgrid">
+    <div class="appgrid a3">
       <button class="app" onclick="addMatter()"><span class="ic">${HOME_ICONS.newmatter}</span><span class="t">New matter</span></button>
-      <button class="app" onclick="ownerAddDate()"><span class="ic">${HOME_ICONS.calendar}</span><span class="t">Add date</span></button>
       <button class="app gold" onclick="openBilling('receipt')"><span class="ic">${HOME_ICONS.receipt}</span><span class="t">New receipt</span></button>
       <button class="app gold" onclick="openBilling('invoice')"><span class="ic">${HOME_ICONS.invoice}</span><span class="t">New invoice</span></button>
     </div>`;
   const openGrid=`<div class="grp-h">Open</div>
-    <div class="appgrid">
+    <div class="appgrid a3">
       <button class="app" onclick="openDeadlines()"><span class="ic">${HOME_ICONS.calendar}</span><span class="t">Deadlines</span></button>
       <button class="app gold" onclick="openOutstanding()"><span class="ic">${HOME_ICONS.invoice}</span><span class="t">Outstanding</span></button>
       <button class="app" onclick="openSub('todos')"><span class="ic">${HOME_ICONS.reminder}</span><span class="t">Tasks &amp; reminders</span></button>
