@@ -5321,6 +5321,8 @@ function _normCourtUpdates(data){
       court:m.court||"—",
       coram:m.coram||"",
       item:m.item||"—",
+      family:m.family||"",              // MJ=Misc/court, FJ=Regular, MR=Registrar, MCC=Curative/Review
+      kind:m.kind||"",                  // main | supp | advance
       supp:(m.is_supplementary!==undefined)?!!m.is_supplementary:!!m.supplementary,
       title:m.text || [m.case, [m.petitioner,m.respondent].filter(Boolean).join(" v. ")].filter(Boolean).join(" — "),
       tot:m.court_total||"", fresh:m.court_fresh||"",
@@ -5413,14 +5415,20 @@ function _loadCourtUpdates(){
           const suppTag = day.suppOut?`<span class="cu-supp ok">supp. out</span>`:`<span class="cu-supp wait">supp. awaited</span>`;
           html+=`<div class="cu-day"><div class="cu-day-h"><span>${esc(dl)}</span><span class="cu-day-r">${day.matches.length?day.matches.length+" listed":"—"} ${suppTag}</span></div>`;
           if(!day.matches.length){ html+=`<div class="cu-none">None of your matters on this day yet.</div></div>`; return; }
+          // Group by forum, keyed on family+court so e.g. Registrar Court 2 and a
+          // Judge's Court 2 don't collide into one section.
           const courts={}; const corder=[];
-          day.matches.forEach(m=>{ const k=m.court; if(!courts[k]){courts[k]=[];corder.push(k);} courts[k].push(m); });
+          day.matches.forEach(m=>{ const k=(m.family||"")+"|"+m.court; if(!courts[k]){courts[k]=[];corder.push(k);} courts[k].push(m); });
           html+=`<table class="cu-tbl"><colgroup><col style="width:58px"><col><col style="width:80px"></colgroup><tbody>`;
-          corder.forEach(c=>{
-            const rows=courts[c]; const coram=shortCoram(rows[0].coram);
-            const tot=rows[0].tot, fr=rows[0].fresh;
+          corder.forEach(k=>{
+            const rows=courts[k]; const m0=rows[0]; const c=m0.court; const coram=shortCoram(m0.coram);
+            const tot=m0.tot, fr=m0.fresh;
+            let forum;
+            if(m0.family==="MR") forum=(c&&c!=="—")?"Registrar — Court "+esc(c):"Registrar";
+            else if(m0.family==="MCC") forum="Curative &amp; Review";
+            else forum=(c&&c!=="—")?"Court "+esc(c):"In Chamber";
             html+=`<tr class="cu-court"><td colspan="3">
-              <span class="cu-cno">${(c&&c!=="—")?"Court "+esc(c):"In Chamber"}</span>${coram?`<span class="cu-coram">${esc(coram)}</span>`:""}${(tot||fr)?`<span class="cu-tally">${tot?esc(tot):"—"}${fr?` · ${esc(fr)} fr.`:""}</span>`:""}
+              <span class="cu-cno">${forum}</span>${coram?`<span class="cu-coram">${esc(coram)}</span>`:""}${(tot||fr)?`<span class="cu-tally">${tot?esc(tot):"—"}${fr?` · ${esc(fr)} fr.`:""}</span>`:""}
             </td></tr>`;
             rows.forEach(m=>{
               const info=_parseListing(m.title);
@@ -5465,6 +5473,17 @@ function _hcShift(delta){
   window.__hcDay=days[i]; _renderHomeCourt();
 }
 function _hcToday(){ const iso=todayISO?todayISO():new Date().toISOString().slice(0,10); const days=(window.__cuCache&&window.__cuCache.days||[]).map(d=>d.date); window.__hcDay = days.indexOf(iso)>=0 ? iso : null; _renderHomeCourt(); }
+// Forum badge for a fetched SC listing. The court NUMBER alone is ambiguous:
+// "2" can be Judge's Court 2, Registrar Court 2, etc. Use the list family to
+// label it correctly — Registrar → "R-2", Curative/Review circulation → "Circ.".
+function _forumBadge(m){
+  const c=(m.court&&m.court!=="—")?String(m.court):"";
+  const fam=m.family||"";
+  if(fam==="MR") return c?{big:"R-"+c, cap:"Regr."}:{big:"Regr.", cap:"Registrar"};
+  if(fam==="MCC") return {big:"Circ.", cap:"Review"};
+  if(!c) return {big:"Ch.", cap:"Chamber"};
+  return {big:c, cap:"Court"};
+}
 function _renderHomeCourt(){
   const el=document.getElementById("homeCourtCard"); if(!el) return;
   const cu=window.__cuCache;
@@ -5490,8 +5509,9 @@ function _renderHomeCourt(){
         const info=_parseListing(m.title);
         const cn=info.caseNo||info.diaryNo||"";
         const title=info.party||cn||String(m.title||"").replace(/^\s*\d+\s*/,"");
+        const fb=_forumBadge(m);
         return `<div class="row">
-          <div class="ct">${(m.court&&m.court!=="—")?`<b>${esc(m.court)}</b>Court`:`<b style="font-size:13px">Ch.</b>Chamber`}</div>
+          <div class="ct"><b${fb.big.length>2?' style="font-size:13px"':''}>${esc(fb.big)}</b>${esc(fb.cap)}</div>
           <div class="m"><div class="t">${esc(title||"—")}</div>${(info.party&&cn)?`<div class="s mono">${esc(cn)}</div>`:""}</div>
           <div class="it">Item<b>${esc(m.item)}</b></div></div>`;
       }).join("")
