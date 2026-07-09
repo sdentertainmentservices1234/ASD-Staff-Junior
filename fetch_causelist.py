@@ -52,10 +52,10 @@ ADVANCE_LISTS = [
 ]
 
 WINDOW_DAYS = 8
-# Paths are relative to the repo root (the workflow runs `python causelist/fetch_causelist.py`
-# from there). court-updates.json is written to the root so the app can fetch it same-origin
-# next to index.html.
-WATCHLIST_FILE = "causelist/watchlist.json"
+# All at the repo root (matching the existing layout): the workflow runs `python
+# fetch_causelist.py`, reads watchlist.json, and writes court-updates.json next to index.html
+# so the app can fetch it same-origin.
+WATCHLIST_FILE = "watchlist.json"
 OUTPUT_FILE = "court-updates.json"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; chamber-causelist-bot/1.0)"}
 
