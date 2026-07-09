@@ -1158,6 +1158,17 @@
     .mshelf{flex-wrap:wrap;overflow:visible}
     .mcard{width:170px}
   }
+  /* More menu — scannable vertical list (icon · label · desc · chevron), grouped in cards */
+  .mlist{background:var(--paper2);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .mrow{display:flex;align-items:center;gap:13px;width:100%;padding:12px 14px;background:none;border:none;border-top:1px solid var(--line2);cursor:pointer;font-family:inherit;text-align:left}
+  .mrow:first-child{border-top:none}
+  .mrow:hover{background:var(--paper)}
+  .mrow:active{background:var(--seal-soft)}
+  .mrow .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .mrow .lb{font-size:14px;font-weight:600;color:var(--ink);line-height:1.25}
+  .mrow .ds{font-size:11.5px;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mrow .chev{color:var(--muted);font-size:20px;flex:none;line-height:1;opacity:.6}
+  @media(min-width:760px){ .mmore-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start} }
   .hh-mid{flex:1;min-width:0}
   .hh-t{font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hh-go{color:var(--line);flex:0 0 auto}
@@ -14551,11 +14562,11 @@ function renderMoreMenu(){
       <div style="font-size:13.5px;color:var(--ink);margin:4px 0 12px">Signed in as <b>${esc(signedInAs)}</b></div>
       <button class="btn ghost sm" onclick="cloudLogout()">Log out</button>
     </div>` : "";
-  const item=(onclick,icon,label,desc)=>`<button class="mcard" onclick="${onclick}">
+  const item=(onclick,icon,label,desc)=>`<button class="mrow" onclick="${onclick}">
       <span class="mc-ic">${icon}</span>
-      <span class="mc-lb">${label}</span>
-      ${desc?`<span class="mc-ds">${desc}</span>`:""}</button>`;
-  const group=(title,items)=>`<div class="mgrp-h">${title}</div><div class="mshelf">${items.join("")}</div>`;
+      <span class="txt"><span class="lb">${label}</span>${desc?`<span class="ds">${desc}</span>`:""}</span>
+      <span class="chev">›</span></button>`;
+  const group=(title,items)=>`<div class="mgrp"><div class="mgrp-h">${title}</div><div class="mlist">${items.join("")}</div></div>`;
 
   const money=[
     item("shellGo('books')",HOME_ICONS.receipt,"Books &amp; financials","Receipts ledger, cash, expenses"),
@@ -14583,11 +14594,13 @@ function renderMoreMenu(){
   ];
   document.getElementById("panel-home").innerHTML=`
     <div class="hello">More</div>
-    ${group("Money", money)}
-    ${group("Work", work)}
-    ${group("Registers", registers)}
-    ${group("Admin", admin)}
-    ${acctCard}`;
+    ${acctCard}
+    <div class="mmore-2col">
+      ${group("Money", money)}
+      ${group("Work", work)}
+      ${group("Registers", registers)}
+      ${group("Admin", admin)}
+    </div>`;
 }
 async function cloudLogout(){
   if(!(window.FB && FB.logout)){ toast("Cloud not available.", true); return; }
