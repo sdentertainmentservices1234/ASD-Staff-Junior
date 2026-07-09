@@ -9422,13 +9422,13 @@ function _waDefaultMsg(m){
     : `Dear ${who||"Sir/Madam"},\n\nRegarding your matter ${ref}${parties}:`;
   return body+`\n\nRegards,\n${s.advName||s.chamberName||"Chamber"}`;
 }
-function messageClient(matterId){
+function messageClient(matterId, customMsg){
   const m=matterById(matterId); if(!m) return;
   const num=_waNumber(m.contact);
   if(!num){ toast("No client mobile number on this matter — add one via Edit.",true); return; }
   openModal("Message client on WhatsApp", `
     <div class="hint" style="margin-bottom:10px">To <b>${esc(m.client||"client")}</b> · ${esc(m.contact||"")}. Edit if you like, then open WhatsApp to send.</div>
-    <textarea class="in" id="waMsg" style="min-height:150px">${esc(_waDefaultMsg(m))}</textarea>
+    <textarea class="in" id="waMsg" style="min-height:150px">${esc(customMsg||_waDefaultMsg(m))}</textarea>
     <div class="btn-row" style="margin-top:12px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
       <button class="btn seal" onclick="_waSend('${num}')">Open WhatsApp ↗</button>
@@ -9438,6 +9438,49 @@ function _waSend(num){
   const t=(document.getElementById("waMsg")||{}).value||"";
   try{ window.open("https://wa.me/"+num+"?text="+encodeURIComponent(t),"_blank","noopener"); }catch(e){}
   closeModal();
+}
+// ===== Outstanding-fees tracker: who owes what (billed − received, per matter) =====
+function _matterOutstanding(){
+  const byMatter={};
+  (DB.invoices||[]).forEach(inv=>{ if(isVoided(inv)) return; const mid=inv.matterId||""; if(!mid) return;
+    (byMatter[mid]=byMatter[mid]||{billed:0,received:0}).billed+=invoiceTotal(inv); });
+  (DB.receipts||[]).forEach(r=>{ if(isVoided(r)) return; const mid=r.matterId||""; if(!mid||!byMatter[mid]) return;
+    byMatter[mid].received+=(+r.amount||0); });
+  const out=[];
+  Object.keys(byMatter).forEach(mid=>{ const b=byMatter[mid]; const due=Math.round(b.billed-b.received); if(due>0){
+    const m=matterById(mid)||{}; out.push({matterId:mid, code:m.code||"", client:m.client||"", parties:m.parties||"", contact:m.contact||"", billed:b.billed, received:b.received, due}); } });
+  out.sort((a,b)=>b.due-a.due);
+  return out;
+}
+function _feeReminderMsg(m, due){
+  const s=DB.settings||{}; const who=(m.client||"Sir/Madam").trim();
+  const ref=(m.caseNo||m.diaryNo||m.code||"your matter");
+  return `Dear ${who},\n\nThis is a gentle reminder regarding the outstanding professional fee of ${fmtINR(due)} in your matter ${ref}. Kindly arrange payment at your convenience.\n\nRegards,\n${s.advName||s.chamberName||"Chamber"}`;
+}
+function remindFee(matterId){
+  const m=matterById(matterId); if(!m) return;
+  const o=_matterOutstanding().find(x=>x.matterId===matterId);
+  messageClient(matterId, _feeReminderMsg(m, o?o.due:0));
+}
+function openOutstanding(){
+  const rows=_matterOutstanding();
+  const total=rows.reduce((s,r)=>s+r.due,0);
+  const body = rows.length ? rows.map(r=>`
+    <div class="lrow">
+      <div class="l" onclick="closeModal();openMatterDetail('${r.matterId}')" style="cursor:pointer">
+        <div class="t">${esc(r.client||r.parties||r.code||"—")}</div>
+        <div class="s">${esc(r.code)}${(r.parties&&r.parties!==r.client)?" · "+esc(r.parties):""} · billed ${fmtINR(r.billed)} · received ${fmtINR(r.received)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex:none">
+        <b style="color:var(--seal);white-space:nowrap">${fmtINR(r.due)}</b>
+        ${r.contact?`<button class="row-act" onclick="remindFee('${r.matterId}')" title="Send a WhatsApp payment reminder">Remind</button>`:""}
+      </div>
+    </div>`).join("") : `<div class="empty" style="padding:24px">Nothing outstanding — every billed matter is fully received. 🎉</div>`;
+  openModal("Outstanding fees", `
+    <div class="ov-stats" style="margin-bottom:12px"><div class="ov-stat"><div class="ov-stat-lbl">Total outstanding</div><div class="ov-stat-val" style="color:var(--seal)">${fmtINR(total)}</div></div></div>
+    <div class="hint" style="margin-bottom:8px">Billed minus received, per matter (all-time). Tap a name to open it, or send a WhatsApp reminder.</div>
+    ${body}
+    <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
 function renderMatterDetail(){
   const m = DB.matters.find(x=>x.id===_currentMatterId);
@@ -13878,6 +13921,7 @@ function renderHome(){
   const openGrid=`<div class="grp-h">Open</div>
     <div class="appgrid">
       <button class="app" onclick="openDeadlines()"><span class="ic">${HOME_ICONS.calendar}</span><span class="t">Deadlines</span></button>
+      <button class="app gold" onclick="openOutstanding()"><span class="ic">${HOME_ICONS.invoice}</span><span class="t">Outstanding</span></button>
       <button class="app" onclick="openSub('todos')"><span class="ic">${HOME_ICONS.reminder}</span><span class="t">Tasks &amp; reminders</span></button>
       <button class="app" onclick="openAppointments()"><span class="ic">${HOME_ICONS.appointment}</span><span class="t">Appointments</span></button>
       <button class="app" onclick="openSub('exadv')"><span class="ic">${HOME_ICONS.expense}</span><span class="t">Expenses</span></button>
