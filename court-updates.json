@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-09T10:10:18.278106Z",
+  "generated_at": "2026-07-09T13:30:52.700993Z",
   "window": [
     "2026-07-09",
     "2026-07-10",
@@ -17,34 +17,58 @@
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Regular / Final - Supplementary",
-        "Registrar - Main"
+        "Registrar - Main",
+        "Registrar - Supplementary"
       ],
       "has_supplementary": true,
       "has_advance": false,
+      "has_main": true,
       "match_count": 0,
       "matches": []
     },
     "2026-07-10": {
       "lists_found": [
-        "Miscellaneous - Main"
+        "Miscellaneous - Main",
+        "Miscellaneous - Supplementary"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": false,
+      "has_main": true,
       "match_count": 0,
       "matches": []
     },
     "2026-07-13": {
       "lists_found": [
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "match_count": 5,
+      "has_main": true,
+      "match_count": 6,
       "matches": [
+        {
+          "for_date": "2026-07-13",
+          "list": "Registrar - Main",
+          "kind": "main",
+          "family": "MR",
+          "is_supplementary": false,
+          "court": "2",
+          "item": "49",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "49 SLP(C) No. SANJEEV MALHOTRA AND ANR. DESHMUKH ADITH SATISH"
+        },
         {
           "for_date": "2026-07-13",
           "list": "Miscellaneous - Advance",
           "kind": "advance",
+          "family": "MJ",
           "is_supplementary": false,
           "court": "",
           "item": "1419",
@@ -61,6 +85,7 @@
           "for_date": "2026-07-13",
           "list": "Miscellaneous - Advance",
           "kind": "advance",
+          "family": "MJ",
           "is_supplementary": false,
           "court": "",
           "item": "1563",
@@ -77,6 +102,7 @@
           "for_date": "2026-07-13",
           "list": "Miscellaneous - Advance",
           "kind": "advance",
+          "family": "MJ",
           "is_supplementary": false,
           "court": "",
           "item": "1648",
@@ -93,6 +119,7 @@
           "for_date": "2026-07-13",
           "list": "Miscellaneous - Advance",
           "kind": "advance",
+          "family": "MJ",
           "is_supplementary": false,
           "court": "11",
           "item": "2073",
@@ -109,6 +136,7 @@
           "for_date": "2026-07-13",
           "list": "Miscellaneous - Advance",
           "kind": "advance",
+          "family": "MJ",
           "is_supplementary": false,
           "court": "11",
           "item": "2170",
@@ -129,12 +157,14 @@
       ],
       "has_supplementary": false,
       "has_advance": true,
+      "has_main": false,
       "match_count": 1,
       "matches": [
         {
           "for_date": "2026-07-14",
           "list": "Miscellaneous - Advance",
           "kind": "advance",
+          "family": "MJ",
           "is_supplementary": false,
           "court": "",
           "item": "1620",
@@ -150,6 +180,6 @@
       ]
     }
   },
-  "match_count": 6,
+  "match_count": 7,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
