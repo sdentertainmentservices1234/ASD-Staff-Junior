@@ -9289,6 +9289,39 @@ function _dataIntegrityIssues(){
 var _currentMatterId=null;
 /* Finding 3 — per-matter fee status: billed / received / outstanding,
    computed from this matter's own receipts and invoices. */
+// Statement of Account for a matter — a chamber document (letterhead is appropriate here,
+// unlike court filings): invoices billed vs receipts paid, chronological, with running balance.
+function printStatement(matterId){
+  const s=_chamberDocSettings({}); const m=matterById(matterId)||{};
+  const invs=(DB.invoices||[]).filter(v=>v.matterId===m.id&&!isVoided(v)).map(v=>({date:v.date||"",type:"inv",amt:invoiceTotal(v),desc:"Invoice "+(v.no||"")+(v.towards?" — "+v.towards:"")}));
+  const recs=(DB.receipts||[]).filter(r=>r.matterId===m.id&&!isVoided(r)).map(r=>({date:r.date||"",type:"rec",amt:(+r.amount||0),desc:"Receipt "+(r.no||"")+(r.mode?" ("+r.mode+")":"")}));
+  const rows=invs.concat(recs).sort((a,b)=>a.date.localeCompare(b.date));
+  let bal=0, totBilled=0, totRec=0;
+  const td="padding:5px 8px;border-bottom:1px solid #eee";
+  const bodyRows=rows.map(e=>{ if(e.type==="inv"){ bal+=e.amt; totBilled+=e.amt; } else { bal-=e.amt; totRec+=e.amt; }
+    return `<tr><td style="${td}">${_tplDate(e.date)}</td><td style="${td}">${esc(e.desc)}</td>`+
+      `<td style="${td};text-align:right">${e.type==="inv"?fmtINR(e.amt):""}</td>`+
+      `<td style="${td};text-align:right">${e.type==="rec"?fmtINR(e.amt):""}</td>`+
+      `<td style="${td};text-align:right;font-weight:600">${fmtINR(bal)}</td></tr>`; }).join("");
+  const net=totBilled-totRec;
+  const closing = net>0?`Balance outstanding: ${fmtINR(net)}`:net<0?`Advance in hand: ${fmtINR(-net)}`:`Account settled — Nil`;
+  document.getElementById("receiptArea").innerHTML=`<div class="tpl">
+    ${_tplMast(s)}
+    <div class="tpl-dband"><div class="tpl-dtitle">Statement of Account</div></div>
+    <div class="tpl-body" style="font-size:12.5px">
+      <div class="tpl-cols solo"><div class="tpl-col"><div class="tpl-lbl">Client</div><div class="tpl-bigname">${esc(m.client||"—")}</div>${m.parties?`<div class="tpl-meta"><div>${esc(m.parties)}</div></div>`:""}${(m.caseNo||m.code)?`<div class="tpl-meta"><div>${esc(m.caseNo||m.code)}${m.court?" · "+esc(m.court):""}</div></div>`:""}</div></div>
+      <div class="tpl-meta" style="text-align:right;margin:6px 0 10px">As on ${_tplDate(todayISO())}</div>
+      ${rows.length?`<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#efe9db"><th style="text-align:left;padding:6px 8px">Date</th><th style="text-align:left;padding:6px 8px">Particulars</th><th style="text-align:right;padding:6px 8px">Billed</th><th style="text-align:right;padding:6px 8px">Received</th><th style="text-align:right;padding:6px 8px">Balance</th></tr></thead>
+        <tbody>${bodyRows}</tbody>
+        <tfoot><tr style="font-weight:700;border-top:2px solid #333"><td colspan="2" style="padding:6px 8px">Total</td><td style="padding:6px 8px;text-align:right">${fmtINR(totBilled)}</td><td style="padding:6px 8px;text-align:right">${fmtINR(totRec)}</td><td style="padding:6px 8px;text-align:right">${fmtINR(net)}</td></tr></tfoot></table>
+      <div style="margin-top:16px;text-align:right;font-size:14px;font-weight:700;color:var(--seal)">${closing}</div>`
+      :`<div class="empty" style="padding:20px">No invoices or receipts recorded for this matter yet.</div>`}
+    </div>
+    ${_tplFoot(s)}
+  </div>`;
+  setTimeout(()=>_printAs("Statement "+String(m.code||"").replace(/[\/\\]/g,"-")), 150);
+}
 function _matterFeeStrip(m){
   if(!m) return "";
   const receipts = DB.receipts.filter(r=>r.matterId===m.id && !isVoided(r));
@@ -9304,7 +9337,8 @@ function _matterFeeStrip(m){
     <div class="fs-cell"><span class="fs-k">Billed</span><span class="fs-v">${fmtINR(billed)}</span></div>
     <div class="fs-cell"><span class="fs-k">Received</span><span class="fs-v">${fmtINR(received)}</span></div>
     <div class="fs-cell ${oCls}"><span class="fs-k">Outstanding</span><span class="fs-v">${fmtINR(outstanding)}</span></div>
-  </div>`;
+  </div>
+  <div style="text-align:right;margin:2px 0 10px">${m.contact&&outstanding>0?`<button class="btn ghost sm" onclick="remindFee('${m.id}')" style="margin-right:6px">WhatsApp reminder</button>`:""}<button class="btn ghost sm" onclick="printStatement('${m.id}')">Statement of account ↗</button></div>`;
 }
 /* Finding 2 — post-hearing flow: record what happened AND set the next date
    in one step. Logs a dated hearing entry with the outcome, updates nextDate. */
