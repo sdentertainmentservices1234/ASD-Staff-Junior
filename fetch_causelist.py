@@ -39,16 +39,21 @@ import urllib.request
 DAILY_BASE   = "https://api.sci.gov.in/jonew/cl/{date}/{suffix}.pdf"
 ADVANCE_BASE = "https://api.sci.gov.in/jonew/cl/advance/{date}/{suffix}.pdf"
 
+# Each entry: (suffix, human label, kind, family). "family" groups a list's main/supp/advance
+# variants so "main published" can be tracked PER list-type — the Miscellaneous (court),
+# Regular/Final (court), Registrar, and Curative/Review lists each publish on their own schedule.
 DAILY_LISTS = [
-    ("M_J_1", "Miscellaneous - Main",           "main"),
-    ("M_J_2", "Miscellaneous - Supplementary",  "supp"),
-    ("F_J_1", "Regular / Final - Main",          "main"),
-    ("F_J_2", "Regular / Final - Supplementary", "supp"),
-    ("M_R_1", "Registrar - Main",                "main"),
+    ("M_J_1",  "Miscellaneous - Main",              "main", "MJ"),
+    ("M_J_2",  "Miscellaneous - Supplementary",     "supp", "MJ"),
+    ("F_J_1",  "Regular / Final - Main",            "main", "FJ"),
+    ("F_J_2",  "Regular / Final - Supplementary",   "supp", "FJ"),
+    ("M_R_1",  "Registrar - Main",                  "main", "MR"),
+    ("M_R_2",  "Registrar - Supplementary",         "supp", "MR"),
+    ("M_CC_1", "Curative & Review (circulation)",   "main", "MCC"),
 ]
 ADVANCE_LISTS = [
-    ("M_J", "Miscellaneous - Advance", "advance"),
-    ("F_J", "Regular / Final - Advance", "advance"),
+    ("M_J", "Miscellaneous - Advance",   "advance", "MJ"),
+    ("F_J", "Regular / Final - Advance", "advance", "FJ"),
 ]
 
 WINDOW_DAYS = 8
@@ -123,7 +128,7 @@ TOTAL_RE = re.compile(r"total\s*(?:matters)?\s*[:\-]?\s*([0-9]+)", re.I)
 FRESH_RE = re.compile(r"fresh\s*(?:matters)?\s*[:\-]?\s*([0-9]+)", re.I)
 
 
-def scan_text(text, wl, list_label, list_kind, for_date):
+def scan_text(text, wl, list_label, list_kind, for_date, family=""):
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
 
     name_token_sets = [set(name_tokens(x)) for x in wl["advocate_names"] if name_tokens(x)]
@@ -197,6 +202,7 @@ def scan_text(text, wl, list_label, list_kind, for_date):
                     "for_date": for_date,
                     "list": list_label,
                     "kind": list_kind,
+                    "family": family,
                     "is_supplementary": list_kind == "supp",
                     "court": cur_court,
                     "item": cur_item,
@@ -248,7 +254,7 @@ def upcoming_days(n):
 
 
 def scan_family(base, lists, date_str, wl, day):
-    for suffix, label, kind in lists:
+    for suffix, label, kind, family in lists:
         url = base.format(date=date_str, suffix=suffix)
         data = fetch_pdf(url)
         if not data:
@@ -260,10 +266,11 @@ def scan_family(base, lists, date_str, wl, day):
             day["has_advance"] = True
         if kind == "main":
             day["has_main"] = True
+            day["main_families"].add(family)     # this list-type's main list is now out
         text = pdf_to_text(data)
         if not text.strip():
             continue
-        day["matches"].extend(scan_text(text, wl, label, kind, date_str))
+        day["matches"].extend(scan_text(text, wl, label, kind, date_str, family))
 
 
 def main():
@@ -280,7 +287,8 @@ def main():
 
     by_date = {}
     for date_str in dates:
-        day = {"matches": [], "lists_found": [], "has_supp": False, "has_advance": False, "has_main": False}
+        day = {"matches": [], "lists_found": [], "has_supp": False, "has_advance": False,
+               "has_main": False, "main_families": set()}
         # Scan the DAILY (main + supplementary) lists FIRST so that on de-dup the authoritative
         # daily copy of a matter wins over its advance-list copy.
         scan_family(DAILY_BASE, DAILY_LISTS, date_str, wl, day)
@@ -294,11 +302,13 @@ def main():
             seen.add(k)
             deduped.append(m)
         day["matches"] = deduped
-        # Once the MAIN daily list for a date is published, the advance list is superseded: an
-        # advance-listed matter may not have materialised. Drop advance-only matches so we show
-        # only what's actually in the main/supplementary lists.
-        if day["has_main"]:
-            day["matches"] = [m for m in day["matches"] if m.get("kind") != "advance"]
+        # Once a list-type's MAIN daily list for a date is published, its advance list is
+        # superseded: an advance-listed matter may not have materialised. Drop an advance match
+        # only when ITS OWN family's main list is out — so, e.g., a Regular-list advance matter
+        # isn't dropped just because the Miscellaneous main list happens to be published.
+        mf = day["main_families"]
+        day["matches"] = [m for m in day["matches"]
+                          if not (m.get("kind") == "advance" and m.get("family") in mf)]
         if day["lists_found"] or day["matches"]:
             by_date[date_str] = day
             status = "[main list out — advance dropped]" if day["has_main"] else ("[advance only]" if day["has_advance"] else "")
