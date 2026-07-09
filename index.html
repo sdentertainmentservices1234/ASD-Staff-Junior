@@ -5570,6 +5570,7 @@ function printCauseList(iso, includeMeetings, opts){
       if(num && have.has(num)) return;
       if(num) have.add(num);
       rows.push({ forum:"Supreme Court of India", court:(m.court&&m.court!=="—")?m.court:"", item:m.item||"",
+        family:m.family||"",
         timingMode:"default", courtFrom:"", courtTo:"", specialTime:"",
         __defaultTiming:_courtDefaultTiming("Supreme Court of India").replace(/ (AM|PM)/g,"").replace(" – ","–"),
         coram:m.coram||"", caseNo:info.caseNo||"", diaryNo:info.diaryNo||"",
@@ -5585,12 +5586,19 @@ function printCauseList(iso, includeMeetings, opts){
   const isSC=(f)=>/supreme court/i.test(f||"");
   function _grpKey(r){
     if(isSC(r.forum) || !r.forum){
-      return r.court ? ("SC#"+String(r.court).padStart(4,"0")) : "SC#zzzz";
+      // Registrar (MR) and Curative/Review (MCC) have their own court namespaces, so
+      // segment them out — a Registrar Court 2 must not merge with a Judge's Court 2.
+      // Miscellaneous/Regular (MJ/FJ) and the user's own matters (blank family) all
+      // share the judge-courtroom namespace, so they keep grouping together.
+      const fam=(r.family==="MR"||r.family==="MCC")?r.family:"";
+      return r.court ? ("SC#"+fam+"#"+String(r.court).padStart(4,"0")) : ("SC#"+fam+"#zzzz");
     }
     return "F#"+(r.forum||"");
   }
   function _grpLabel(r){
     if(isSC(r.forum) || !r.forum){
+      if(r.family==="MR") return r.court ? ("Registrar — Court No. "+r.court) : "Registrar";
+      if(r.family==="MCC") return "Curative & Review (circulation)";
       return r.court ? ("CR. No. "+r.court) : "Supreme Court — (court no. to be updated)";
     }
     return r.forum;
