@@ -5275,12 +5275,14 @@ function openCauseList(){
   window.__clGo=(bw)=>{
     const iso=(document.getElementById("clDate")||{}).value||tomorrow;
     const mtg=!!(document.getElementById("clMeetings")||{}).checked;
-    printCauseList(iso, mtg, {bw:bw});
+    const incF=!!(document.getElementById("clIncFetched")||{}).checked;
+    printCauseList(iso, mtg, {bw:bw, includeFetched:incF});
   };
   openModal("Cause list", `
     <label class="fld">Cause list for which day?</label>
     <input class="in" type="date" id="clDate" value="${tomorrow}">
     <label class="checkline" style="margin-top:12px"><input type="checkbox" id="clMeetings" checked> Include Meetings &amp; Conferences below the table</label>
+    <label class="checkline" style="margin-top:8px"><input type="checkbox" id="clIncFetched" checked> Include Supreme Court listings found for this day <span style="color:var(--muted)">(from the auto-fetch — verify before relying)</span></label>
     <div class="hint" style="margin-top:8px">Shows every case with a hearing on the chosen day. Fill each case's cause-list details (court no., coram, timings, sequence) from its <b>Add date</b> screen for the fullest list.</div>
     <div id="clAutoBox" style="border-top:1px solid var(--line);margin:14px 0 4px;padding-top:12px">
       <div class="hint">Checking the Supreme Court's published list for your matters…</div>
@@ -5316,7 +5318,8 @@ function _normCourtUpdates(data){
       item:m.item||"—",
       supp:(m.is_supplementary!==undefined)?!!m.is_supplementary:!!m.supplementary,
       title:m.text || [m.case, [m.petitioner,m.respondent].filter(Boolean).join(" v. ")].filter(Boolean).join(" — "),
-      tot:m.court_total||"", fresh:m.court_fresh||""
+      tot:m.court_total||"", fresh:m.court_fresh||"",
+      conf:m.confidence||"", on:m.matched_on||[]
     }));
     out.days.push({date:d, suppOut, matches});
   });
@@ -5387,6 +5390,7 @@ function _loadCourtUpdates(){
     .then(r=>r.ok?r.json():null)
     .then(raw=>{
       const cu=_normCourtUpdates(raw);
+      window.__cuCache=cu;   // cache for the cause-list print
       if(!raw){ box.style.display="none"; return; }
       if(!cu.days.length){
         box.innerHTML=`<div class="cu-empty">No Supreme Court listings found yet for your matters.<span>Checked ${esc(cu.when)}</span></div>`;
@@ -5447,6 +5451,7 @@ function _fillHomeCourtCard(){
   fetch("court-updates.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
   .then((rawCU)=>{
     const cu=_normCourtUpdates(rawCU);
+    window.__cuCache=cu;   // cache so the cause-list print can fold in these listings
     const iso=todayISO?todayISO():new Date().toISOString().slice(0,10);
     let day=cu.days.find(d=>d.date===iso);
     let sub="Supreme Court";
@@ -5455,11 +5460,15 @@ function _fillHomeCourtCard(){
       if(nxt){ day=nxt; sub="Supreme Court — "+new Date(nxt.date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}); }
     }
     const listRows=(day&&day.matches.length)
-      ? day.matches.slice(0,4).map(m=>`<div class="row">
-          <div class="ct">${(m.court&&m.court!=="—")?`<b>${esc(m.court)}</b>Court`:`<b style="font-size:13px">Ch.</b>Chamber`}</div>
-          <div class="m"><div class="t">${esc(String(m.title||"").replace(/^\s*\d+\s*/,""))}</div>
-          <div class="s">${esc((m.coram||"").replace(/hon'?ble/gi,"").trim())}</div></div>
-          <div class="it">Item<b>${esc(m.item)}</b></div></div>`).join("")
+      ? day.matches.slice(0,4).map(m=>{
+          const info=_parseListing(m.title);                      // strips your own AOR name
+          const cn=info.caseNo||info.diaryNo||"";                 // case / diary number
+          const title=info.party||cn||String(m.title||"").replace(/^\s*\d+\s*/,"");
+          return `<div class="row">
+            <div class="ct">${(m.court&&m.court!=="—")?`<b>${esc(m.court)}</b>Court`:`<b style="font-size:13px">Ch.</b>Chamber`}</div>
+            <div class="m"><div class="t">${esc(title||"—")}</div>${(info.party&&cn)?`<div class="s mono">${esc(cn)}</div>`:""}</div>
+            <div class="it">Item<b>${esc(m.item)}</b></div></div>`;
+        }).join("")
       : "";
     const ordersLink=`<a href="https://www.sci.gov.in/daily-order-case-no/" target="_blank" rel="noopener" class="cu-orderlink">Look up case orders on SC website ↗</a>`;
     if(!listRows){ el.innerHTML=`<div class="cu-embed">${ordersLink}</div>`; return; }
@@ -5497,6 +5506,29 @@ function printCauseList(iso, includeMeetings, opts){
       });
     }
   });
+  // Optionally fold in the auto-fetched Supreme Court listings for this day — matters the
+  // court has listed under your name that aren't entered in the app. Deduped by case/diary
+  // number against your own rows; low-confidence (party-only) matches are skipped; each is
+  // flagged __fetched so the printout marks it as "verify".
+  if(opts.includeFetched && window.__cuCache){
+    const _n=s=>String(s||"").replace(/[^0-9]/g,"");
+    const have=new Set();
+    rows.forEach(r=>{ const n=_n(r.caseNo)||_n(r.diaryNo); if(n) have.add(n); });
+    const fday=(window.__cuCache.days||[]).find(d=>d.date===iso);
+    (fday?fday.matches:[]).forEach(m=>{
+      if(m.conf==="low") return;
+      const info=_parseListing(m.title);
+      const num=_n(info.number)||_n(info.caseNo)||_n(info.diaryNo);
+      if(num && have.has(num)) return;
+      if(num) have.add(num);
+      rows.push({ forum:"Supreme Court of India", court:(m.court&&m.court!=="—")?m.court:"", item:m.item||"",
+        timingMode:"default", courtFrom:"", courtTo:"", specialTime:"",
+        __defaultTiming:_courtDefaultTiming("Supreme Court of India").replace(/ (AM|PM)/g,"").replace(" – ","–"),
+        coram:m.coram||"", caseNo:info.caseNo||"", diaryNo:info.diaryNo||"",
+        title:info.party||String(m.title||"").replace(/^\s*\d+\s*/,""), team:"",
+        mainTotal:"", mainFresh:"", suppTotal:"", suppFresh:"", seqPos:"", __fetched:true });
+    });
+  }
   // Grouping key + label per row.
   // Supreme Court matters group by courtroom ("Court No. 5"); matters before any
   // other forum (High Court, tribunal, arbitration, etc.) group under that forum's
@@ -5580,7 +5612,7 @@ function printCauseList(iso, includeMeetings, opts){
         return `<tr>
           <td class="cl-c-item">${itemDisp}</td>
           <td class="cl-c-num">${numCell}</td>
-          <td class="cl-c-case"><div class="cl-title2">${esc(r.title||"—")}</div>${fixed}${subBits.length?`<div class="cl-subline">${subBits.join('<span class="cl-subdot">·</span>')}</div>`:""}</td>
+          <td class="cl-c-case"><div class="cl-title2">${esc(r.title||"—")}${r.__fetched?` <span style="font-size:8.5px;font-weight:700;letter-spacing:.04em;color:#8c2f39;border:1px solid #d9b3b3;border-radius:4px;padding:0 4px;vertical-align:middle;white-space:nowrap">SC LIST · VERIFY</span>`:""}</div>${fixed}${subBits.length?`<div class="cl-subline">${subBits.join('<span class="cl-subdot">·</span>')}</div>`:""}</td>
           <td class="cl-c-seq">${seqCell}</td>
         </tr>`;
       }).join("");
