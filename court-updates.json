@@ -1,47 +1,16 @@
 {
-  "generated_at": "2026-07-13T17:10:38.171922Z",
+  "generated_at": "2026-07-13T19:03:31.992600Z",
   "window": [
-    "2026-07-13",
     "2026-07-14",
     "2026-07-15",
     "2026-07-16",
     "2026-07-17",
     "2026-07-20",
     "2026-07-21",
-    "2026-07-22"
+    "2026-07-22",
+    "2026-07-23"
   ],
   "by_date": {
-    "2026-07-13": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Registrar - Main",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-07-13",
-          "list": "Registrar - Main",
-          "kind": "main",
-          "family": "MR",
-          "is_supplementary": false,
-          "court": "2",
-          "item": "49",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "49 SLP(C) No. SANJEEV MALHOTRA AND ANR. DESHMUKH ADITH SATISH"
-        }
-      ]
-    },
     "2026-07-14": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -117,6 +86,85 @@
           ],
           "confidence": "medium",
           "text": "URMILA RATTANLAL SUD DESHMUKH ADITH SATISH"
+        }
+      ]
+    },
+    "2026-07-17": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 4,
+      "matches": [
+        {
+          "for_date": "2026-07-17",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1",
+          "coram": "Hon'ble Judge in Chamber.",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "DESHMUKH ADITH SATISH"
+        },
+        {
+          "for_date": "2026-07-17",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "776",
+          "coram": "Hon'ble Judge in Chamber.",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "776 SLP(Crl) No. 6256/2026 NARESH TUDU DESHMUKH ADITH SATISH"
+        },
+        {
+          "for_date": "2026-07-17",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1040",
+          "coram": "Hon'ble Judge in Chamber.",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1040 SLP(C) No. RAJEEVAN M DESHMUKH ADITH SATISH"
+        },
+        {
+          "for_date": "2026-07-17",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "2670",
+          "coram": "Hon'ble Judge in Chamber.",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "MEERA VISHWANATHAN AND ORS. DESHMUKH ADITH SATISH,"
         }
       ]
     },
@@ -287,8 +335,36 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-07-23": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-07-23",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "238",
+          "coram": "HON'BLE COURT",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "238. Connected RUMI SAIKIA DESHMUKH ADITH SATISH"
+        }
+      ]
     }
   },
-  "match_count": 11,
+  "match_count": 15,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
