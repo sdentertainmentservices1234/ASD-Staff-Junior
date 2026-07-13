@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-13T12:50:51.330998Z",
+  "generated_at": "2026-07-13T17:10:38.171922Z",
   "window": [
     "2026-07-13",
     "2026-07-14",
@@ -45,6 +45,7 @@
     "2026-07-14": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Registrar - Main",
         "Registrar - Supplementary",
@@ -62,9 +63,9 @@
           "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "17",
+          "court": "14",
           "item": "150",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR",
+          "coram": "HON'BLE MR. JUSTICE J.B. PARDIWALA AND",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -80,6 +81,7 @@
         "Miscellaneous - Main",
         "Regular / Final - Main",
         "Registrar - Main",
+        "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
@@ -90,6 +92,7 @@
     },
     "2026-07-16": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Registrar - Main",
         "Miscellaneous - Advance"
       ],
@@ -100,99 +103,20 @@
       "matches": [
         {
           "for_date": "2026-07-16",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "198",
-          "coram": "HON'BLE COURT'S ORDER DATED",
+          "court": "6",
+          "item": "21",
+          "coram": "HON'BLE MR. JUSTICE UJJAL BHUYAN",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "URMILA RATTANLAL SUD DESHMUKH ADITH"
-        }
-      ]
-    },
-    "2026-07-17": {
-      "lists_found": [
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": false,
-      "match_count": 4,
-      "matches": [
-        {
-          "for_date": "2026-07-17",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1",
-          "coram": "Hon'ble Judge in Chamber.",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "DESHMUKH ADITH SATISH"
-        },
-        {
-          "for_date": "2026-07-17",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "776",
-          "coram": "Hon'ble Judge in Chamber.",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "776 SLP(Crl) No. 6256/2026 NARESH TUDU DESHMUKH ADITH SATISH"
-        },
-        {
-          "for_date": "2026-07-17",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1040",
-          "coram": "Hon'ble Judge in Chamber.",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1040 SLP(C) No. RAJEEVAN M DESHMUKH ADITH SATISH"
-        },
-        {
-          "for_date": "2026-07-17",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "2670",
-          "coram": "Hon'ble Judge in Chamber.",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "MEERA VISHWANATHAN AND ORS. DESHMUKH ADITH SATISH,"
+          "text": "URMILA RATTANLAL SUD DESHMUKH ADITH SATISH"
         }
       ]
     },
@@ -365,6 +289,6 @@
       "matches": []
     }
   },
-  "match_count": 15,
+  "match_count": 11,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
