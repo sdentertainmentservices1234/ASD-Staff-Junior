@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-13T20:47:20.328422Z",
+  "generated_at": "2026-07-14T04:27:19.862096Z",
   "window": [
     "2026-07-14",
     "2026-07-15",
@@ -32,16 +32,16 @@
           "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "14",
+          "court": "9",
           "item": "150",
-          "coram": "HON'BLE MR. JUSTICE J.B. PARDIWALA AND",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "DESHMUKH ADITH SATISH"
+          "text": "150 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN NARESH KUMAR [P-1]"
         }
       ]
     },
@@ -76,16 +76,16 @@
           "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "6",
+          "court": "17",
           "item": "21",
-          "coram": "HON'BLE MR. JUSTICE UJJAL BHUYAN",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "URMILA RATTANLAL SUD DESHMUKH ADITH SATISH"
+          "text": "21 T.P.(C) No. 302/2026 KAMNA ASHOK SUD SANCHIT GARGA"
         }
       ]
     },
@@ -113,7 +113,7 @@
             "advocate"
           ],
           "confidence": "medium",
-          "text": "DESHMUKH ADITH SATISH"
+          "text": "1 SLP(C) No. TECHNOLOGY EDUCATION SOCIETY (PICTES) AND"
         },
         {
           "for_date": "2026-07-17",
@@ -164,7 +164,7 @@
             "advocate"
           ],
           "confidence": "medium",
-          "text": "MEERA VISHWANATHAN AND ORS. DESHMUKH ADITH SATISH,"
+          "text": "2670 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. BIJAN KUMAR GHOSH"
         }
       ]
     },
@@ -185,7 +185,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "367",
-          "coram": "HON'BLE THE CHIEF JUSTICE",
+          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -202,14 +202,14 @@
           "is_supplementary": false,
           "court": "",
           "item": "1",
-          "coram": "HON'BLE THE CHIEF JUSTICE",
+          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "NATRAJ COMMERCIAL COMPLEX PVT. LTD. AND ANR. DESHMUKH ADITH SATISH"
+          "text": "1 Diary No. 14180-2026"
         },
         {
           "for_date": "2026-07-20",
@@ -219,14 +219,14 @@
           "is_supplementary": false,
           "court": "",
           "item": "1734",
-          "coram": "HON'BLE THE CHIEF JUSTICE",
+          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "MADHAV AND ORS. DESHMUKH ADITH SATISH"
+          "text": "1734 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL KUNAL CHEEMA"
         },
         {
           "for_date": "2026-07-20",
@@ -236,7 +236,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "1772",
-          "coram": "HON'BLE THE CHIEF JUSTICE",
+          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -253,14 +253,14 @@
           "is_supplementary": false,
           "court": "",
           "item": "1965",
-          "coram": "HON'BLE THE CHIEF JUSTICE",
+          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "MEERA VISHWANATHAN AND ORS. DESHMUKH ADITH SATISH,"
+          "text": "1965 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. BIJAN KUMAR GHOSH"
         },
         {
           "for_date": "2026-07-20",
@@ -270,7 +270,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "2382",
-          "coram": "HON'BLE THE CHIEF JUSTICE",
+          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -298,14 +298,14 @@
           "is_supplementary": false,
           "court": "",
           "item": "277",
-          "coram": "HON'BLE MR. JUSTICE VIKRAM",
+          "coram": "HON'BLE MR. JUSTICE SANDEEP",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "RAMANI AND ORS. DESHMUKH ADITH"
+          "text": "277 SLP(C) No. 8029/2026 ANILA M R LAW ASSOCIATES"
         },
         {
           "for_date": "2026-07-21",
@@ -315,14 +315,14 @@
           "is_supplementary": false,
           "court": "",
           "item": "1345",
-          "coram": "HON'BLE MR. JUSTICE VIKRAM",
+          "coram": "HON'BLE MR. JUSTICE SANDEEP",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "MEERA VISHWANATHAN AND ORS. DESHMUKH ADITH SATISH,"
+          "text": "1345 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. BIJAN KUMAR GHOSH"
         }
       ]
     },
@@ -360,7 +360,7 @@
             "advocate"
           ],
           "confidence": "medium",
-          "text": "238. Connected RUMI SAIKIA DESHMUKH ADITH SATISH"
+          "text": "238. Connected DHRUBOJYOTI CHAKRABORTY DESHMUKH ADITH SATISH"
         }
       ]
     }
