@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-14T17:51:57.195655Z",
+  "generated_at": "2026-07-14T18:24:30.755967Z",
   "window": [
     "2026-07-14",
     "2026-07-15",
@@ -81,7 +81,6 @@
     },
     "2026-07-16": {
       "lists_found": [
-        "Miscellaneous - Main",
         "Registrar - Main",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
@@ -93,20 +92,20 @@
       "matches": [
         {
           "for_date": "2026-07-16",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "17",
-          "item": "21",
-          "coram": "",
+          "court": "",
+          "item": "198",
+          "coram": "HON'BLE COURT'S ORDER DATED",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "21 T.P.(C) No. 302/2026 KAMNA ASHOK SUD SANCHIT GARGA"
+          "text": "198 T.P.(C) No. 302/2026 KAMNA ASHOK SUD SANCHIT GARGA"
         }
       ]
     },
