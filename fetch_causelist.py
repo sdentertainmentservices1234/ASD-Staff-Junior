@@ -123,9 +123,29 @@ def name_tokens(name):
     return toks
 
 
-COURT_RE = re.compile(r"court\s*no\.?\s*([0-9]+)", re.I)
+# Court header. The real lists write "COURT NO. : 9" (with a colon) and the
+# Registrar lists write "Registrar Court No. 2" — the old pattern (no colon)
+# matched NEITHER, so the court number was left stale/wrong. Allow an optional
+# colon and any prefix. "CHIEF JUSTICE'S COURT" carries no number → Court 1.
+COURT_RE = re.compile(r"court\s*no\.?\s*:?\s*([0-9]+)", re.I)
+CJ_RE = re.compile(r"chief\s+justice'?s\s+court", re.I)
 TOTAL_RE = re.compile(r"total\s*(?:matters)?\s*[:\-]?\s*([0-9]+)", re.I)
 FRESH_RE = re.compile(r"fresh\s*(?:matters)?\s*[:\-]?\s*([0-9]+)", re.I)
+# A real item line begins with the item number followed by a case-type token, e.g.
+# "150 SLP(C) No. 9386/2023 <parties> <advocate>". We anchor on this so the match's
+# court/item and DISPLAY TEXT come from the item's own line (case no. + parties),
+# not from a wrapped advocate-name continuation line that merely mentions the name.
+ITEM_RE = re.compile(
+    r"^\s*(\d{1,4})[.\)]?\s+(?:SLP|W\.?\s*P|C\.?\s*A|Crl|Cri|Diary|T\.?\s*P|R\.?\s*P|"
+    r"M\.?\s*A|CONMT|SMC|SMW|Cont|Ref|Curative|Review|Comp|Connected)", re.I)
+
+
+def is_bench_note(line):
+    """True for bracketed judge-sitting notes like
+    '[HON'BLE MR. JUSTICE MANMOHAN WILL SIT IN COURT NO.3 AT 2 P.M. ...]'.
+    These mention a court number that must NOT become the running court."""
+    l = line.strip()
+    return l.startswith("[") or "WILL SIT" in line.upper()
 
 
 def scan_text(text, wl, list_label, list_kind, for_date, family=""):
@@ -138,6 +158,7 @@ def scan_text(text, wl, list_label, list_kind, for_date, family=""):
 
     grouped, order = {}, []
     cur_court = cur_coram = cur_total = cur_fresh = cur_item = ""
+    cur_item_text = ""
     cur_key = None
 
     for line in lines:
@@ -147,12 +168,19 @@ def scan_text(text, wl, list_label, list_kind, for_date, family=""):
         # digit tokens on the line, for AOR-code word matching
         digit_tokens = set(re.findall(r"\d+", line))
 
-        cm = COURT_RE.search(line)
-        if cm:
-            cur_court = cm.group(1)
-            cur_coram = ""
-            cur_total = cur_fresh = ""
-        if not cur_coram:
+        # Court header — but never from a bracketed "[... WILL SIT IN COURT NO.N ...]"
+        # bench note, which would otherwise hijack the running court number.
+        if not is_bench_note(line):
+            cm = COURT_RE.search(line)
+            if cm:
+                cur_court = cm.group(1)
+                cur_coram = ""
+                cur_total = cur_fresh = ""
+            elif CJ_RE.search(line):
+                cur_court = "1"          # Chief Justice's Court is Court No. 1
+                cur_coram = ""
+                cur_total = cur_fresh = ""
+        if not cur_coram and not is_bench_note(line):
             cmatch = re.search(r"(hon'?ble.*)", line, re.I)
             if cmatch:
                 cur_coram = re.sub(r"\s+", " ", cmatch.group(1)).strip()[:120]
@@ -163,9 +191,10 @@ def scan_text(text, wl, list_label, list_kind, for_date, family=""):
         if fm:
             cur_fresh = fm.group(1)
 
-        im = re.match(r"^\s*([0-9]{1,4})\b", line)
+        im = ITEM_RE.match(line)
         if im:
             cur_item = im.group(1)
+            cur_item_text = line.strip()   # the case line: item no. + case no. + parties
             cur_key = (list_kind, cur_court, cur_item)
 
         hits = []
@@ -227,8 +256,11 @@ def scan_text(text, wl, list_label, list_kind, for_date, family=""):
                 g["court_total"] = cur_total
             if cur_fresh and not g["court_fresh"]:
                 g["court_fresh"] = cur_fresh
-            if re.match(r"^\s*[0-9]{1,4}\b", line) and not re.match(r"^\s*[0-9]{1,4}\b", g["text"]):
-                g["text"] = line[:300]
+            # Prefer the item's own case line (item no. + case no. + parties) for the
+            # display text. The line that MATCHED is often just a wrapped advocate name
+            # (e.g. "DESHMUKH ADITH SATISH"), which is useless to show.
+            if cur_item_text:
+                g["text"] = cur_item_text[:300]
             elif not g["text"]:
                 g["text"] = line[:300]
 
