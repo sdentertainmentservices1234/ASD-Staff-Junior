@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T13:05:50.546945Z",
+  "generated_at": "2026-07-15T17:59:00.434136Z",
   "window": [
     "2026-07-15",
     "2026-07-16",
@@ -48,6 +48,8 @@
     "2026-07-16": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
+        "Regular / Final - Main",
         "Registrar - Main",
         "Registrar - Supplementary",
         "Curative & Review (circulation)",
@@ -56,26 +58,8 @@
       "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-07-16",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "17",
-          "item": "21",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "21 T.P.(C) No. 302/2026 KAMNA ASHOK SUD SANCHIT GARGA"
-        }
-      ]
+      "match_count": 0,
+      "matches": []
     },
     "2026-07-17": {
       "lists_found": [
@@ -332,6 +316,6 @@
       ]
     }
   },
-  "match_count": 13,
+  "match_count": 12,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
