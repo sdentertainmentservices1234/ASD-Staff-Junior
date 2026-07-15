@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T18:45:55.130385Z",
+  "generated_at": "2026-07-15T18:54:19.669572Z",
   "window": [
     "2026-07-16",
     "2026-07-17",
@@ -54,119 +54,6 @@
           ],
           "confidence": "medium",
           "text": "52 SLP(C) No. GIRIJABAI YASHWANT PATIL UDAYADITYA BANERJEE"
-        }
-      ]
-    },
-    "2026-07-20": {
-      "lists_found": [
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": false,
-      "match_count": 6,
-      "matches": [
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "367",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "367 SLP(C) No. 3574/2026 SANJEEV KUMAR DESHMUKH ADITH SATISH"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1 Diary No. 14180-2026"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1734",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1734 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL KUNAL CHEEMA"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1772",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1772 SLP(Crl) No. 19901/2025 TULESHWAR SINGH GOND AND ANR. DESHMUKH ADITH SATISH"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1965",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1965 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. BIJAN KUMAR GHOSH"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "2382",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "2382 SLP(C) No. 38281/2025 WEST KHANDESH DALIT SHIKSHAN PRASARAK DESHMUKH ADITH SATISH"
         }
       ]
     },
@@ -253,34 +140,6 @@
         }
       ]
     },
-    "2026-07-24": {
-      "lists_found": [
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": false,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-07-24",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1094",
-          "coram": "Hon'ble Court's",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1094 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. BIJAN KUMAR GHOSH"
-        }
-      ]
-    },
     "2026-07-27": {
       "lists_found": [
         "Miscellaneous - Advance"
@@ -292,6 +151,6 @@
       "matches": []
     }
   },
-  "match_count": 11,
+  "match_count": 4,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
