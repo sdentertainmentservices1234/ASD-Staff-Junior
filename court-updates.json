@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T10:31:27.930582Z",
+  "generated_at": "2026-07-15T13:05:50.546945Z",
   "window": [
     "2026-07-15",
     "2026-07-16",
@@ -49,10 +49,11 @@
       "lists_found": [
         "Miscellaneous - Main",
         "Registrar - Main",
+        "Registrar - Supplementary",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
       "match_count": 1,
@@ -79,13 +80,32 @@
     "2026-07-17": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 0,
-      "matches": []
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-07-17",
+          "list": "Registrar - Main",
+          "kind": "main",
+          "family": "MR",
+          "is_supplementary": false,
+          "court": "1",
+          "item": "52",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "52 SLP(C) No. GIRIJABAI YASHWANT PATIL UDAYADITYA BANERJEE"
+        }
+      ]
     },
     "2026-07-20": {
       "lists_found": [
@@ -312,6 +332,6 @@
       ]
     }
   },
-  "match_count": 12,
+  "match_count": 13,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
