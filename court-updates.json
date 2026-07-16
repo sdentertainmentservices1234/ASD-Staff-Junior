@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-16T13:14:37.578525Z",
+  "generated_at": "2026-07-16T17:57:28.095668Z",
   "window": [
     "2026-07-16",
     "2026-07-17",
@@ -13,6 +13,7 @@
   "by_date": {
     "2026-07-16": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Registrar - Main",
@@ -23,30 +24,13 @@
       "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-07-16",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "198",
-          "coram": "HON'BLE COURT'S ORDER DATED",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "198 T.P.(C) No. 302/2026 KAMNA ASHOK SUD SANCHIT GARGA"
-        }
-      ]
+      "match_count": 0,
+      "matches": []
     },
     "2026-07-17": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
         "Registrar - Main",
         "Registrar - Supplementary",
         "Miscellaneous - Advance"
@@ -77,115 +61,48 @@
     },
     "2026-07-20": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 6,
+      "match_count": 2,
       "matches": [
         {
           "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "367",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
+          "court": "13",
+          "item": "52",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "367 SLP(C) No. 3574/2026 SANJEEV KUMAR DESHMUKH ADITH SATISH"
+          "text": "52 SLP(C) No. 3574/2026 SANJEEV KUMAR DESHMUKH ADITH SATISH"
         },
         {
           "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "1",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
+          "court": "16",
+          "item": "5",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "1 Diary No. 14180-2026"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1734",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1734 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL KUNAL CHEEMA"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1772",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1772 SLP(Crl) No. 19901/2025 TULESHWAR SINGH GOND AND ANR. DESHMUKH ADITH SATISH"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "1965",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "1965 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. BIJAN KUMAR GHOSH"
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "2382",
-          "coram": "HON'BLE MR. JUSTICE JOYMALYA BAGCHI ]",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "2382 SLP(C) No. 38281/2025 WEST KHANDESH DALIT SHIKSHAN PRASARAK DESHMUKH ADITH SATISH"
+          "text": "5 SLP(Crl) No. 8841/2026 FAVAS RAHIMT DESHMUKH ADITH SATISH"
         }
       ]
     },
@@ -312,6 +229,6 @@
       "matches": []
     }
   },
-  "match_count": 12,
+  "match_count": 7,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
