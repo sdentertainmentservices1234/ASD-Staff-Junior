@@ -1,32 +1,16 @@
 {
-  "generated_at": "2026-07-16T17:57:28.095668Z",
+  "generated_at": "2026-07-16T18:50:29.821696Z",
   "window": [
-    "2026-07-16",
     "2026-07-17",
     "2026-07-20",
     "2026-07-21",
     "2026-07-22",
     "2026-07-23",
     "2026-07-24",
-    "2026-07-27"
+    "2026-07-27",
+    "2026-07-28"
   ],
   "by_date": {
-    "2026-07-16": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Registrar - Main",
-        "Registrar - Supplementary",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 0,
-      "matches": []
-    },
     "2026-07-17": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -227,8 +211,36 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-07-28": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-07-28",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "421",
+          "coram": "HOn'ble Court's order dated",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "421 SLP(Crl) No. 8841/2026 FAVAS RAHIMT DESHMUKH ADITH SATISH"
+        }
+      ]
     }
   },
-  "match_count": 7,
+  "match_count": 8,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
