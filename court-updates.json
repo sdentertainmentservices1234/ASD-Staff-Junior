@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T20:24:46.279756Z",
+  "generated_at": "2026-07-16T10:41:42.738405Z",
   "window": [
     "2026-07-16",
     "2026-07-17",
@@ -17,7 +17,6 @@
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Registrar - Main",
-        "Registrar - Supplementary",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
@@ -30,10 +29,11 @@
     "2026-07-17": {
       "lists_found": [
         "Miscellaneous - Main",
-        "Registrar - Main"
+        "Registrar - Main",
+        "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
-      "has_advance": false,
+      "has_advance": true,
       "has_main": true,
       "match_count": 1,
       "matches": [
@@ -224,6 +224,34 @@
       "match_count": 0,
       "matches": []
     },
+    "2026-07-23": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-07-23",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "238",
+          "coram": "HON'BLE COURT",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "238. Connected DHRUBOJYOTI CHAKRABORTY DESHMUKH ADITH SATISH"
+        }
+      ]
+    },
     "2026-07-24": {
       "lists_found": [
         "Miscellaneous - Advance"
@@ -263,6 +291,6 @@
       "matches": []
     }
   },
-  "match_count": 10,
+  "match_count": 11,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
