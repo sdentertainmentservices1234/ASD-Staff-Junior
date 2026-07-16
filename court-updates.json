@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-16T10:41:42.738405Z",
+  "generated_at": "2026-07-16T13:14:37.578525Z",
   "window": [
     "2026-07-16",
     "2026-07-17",
@@ -13,26 +13,45 @@
   "by_date": {
     "2026-07-16": {
       "lists_found": [
-        "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Registrar - Main",
+        "Registrar - Supplementary",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
-      "match_count": 0,
-      "matches": []
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-07-16",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "198",
+          "coram": "HON'BLE COURT'S ORDER DATED",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "198 T.P.(C) No. 302/2026 KAMNA ASHOK SUD SANCHIT GARGA"
+        }
+      ]
     },
     "2026-07-17": {
       "lists_found": [
         "Miscellaneous - Main",
         "Registrar - Main",
+        "Registrar - Supplementary",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
       "match_count": 1,
@@ -58,11 +77,12 @@
     },
     "2026-07-20": {
       "lists_found": [
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
+      "has_main": true,
       "match_count": 6,
       "matches": [
         {
@@ -171,11 +191,12 @@
     },
     "2026-07-21": {
       "lists_found": [
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
+      "has_main": true,
       "match_count": 2,
       "matches": [
         {
@@ -291,6 +312,6 @@
       "matches": []
     }
   },
-  "match_count": 11,
+  "match_count": 12,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
