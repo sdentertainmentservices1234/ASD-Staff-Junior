@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-17T12:51:46.703534Z",
+  "generated_at": "2026-07-17T17:48:43.155554Z",
   "window": [
     "2026-07-17",
     "2026-07-20",
@@ -92,7 +92,10 @@
     },
     "2026-07-21": {
       "lists_found": [
+        "Miscellaneous - Main",
+        "Regular / Final - Main",
         "Registrar - Main",
+        "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
@@ -102,37 +105,37 @@
       "matches": [
         {
           "for_date": "2026-07-21",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "277",
-          "coram": "HON'BLE MR. JUSTICE SANDEEP",
+          "court": "7",
+          "item": "49",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "277 SLP(C) No. 8029/2026 ANILA M R LAW ASSOCIATES"
+          "text": "49 SLP(C) No. 8029/2026 ANILA M R LAW ASSOCIATES"
         },
         {
           "for_date": "2026-07-21",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "1345",
-          "coram": "HON'BLE MR. JUSTICE SANDEEP",
+          "court": "8",
+          "item": "127",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "1345 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. BIJAN KUMAR GHOSH"
+          "text": "127 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN NARESH KUMAR [P-1]"
         }
       ]
     },
