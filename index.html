@@ -2435,6 +2435,17 @@ function _matterSuccess(m){
 }
 // Weight a matter's outcome towards the success rate: 1 win, 0.5 partial, 0 loss.
 function _matterScore(m){ const r=_matterSuccess(m); return r==="success"?1:(r==="partial"?0.5:0); }
+// A case counts (win / half-win / loss) only when it has a real allowed/dismissed/
+// partly-allowed result on a moving/opposing side. "Nothing but a concluded remark"
+// (no result), and settled/withdrawn/disposed, are NOT decided — excluded from the score.
+function _isDecided(m){ const r=_matterSuccess(m); return r==="success"||r==="partial"||r==="unfavourable"; }
+// The year a matter was disposed of: explicit concluded-year (historical) else the
+// year of its conclusion date, else its opening year.
+function _disposalYear(m){
+  if(m && m.concludedYear) return String(m.concludedYear).slice(0,4);
+  const d=(m&&(m.concludedAt||m.opened))||"";
+  return d?String(d).slice(0,4):"";
+}
 function typesForForum(forum){
   if(!forum) return GENERIC_TYPES;
   if(forum.startsWith("Supreme Court")) return SC_TYPES;
@@ -3741,13 +3752,14 @@ function openSuccessStats(){
 function renderSuccessStats(){
   const back = isStaffView() ? "staffGo('home')" : "shellGo('more')";
   const s=_successStats();
-  const caseRow=(m)=>{
+  const caseRow=(m, sr)=>{
     const tag=_matterSuccess(m);
     const badge = tag==="success"?`<span class="tag active" style="background:var(--green,#2e7d32);color:#fff">Win</span>`
       : tag==="partial"?`<span class="tag" style="background:var(--brass);color:#fff">½ Win</span>`
       : tag==="unfavourable"?`<span class="tag" style="background:#8c2f39;color:#fff">Lost</span>`
       : `<span class="tag">&mdash;</span>`;
     return `<tr>
+      <td style="text-align:center;color:var(--muted);font-variant-numeric:tabular-nums">${sr}</td>
       <td class="mono"><a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code||"")}</a></td>
       <td><b>${esc(m.parties||m.client||"")}</b>${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
       <td>${esc(m.appearFor||"")||"&mdash;"}</td>
@@ -3755,7 +3767,16 @@ function renderSuccessStats(){
       <td>${badge}</td>
     </tr>`;
   };
-  const scored=s.wins.concat(s.partial, s.losses).sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true}));
+  // Decided cases grouped by DISPOSAL YEAR, each year numbered serially from 1.
+  const scored=s.wins.concat(s.partial, s.losses);
+  const byYear={};
+  scored.forEach(m=>{ const y=_disposalYear(m)||"Year not set"; (byYear[y]=byYear[y]||[]).push(m); });
+  const years=Object.keys(byYear).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));   // oldest first
+  years.forEach(y=>byYear[y].sort((a,b)=>String(a.concludedAt||a.code||"").localeCompare(String(b.concludedAt||b.code||""),undefined,{numeric:true})));
+  const decidedBody=years.map(y=>{
+    const hdr=`<tr><td colspan="6" style="background:var(--seal);color:#f2ead9;font-weight:700;font-size:12px;letter-spacing:.02em;padding:6px 10px">${esc(y)} &middot; ${byYear[y].length} case${byYear[y].length!==1?"s":""}</td></tr>`;
+    return hdr+byYear[y].map((m,i)=>caseRow(m,i+1)).join("");
+  }).join("");
   // colours (status, always paired with a text label so identity is never colour-alone)
   const C_WIN="var(--green,#2e7d32)", C_PART="#b8860b", C_LOSS="#8c2f39", C_TRACK="var(--line2,#eee)";
   const win=s.wins.length, part=s.partial.length, loss=s.losses.length, dec=s.decided;
@@ -3823,8 +3844,8 @@ function renderSuccessStats(){
       ${s.pending.length?`<div class="note" style="margin-top:12px">${s.pending.length} concluded case${s.pending.length!==1?"s are":" is"} missing the side and/or result &mdash; open ${s.pending.length!==1?"them":"it"} and set the two fields to fold ${s.pending.length!==1?"them":"it"} into your score.</div>`:""}
     </div>
     <div class="card">
-      <div class="card-head"><div><h2>Decided cases</h2><div class="hint">${scored.length} scored</div></div></div>
-      ${scored.length?`<div class="tbl-wrap"><table><thead><tr><th>Code</th><th>Cause title</th><th>Appeared for</th><th>Result</th><th>Outcome</th></tr></thead><tbody>${scored.map(caseRow).join("")}</tbody></table></div>`:`<div class="empty" style="padding:14px">No decided cases yet. Mark cases concluded with a side and result to build your success record.</div>`}
+      <div class="card-head"><div><h2>Decided cases</h2><div class="hint">${scored.length} scored &middot; numbered by year of disposal</div></div></div>
+      ${scored.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th style="width:40px;text-align:center">Sr.</th><th>Code</th><th>Cause title</th><th>Appeared for</th><th>Result</th><th>Outcome</th></tr></thead><tbody>${decidedBody}</tbody></table></div>`:`<div class="empty" style="padding:14px">No decided cases yet. Mark cases concluded with a side and result to build your success record.</div>`}
     </div>`;
 }
 function matterLabel(id){
