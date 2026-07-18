@@ -1006,19 +1006,19 @@
   .cu-embed{border-top:1px solid var(--line2);margin-top:10px;padding-top:9px}
   .cu-orderlink{display:inline-block;margin-top:9px;color:var(--seal);font-weight:600;text-decoration:none;font-size:12.5px}
   .cu-orderlink:hover{text-decoration:underline}
-  .cu-sub{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--brass);font-weight:700;margin:0 0 4px}
-  .cu-embed .row{display:flex;gap:10px;align-items:center;padding:6px 0;
+  .cu-sub{font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--brass);font-weight:700;margin:0 0 6px}
+  .cu-embed .row{display:flex;gap:12px;align-items:center;padding:10px 0;
     border-bottom:1px solid var(--line2)}
   .cu-embed .row:last-of-type{border-bottom:0}
-  .cu-embed .ct{min-width:50px;text-align:center;background:var(--seal);color:#f2ead9;
-    border-radius:8px;padding:4px 3px;font-size:9.5px;line-height:1.2}
-  .cu-embed .ct b{display:block;font-size:14px}
+  .cu-embed .ct{min-width:58px;text-align:center;background:var(--seal);color:#f2ead9;
+    border-radius:9px;padding:6px 4px;font-size:10.5px;line-height:1.2}
+  .cu-embed .ct b{display:block;font-size:17px}
   .cu-embed .m{flex:1;min-width:0}
-  .cu-embed .m .t{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cu-embed .m .s{font-size:11.5px;color:var(--muted)}
-  .cu-embed .it{font-size:11px;color:var(--muted);text-align:right;white-space:nowrap}
-  .cu-embed .it b{display:block;font-size:14px;color:var(--ink)}
+  .cu-embed .m .t{font-size:15px;font-weight:600;white-space:normal;line-height:1.32}
+  .cu-embed .m .s{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .cu-embed .it{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+  .cu-embed .it b{display:block;font-size:17px;color:var(--ink)}
   .cu-top{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;color:var(--ink);margin-bottom:8px}
   .cu-top span{font-weight:400;font-size:10.5px;color:var(--muted)}
   .cu-day{margin-bottom:12px}
@@ -5498,18 +5498,20 @@ function _renderHomeCourt(){
   const tentative = (day.hasMain===false && day.matches.length) ? ` <span style="font-size:9.5px;font-weight:700;color:var(--brass);border:1px solid var(--brass);border-radius:4px;padding:0 4px;vertical-align:middle" title="From the advance list — tentative until the main list is published">ADVANCE</span>` : "";
   const sub=`Supreme Court — ${isToday?"Today":esc(dlabel)}${tentative}`;
   const nav=(d,dis)=>`<button onclick="_hcShift(${d})" ${dis?"disabled":""} aria-label="${d<0?"Previous":"Next"} day" style="background:none;border:none;color:${dis?"var(--line)":"var(--seal)"};font-size:22px;line-height:1;cursor:${dis?"default":"pointer"};padding:0 8px;font-family:inherit">${d<0?"‹":"›"}</button>`;
+  const CU_MAX=20;
+  const moreN=Math.max(0, day.matches.length-CU_MAX);
   const listRows=day.matches.length
-    ? day.matches.slice(0,6).map(m=>{
+    ? day.matches.slice(0,CU_MAX).map(m=>{
         const info=_parseListing(m.title);
         const cn=info.caseNo||info.diaryNo||"";
         const title=info.party||cn||String(m.title||"").replace(/^\s*\d+\s*/,"");
         const fb=_forumBadge(m);
         return `<div class="row">
-          <div class="ct"><b${fb.big.length>2?' style="font-size:13px"':''}>${esc(fb.big)}</b>${esc(fb.cap)}</div>
+          <div class="ct"><b${fb.big.length>2?' style="font-size:14px"':''}>${esc(fb.big)}</b>${esc(fb.cap)}</div>
           <div class="m"><div class="t">${esc(title||"—")}</div>${(info.party&&cn)?`<div class="s mono">${esc(cn)}</div>`:""}</div>
           <div class="it">Item<b>${esc(m.item)}</b></div></div>`;
-      }).join("")
-    : `<div style="font-size:12px;color:var(--muted);padding:9px 2px">None of your matters listed on this day.</div>`;
+      }).join("") + (moreN? `<div style="font-size:12px;color:var(--muted);padding:9px 2px 2px">+ ${moreN} more — open the full cause list</div>`:"")
+    : `<div style="font-size:13px;color:var(--muted);padding:11px 2px">None of your matters listed on this day.</div>`;
   el.innerHTML=`<div class="cu-embed">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px">
       ${nav(-1, idx<=0)}
@@ -13992,22 +13994,6 @@ function renderHome(){
       ? `<b>${weekCount}</b> hearing${weekCount===1?"":"s"} this week`
       : `No hearings this week`;
 
-  // today strip counts (live)
-  const openTasks=(typeof _openTodos==="function")? _openTodos().length : 0;
-  const hh=new Date().getHours();
-  const greet=hh<12?"Good morning":hh<17?"Good afternoon":"Good evening";
-  const firstName=((DB.settings.advName||"").replace(/^(adv\.?|dr\.?|mr\.?|mrs\.?|ms\.?)\s+/i,"").split(/\s+/)[0])||"Counsel";
-  const dateStr=new Date().toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"});
-
-  const todayStrip=`<div class="today">
-    <div class="greet"><div class="g">${greet}, <span class="serif">${esc(firstName)}</span></div><div class="tdate">${dateStr}</div></div>
-    <div class="tstats">
-      <button class="tstat ${overdueCount?"hot":""}" onclick="showCounter('hearings')"><div class="num">${weekCount}</div><div class="lbl">Hearings this week</div></button>
-      <button class="tstat ${openTasks?"warn":""}" onclick="showCounter('tasks')"><div class="num">${openTasks}</div><div class="lbl">Tasks pending</div></button>
-      <button class="tstat" onclick="showCounter('matters')"><div class="num">${active.length}</div><div class="lbl">Active matters</div></button>
-    </div>
-  </div>`;
-
   const createGrid=`<div class="grp-h">Create</div>
     <div class="appgrid a3">
       <button class="app" onclick="addMatter()"><span class="ic">${HOME_ICONS.newmatter}</span><span class="t">New matter</span></button>
@@ -14025,7 +14011,6 @@ function renderHome(){
     </div>`;
 
   home.innerHTML=`
-    ${todayStrip}
     ${_needsAttentionHTML()}
     ${todayWidgetHTML()}
     ${duplicateWarningHTML()}
@@ -14937,20 +14922,6 @@ function renderStaffHome(){
   const weekCount = buckets.today.length+buckets.tomorrow.length+buckets.week.length;
   const openTasks=(typeof _openTodos==="function")? _openTodos().length : 0;
 
-  const hh=new Date().getHours();
-  const greet=hh<12?"Good morning":hh<17?"Good afternoon":"Good evening";
-  const firstName=((name||"").replace(/^(adv\.?|dr\.?|mr\.?|mrs\.?|ms\.?)\s+/i,"").split(/\s+/)[0])||"there";
-  const dateStr=new Date().toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"});
-
-  const todayStrip=`<div class="today">
-    <div class="greet"><div class="g">${greet}, <span class="serif">${esc(firstName)}</span> <button class="row-act" onclick="staffEditMyName()" style="font-size:11px;font-weight:600">${prof.name?"edit":"set name"}</button></div><div class="tdate">${dateStr}</div></div>
-    <div class="tstats">
-      <button class="tstat ${buckets.overdue.length?"hot":""}" onclick="showCounter('hearings')"><div class="num">${weekCount}</div><div class="lbl">Hearings this week</div></button>
-      <button class="tstat ${openTasks?"warn":""}" onclick="showCounter('tasks')"><div class="num">${openTasks}</div><div class="lbl">Tasks pending</div></button>
-      <button class="tstat" onclick="showCounter('matters')"><div class="num">${activeAll.length}</div><div class="lbl">Active matters</div></button>
-    </div>
-  </div>`;
-
   const createGrid=`<div class="grp-h">Create</div>
     <div class="appgrid">
       <button class="app" onclick="addMatter()"><span class="ic">${HOME_ICONS.newmatter}</span><span class="t">New matter</span></button>
@@ -14967,7 +14938,6 @@ function renderStaffHome(){
     </div>`;
 
   home.innerHTML=`
-    ${todayStrip}
     ${todayWidgetHTML()}
     ${createGrid}
     ${openGrid}

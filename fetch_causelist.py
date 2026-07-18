@@ -107,6 +107,46 @@ def pdf_to_text(data):
     return text
 
 
+# In every SC cause-list template the advocate/counsel column begins at a fixed
+# x0 (~426pt on the 595pt-wide page); parties sit to its left (x0 185-390). We keep
+# the FULL line for matching (we find our matters BY the counsel name) but build a
+# "left" version with the counsel column dropped, so the displayed cause title shows
+# parties only — never the AoR / opposing counsel name appended to it.
+ADV_COL_X = 410
+
+
+def pdf_to_lines(data):
+    """Return visual lines as dicts {"full", "left"}. "left" drops the counsel column.
+    Falls back to plain whole-text lines (full == left) if word geometry is unavailable."""
+    lines = []
+    try:
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(data)) as pdf:
+            for page in pdf.pages:
+                # group words into visual lines by their top-y (small tolerance for jitter)
+                groups = []
+                for w in sorted(page.extract_words(), key=lambda w: w["top"]):
+                    if groups and abs(w["top"] - groups[-1][0]) <= 3:
+                        groups[-1][1].append(w)
+                    else:
+                        groups.append((w["top"], [w]))
+                for _top, ws in groups:
+                    ws = sorted(ws, key=lambda w: w["x0"])
+                    full = " ".join(w["text"] for w in ws).strip()
+                    left = " ".join(w["text"] for w in ws if w["x0"] < ADV_COL_X).strip()
+                    if full:
+                        lines.append({"full": full, "left": left or full})
+        if lines:
+            return lines
+    except Exception:
+        pass
+    for ln in pdf_to_text(data).splitlines():
+        ln = ln.strip()
+        if ln:
+            lines.append({"full": ln, "left": ln})
+    return lines
+
+
 def norm(s):
     s = (s or "").lower().replace(".", " ").replace(",", " ")
     return re.sub(r"\s+", " ", s).strip()
@@ -148,8 +188,11 @@ def is_bench_note(line):
     return l.startswith("[") or "WILL SIT" in line.upper()
 
 
-def scan_text(text, wl, list_label, list_kind, for_date, family=""):
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
+    # lines: list of {"full", "left"} dicts from pdf_to_lines(). We MATCH on "full"
+    # (counsel names included) but take the display text from the item's "left"
+    # (counsel column dropped). A plain list of strings is also accepted (full==left).
+    lines = [({"full": ln, "left": ln} if isinstance(ln, str) else ln) for ln in lines]
 
     name_token_sets = [set(name_tokens(x)) for x in wl["advocate_names"] if name_tokens(x)]
     party_token_sets = [set(name_tokens(x)) for x in wl["parties"] if name_tokens(x)]
@@ -161,7 +204,9 @@ def scan_text(text, wl, list_label, list_kind, for_date, family=""):
     cur_item_text = ""
     cur_key = None
 
-    for line in lines:
+    for _rec in lines:
+        line = _rec["full"]
+        left = _rec["left"]
         ln = norm(line)
         line_tokens = set(ln.split())
         lnum = norm_num(line)
@@ -194,7 +239,9 @@ def scan_text(text, wl, list_label, list_kind, for_date, family=""):
         im = ITEM_RE.match(line)
         if im:
             cur_item = im.group(1)
-            cur_item_text = line.strip()   # the case line: item no. + case no. + parties
+            # Use the "left" (counsel column dropped) form: item no. + case no. + PARTIES,
+            # without the trailing advocate name that would otherwise pollute the title.
+            cur_item_text = left.strip()
             cur_key = (list_kind, cur_court, cur_item)
 
         hits = []
@@ -299,10 +346,10 @@ def scan_family(base, lists, date_str, wl, day):
         if kind == "main":
             day["has_main"] = True
             day["main_families"].add(family)     # this list-type's main list is now out
-        text = pdf_to_text(data)
-        if not text.strip():
+        page_lines = pdf_to_lines(data)
+        if not page_lines:
             continue
-        day["matches"].extend(scan_text(text, wl, label, kind, date_str, family))
+        day["matches"].extend(scan_text(page_lines, wl, label, kind, date_str, family))
 
 
 def main():
