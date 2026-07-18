@@ -5511,6 +5511,38 @@ function _hcShift(delta){
   window.__hcDay=days[i]; _renderHomeCourt();
 }
 function _hcToday(){ const iso=todayISO?todayISO():new Date().toISOString().slice(0,10); const days=(window.__cuCache&&window.__cuCache.days||[]).map(d=>d.date); window.__hcDay = days.indexOf(iso)>=0 ? iso : null; _renderHomeCourt(); }
+// Plain-text version of the day shown on the home cause-list card, for sharing
+// (WhatsApp to the clerk/juniors, email, etc.).
+function _hcShareText(){
+  const cu=window.__cuCache, sel=window.__hcDay;
+  const day=cu&&(cu.days||[]).find(d=>d.date===sel);
+  if(!day||!day.matches.length) return "";
+  const dlabel=new Date(sel+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const adv=(day.hasMain===false)?" (advance list — tentative)":"";
+  const lines=day.matches.map(m=>{
+    const info=_parseListing(m.title);
+    const cn=info.caseNo||info.diaryNo||"";
+    const title=info.party||cn||String(m.title||"").replace(/^\s*\d+[.\)]?\s*/,"");
+    const fb=_forumBadge(m);
+    const where=fb.big==="Ch."?"Judge in Chamber"
+      :(fb.big.indexOf("R-")===0?"Registrar Court "+fb.big.slice(2)
+      :(fb.big==="Circ."?"Circulation":(fb.big==="Regr."?"Registrar":"Court "+fb.big)));
+    return "• "+where+" · Item "+m.item+"\n   "+title+(cn&&info.party?"\n   "+cn:"");
+  });
+  const who=(DB.settings&&DB.settings.advName)?"\n\n— "+DB.settings.advName:"";
+  return "Supreme Court listings — "+dlabel+adv+"\n\n"+lines.join("\n")+who;
+}
+function _hcShare(){
+  const text=_hcShareText();
+  if(!text){ toast("No listings to share for this day."); return; }
+  if(navigator.share){
+    navigator.share({text:text}).catch(()=>{});
+  }else if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast("List copied — paste it into WhatsApp or an email.")).catch(()=>toast("Could not copy the list.",true));
+  }else{
+    toast("Sharing isn't supported in this browser.",true);
+  }
+}
 // Forum badge for a fetched SC listing. The court NUMBER alone is ambiguous:
 // "2" can be Judge's Court 2, Registrar Court 2, etc. Use the list family to
 // label it correctly — Registrar → "R-2", Curative/Review circulation → "Circ.".
@@ -5571,7 +5603,10 @@ function _renderHomeCourt(){
       ${nav(1, idx>=days.length-1)}
     </div>
     ${listRows}
-    ${ordersLink}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      ${ordersLink}
+      ${day.matches.length?`<button onclick="_hcShare()" class="cu-orderlink" style="background:none;border:none;cursor:pointer;font-family:inherit;padding:0;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg>Share this list</button>`:""}
+    </div>
   </div>`;
 }
 // Format a "HH:MM" time as a friendly 12-hour string, e.g. "14:00" -> "2:00 PM".
