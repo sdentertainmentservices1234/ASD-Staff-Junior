@@ -258,8 +258,10 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
             cur_key = (list_kind, cur_court, cur_item)
             # Start the cause title from the item line ("left" = item no + case no +
             # petitioner). Following party-column lines (petitioner cont., Versus,
-            # respondent) are appended until a terminator line.
-            item_titles[cur_key] = left.strip()
+            # respondent) are appended until a terminator line. Connected sub-matters
+            # read "238. Connected <party>" — drop the "Connected" marker from the title.
+            item_titles[cur_key] = re.sub(
+                r"^(\s*\d{1,4})[.\)]?\s+Connected\b\s*", r"\1 ", left.strip(), flags=re.I)
             accumulating = True
         elif cur_key and accumulating:
             if VERSUS_RE.match(line):

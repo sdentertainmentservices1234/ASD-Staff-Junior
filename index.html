@@ -1016,6 +1016,11 @@
   .cu-embed .ct{min-width:58px;text-align:center;background:var(--seal);color:#f2ead9;
     border-radius:9px;padding:6px 4px;font-size:10.5px;line-height:1.2}
   .cu-embed .ct b{display:block;font-size:17px}
+  /* Court + Item badges sit side by side, before the cause title */
+  .cu-embed .cbadges{display:flex;gap:6px;flex:0 0 auto;align-items:stretch}
+  .cu-embed .ct.itm{background:var(--seal-soft,#f3e7e7);color:var(--seal);min-width:46px}
+  .cu-embed .ct.itm b{color:var(--seal)}
+  .cu-embed .cu-adv{color:var(--brass);font-weight:600}
   .cu-embed .m{flex:1;min-width:0}
   .cu-embed .m .t{font-size:15px;font-weight:600;white-space:normal;line-height:1.32}
   .cu-embed .m .s{font-size:12.5px;color:var(--muted);margin-top:2px}
@@ -5377,7 +5382,8 @@ function _advNameTokens(){
 // Best-effort parse of a listing line into {number, caseNo, diaryNo, party}.
 function _parseListing(rawText){
   let raw=String(rawText||"").trim();
-  raw=raw.replace(/^\s*\d{1,4}\s+/,"");   // drop a leading item number
+  raw=raw.replace(/^\s*\d{1,4}[.\)]?\s+/,"");   // drop a leading item number ("127" or "127.")
+  raw=raw.replace(/^connected\s+/i,"");          // drop the "Connected" sub-matter marker
   let diaryNo="",caseNo="",number="";
   const dm=raw.match(/Diary\s*No\.?\s*(\d+[\/\-]\d{4})/i);
   if(dm){ diaryNo=dm[1].replace("-","/"); number=diaryNo; }
@@ -5542,12 +5548,20 @@ function _renderHomeCourt(){
     ? day.matches.slice(0,CU_MAX).map(m=>{
         const info=_parseListing(m.title);
         const cn=info.caseNo||info.diaryNo||"";
-        const title=info.party||cn||String(m.title||"").replace(/^\s*\d+\s*/,"");
+        const title=info.party||cn||String(m.title||"").replace(/^\s*\d+[.\)]?\s*/,"");
         const fb=_forumBadge(m);
+        // Referring advocate: if this listing matches one of your matters and that
+        // matter has a referring advocate on file (set from the Cause-list dialog).
+        let adv=""; try{ const mt=_listingMatch(info); if(mt&&mt.refAdv) adv=mt.refAdv; }catch(e){}
         return `<div class="row">
-          <div class="ct"><b${fb.big.length>2?' style="font-size:14px"':''}>${esc(fb.big)}</b>${esc(fb.cap)}</div>
-          <div class="m"><div class="t">${esc(title||"—")}</div>${(info.party&&cn)?`<div class="s mono">${esc(cn)}</div>`:""}</div>
-          <div class="it">Item<b>${esc(m.item)}</b></div></div>`;
+          <div class="cbadges">
+            <div class="ct"><b${fb.big.length>2?' style="font-size:14px"':''}>${esc(fb.big)}</b>${esc(fb.cap)}</div>
+            <div class="ct itm"><b>${esc(m.item)}</b>Item</div>
+          </div>
+          <div class="m"><div class="t">${esc(title||"—")}</div>
+            ${(info.party&&cn)?`<div class="s mono">${esc(cn)}</div>`:""}
+            ${adv?`<div class="s cu-adv">${/^(adv|mr|ms|mrs|dr)[s.]?\s/i.test(adv)?"":"Adv. "}${esc(adv)}</div>`:""}
+          </div></div>`;
       }).join("") + (moreN? `<div style="font-size:12px;color:var(--muted);padding:9px 2px 2px">+ ${moreN} more — open the full cause list</div>`:"")
     : `<div style="font-size:13px;color:var(--muted);padding:11px 2px">None of your matters listed on this day.</div>`;
   el.innerHTML=`<div class="cu-embed">
@@ -5716,7 +5730,7 @@ function printCauseList(iso, includeMeetings, opts){
         <th class="cl-c-item">Court / Item</th>
         <th class="cl-c-num">Diary / Case No.</th>
         <th class="cl-c-case">Cause Title</th>
-        <th class="cl-c-seq cl-c-adv">Referring Advocate</th>
+        <th class="cl-c-seq cl-c-adv">Advocate</th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>`;
