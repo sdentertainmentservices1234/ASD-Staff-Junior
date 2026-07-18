@@ -107,17 +107,20 @@ def pdf_to_text(data):
     return text
 
 
-# In every SC cause-list template the advocate/counsel column begins at a fixed
-# x0 (~426pt on the 595pt-wide page); parties sit to its left (x0 185-390). We keep
-# the FULL line for matching (we find our matters BY the counsel name) but build a
-# "left" version with the counsel column dropped, so the displayed cause title shows
-# parties only — never the AoR / opposing counsel name appended to it.
-ADV_COL_X = 410
+# SC cause-list template columns (595pt-wide page):
+#   item-no  x0~43 | case-no  x0 68-160 | PARTIES  x0 185-390 | counsel  x0 426+
+# We keep the FULL line for matching (we find our matters BY the counsel name), a
+# "left" version with the counsel column dropped (item no + case no + petitioner),
+# and a "party" version that is the PARTY COLUMN ONLY (drops both the left case/category
+# roman-numeral column and the counsel column) so respondent continuation lines yield
+# clean party text with no stray category codes.
+ADV_COL_X = 410      # counsel column starts here; drop x0 >= this from titles
+PARTY_MIN_X = 170    # party column starts ~185; below this is item-no/case-no/category
 
 
 def pdf_to_lines(data):
-    """Return visual lines as dicts {"full", "left"}. "left" drops the counsel column.
-    Falls back to plain whole-text lines (full == left) if word geometry is unavailable."""
+    """Return visual lines as dicts {"full", "left", "party"}. Falls back to plain
+    whole-text lines (full == left == party) if word geometry is unavailable."""
     lines = []
     try:
         import pdfplumber
@@ -134,8 +137,10 @@ def pdf_to_lines(data):
                     ws = sorted(ws, key=lambda w: w["x0"])
                     full = " ".join(w["text"] for w in ws).strip()
                     left = " ".join(w["text"] for w in ws if w["x0"] < ADV_COL_X).strip()
+                    party = " ".join(w["text"] for w in ws
+                                     if PARTY_MIN_X <= w["x0"] < ADV_COL_X).strip()
                     if full:
-                        lines.append({"full": full, "left": left or full})
+                        lines.append({"full": full, "left": left or full, "party": party})
         if lines:
             return lines
     except Exception:
@@ -143,7 +148,7 @@ def pdf_to_lines(data):
     for ln in pdf_to_text(data).splitlines():
         ln = ln.strip()
         if ln:
-            lines.append({"full": ln, "left": ln})
+            lines.append({"full": ln, "left": ln, "party": ln})
     return lines
 
 
@@ -178,6 +183,13 @@ FRESH_RE = re.compile(r"fresh\s*(?:matters)?\s*[:\-]?\s*([0-9]+)", re.I)
 ITEM_RE = re.compile(
     r"^\s*(\d{1,4})[.\)]?\s+(?:SLP|W\.?\s*P|C\.?\s*A|Crl|Cri|Diary|T\.?\s*P|R\.?\s*P|"
     r"M\.?\s*A|CONMT|SMC|SMW|Cont|Ref|Curative|Review|Comp|Connected)", re.I)
+# Lines that END the parties block of an item (applications, notes, the next item, etc.).
+# Everything from the item line up to (but not including) one of these — with the party
+# column of each line — forms the cause title "PETITIONER Versus RESPONDENT".
+TERM_RE = re.compile(
+    r"^\s*(?:IA\s*No|I\.A\.|\{|\[|O\.T\.|FOR\b|WITH\b|LIST|TO\s+BE|Mention|"
+    r"APPLICATION|ORDER\b|Diary\s*No\.?\s*-)", re.I)
+VERSUS_RE = re.compile(r"^\s*versus\s*$", re.I)
 
 
 def is_bench_note(line):
@@ -192,7 +204,7 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
     # lines: list of {"full", "left"} dicts from pdf_to_lines(). We MATCH on "full"
     # (counsel names included) but take the display text from the item's "left"
     # (counsel column dropped). A plain list of strings is also accepted (full==left).
-    lines = [({"full": ln, "left": ln} if isinstance(ln, str) else ln) for ln in lines]
+    lines = [({"full": ln, "left": ln, "party": ln} if isinstance(ln, str) else ln) for ln in lines]
 
     name_token_sets = [set(name_tokens(x)) for x in wl["advocate_names"] if name_tokens(x)]
     party_token_sets = [set(name_tokens(x)) for x in wl["parties"] if name_tokens(x)]
@@ -201,12 +213,16 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
 
     grouped, order = {}, []
     cur_court = cur_coram = cur_total = cur_fresh = cur_item = ""
-    cur_item_text = ""
     cur_key = None
+    # Cause title accumulated per item key: item line + petitioner continuation +
+    # "Versus" + respondent, taken from the PARTY column so counsel never leaks in.
+    item_titles = {}
+    accumulating = False
 
     for _rec in lines:
         line = _rec["full"]
         left = _rec["left"]
+        party = _rec.get("party", left)
         ln = norm(line)
         line_tokens = set(ln.split())
         lnum = norm_num(line)
@@ -239,10 +255,21 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
         im = ITEM_RE.match(line)
         if im:
             cur_item = im.group(1)
-            # Use the "left" (counsel column dropped) form: item no. + case no. + PARTIES,
-            # without the trailing advocate name that would otherwise pollute the title.
-            cur_item_text = left.strip()
             cur_key = (list_kind, cur_court, cur_item)
+            # Start the cause title from the item line ("left" = item no + case no +
+            # petitioner). Following party-column lines (petitioner cont., Versus,
+            # respondent) are appended until a terminator line.
+            item_titles[cur_key] = left.strip()
+            accumulating = True
+        elif cur_key and accumulating:
+            if VERSUS_RE.match(line):
+                item_titles[cur_key] += " Versus "
+            elif TERM_RE.match(line):
+                accumulating = False
+            elif party:
+                item_titles[cur_key] = (item_titles[cur_key] + " " + party).strip()
+                if len(item_titles[cur_key]) > 180:
+                    accumulating = False
 
         hits = []
         # advocate name: ALL significant tokens of a watchlist name present on the line
@@ -303,18 +330,19 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
                 g["court_total"] = cur_total
             if cur_fresh and not g["court_fresh"]:
                 g["court_fresh"] = cur_fresh
-            # Prefer the item's own case line (item no. + case no. + parties) for the
-            # display text. The line that MATCHED is often just a wrapped advocate name
-            # (e.g. "DESHMUKH ADITH SATISH"), which is useless to show.
-            if cur_item_text:
-                g["text"] = cur_item_text[:300]
-            elif not g["text"]:
+            # Fallback text = the matched line; the accumulated cause title (item no. +
+            # case no. + PETITIONER Versus RESPONDENT) is applied after the loop, once it
+            # has finished accumulating past the "Versus"/respondent lines.
+            if not g["text"]:
                 g["text"] = line[:300]
 
     out = []
     for key in order:
         g = grouped[key]
         g["matched_on"] = sorted(g["matched_on"])
+        title = item_titles.get(key)
+        if title:
+            g["text"] = re.sub(r"\s+", " ", title).strip()[:300]
         out.append(g)
     return out
 

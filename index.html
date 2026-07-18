@@ -5354,8 +5354,10 @@ function _parseListing(rawText){
   if(dm) party=party.replace(dm[0]," ");
   const adv=_advNameTokens();
   party=party.split(/\s+/).filter(w=>{ const lw=w.toLowerCase().replace(/[^a-z]/g,""); return lw&&adv.indexOf(lw)<0; }).join(" ");
-  party=party.replace(/\b(versus|vs|v)\b/ig," ").replace(/\band ors\.?\b|\banr\.?\b/ig," ").replace(/\s+/g," ").trim();
-  if(party.length>60) party=party.slice(0,60).trim();
+  // Keep the full cause title: "PETITIONER vs RESPONDENT". Normalise the "Versus"
+  // separator to "vs" but preserve it (the fetcher now supplies both parties).
+  party=party.replace(/\bversus\b/ig,"vs").replace(/\s+/g," ").trim();
+  if(party.length>140) party=party.slice(0,140).trim()+"…";
   return {number,caseNo,diaryNo,party};
 }
 // Does this listing's number match a matter already in the app?
