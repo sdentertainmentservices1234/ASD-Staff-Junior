@@ -3593,7 +3593,7 @@ function renderClients(){
     <div class="card">
       <div class="card-head"><div><h2>Clients register</h2><div class="hint">${clients.length} client${clients.length!==1?"s":""}. Tap an ID or name for their full history — returning clients keep the same ID.</div></div>
         <button class="btn ghost sm" onclick="openRefAdvocates()">Referring advocates ›</button></div>
-      ${clients.length?`<div class="tbl-wrap"><table><thead><tr><th>ID</th><th>Client</th><th style="text-align:center">Matters</th><th style="text-align:center">Notices</th>${staff?"":`<th style="text-align:right">Outstanding</th>`}</tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:16px">No clients yet. They appear here automatically as you add matters.</div>`}
+      ${clients.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>ID</th><th>Client</th><th style="text-align:center">Matters</th><th style="text-align:center">Notices</th>${staff?"":`<th style="text-align:right">Outstanding</th>`}</tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:16px">No clients yet. They appear here automatically as you add matters.</div>`}
     </div>`;
 }
 function openClientDetail(encKey){
@@ -3639,10 +3639,10 @@ function openClientDetail(encKey){
     </div>
     <div class="card">
       <div class="card-head"><div><h2>Matters</h2></div></div>
-      ${c.matters.length?`<div class="tbl-wrap"><table><thead><tr><th>Code</th><th>Cause title</th><th>Next</th><th>Status</th></tr></thead><tbody>${matterRows}</tbody></table></div>`:`<div class="empty" style="padding:12px">No matters.</div>`}
+      ${c.matters.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Code</th><th>Cause title</th><th>Next</th><th>Status</th></tr></thead><tbody>${matterRows}</tbody></table></div>`:`<div class="empty" style="padding:12px">No matters.</div>`}
     </div>
     ${c.notices.length?`<div class="card"><div class="card-head"><div><h2>Legal notices</h2></div></div>
-      <div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Date</th><th>To</th><th></th></tr></thead><tbody>${noticeRows}</tbody></table></div></div>`:""}`;
+      <div class="tbl-wrap"><table class="sr-num"><thead><tr><th>No.</th><th>Date</th><th>To</th><th></th></tr></thead><tbody>${noticeRows}</tbody></table></div></div>`:""}`;
   window.scrollTo({top:0,behavior:"smooth"});
 }
 /* ===== Referring advocates register — who sends you work, with full history ===== */
@@ -3663,7 +3663,8 @@ function _buildRefAdvs(){
     if(!map[key].addr) map[key].addr=(e&&e.addr)||m.refAddress||"";
     map[key].matters.push(m);
   });
-  return Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  // Arrange by who referred the MOST cases (descending), then by name.
+  return Object.values(map).sort((a,b)=> b.matters.length-a.matters.length || a.name.localeCompare(b.name));
 }
 function openRefAdvocates(){
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
@@ -3696,7 +3697,7 @@ function renderRefAdvocates(){
     <div class="card">
       <div class="card-head"><div><h2>Referring advocates register</h2><div class="hint">${advs.length} advocate${advs.length!==1?"s":""} who have referred work. Tap an ID or name for every matter they sent &mdash; repeat referrers keep the same ID.</div></div>
         <button class="btn ghost sm" onclick="openClients()">Clients &rsaquo;</button></div>
-      ${advs.length?`<div class="tbl-wrap"><table><thead><tr><th>ID</th><th>Advocate</th><th>Contact</th><th style="text-align:center">Matters</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:16px">No referring advocates yet. Fill the "Referring advocate" section when adding a matter and they appear here automatically.</div>`}
+      ${advs.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>ID</th><th>Advocate</th><th>Contact</th><th style="text-align:center">Cases referred</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:16px">No referring advocates yet. Fill the "Referred by" section when adding a matter and they appear here automatically.</div>`}
     </div>`;
 }
 function openRefAdvDetail(encKey){
@@ -3728,7 +3729,7 @@ function openRefAdvDetail(encKey){
     </div>
     <div class="card">
       <div class="card-head"><div><h2>Matters referred</h2><div class="hint">Newest first &mdash; includes past (concluded) cases.</div></div></div>
-      ${a.matters.length?`<div class="tbl-wrap"><table><thead><tr><th>Code</th><th>Cause title</th><th>Client</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:12px">No matters.</div>`}
+      ${a.matters.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Code</th><th>Cause title</th><th>Client</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:12px">No matters.</div>`}
     </div>`;
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -3854,7 +3855,7 @@ function renderSuccessStats(){
     </div>
     <div class="card">
       <div class="card-head"><div><h2>Decided cases</h2><div class="hint">${scored.length} scored &middot; numbered by year of disposal</div></div></div>
-      ${scored.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th style="width:40px;text-align:center">Sr.</th><th>Code</th><th>Cause title</th><th>Appeared for</th><th>Result</th><th>Outcome</th></tr></thead><tbody>${decidedBody}</tbody></table></div>`:`<div class="empty" style="padding:14px">No decided cases yet. Mark cases concluded with a side and result to build your success record.</div>`}
+      ${scored.length?`<div class="tbl-wrap"><table><thead><tr><th style="width:40px;text-align:center">Sr.</th><th>Code</th><th>Cause title</th><th>Appeared for</th><th>Result</th><th>Outcome</th></tr></thead><tbody>${decidedBody}</tbody></table></div>`:`<div class="empty" style="padding:14px">No decided cases yet. Mark cases concluded with a side and result to build your success record.</div>`}
     </div>`;
 }
 function matterLabel(id){
