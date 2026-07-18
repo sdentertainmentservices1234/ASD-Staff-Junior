@@ -2420,17 +2420,21 @@ const RESULT_OPTIONS = [
   "Settled / Compromised","Withdrawn","Abated","Other"
 ];
 // Outcome of a matter relative to the side we appeared for.
-// Returns "success" | "unfavourable" | "neutral" | null (concluded but no result / not concluded).
+// "success" (full win) | "partial" (half win) | "unfavourable" | "neutral" |
+// null (concluded but no result / not concluded).
 function _matterSuccess(m){
   if(!m || isVoided(m) || m.status!=="Concluded") return null;
   const side=_partySide(m.appearFor);
   if(side==="neutral") return "neutral";
   const res=m.result||"";
   if(!res) return null;
-  if(res==="Allowed" || res==="Partly allowed") return side==="moving"?"success":"unfavourable";
+  if(res==="Partly allowed") return "partial";                       // half win for either side
+  if(res==="Allowed") return side==="moving"?"success":"unfavourable";
   if(res==="Dismissed") return side==="opposing"?"success":"unfavourable";
   return "neutral";   // disposed / settled / withdrawn / abated / other
 }
+// Weight a matter's outcome towards the success rate: 1 win, 0.5 partial, 0 loss.
+function _matterScore(m){ const r=_matterSuccess(m); return r==="success"?1:(r==="partial"?0.5:0); }
 function typesForForum(forum){
   if(!forum) return GENERIC_TYPES;
   if(forum.startsWith("Supreme Court")) return SC_TYPES;
@@ -3530,7 +3534,7 @@ function _buildClients(){
     const c=add(gk, disp, n.clientId); if(!c) return;
     c.notices.push(n);
   });
-  return Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  return Object.values(map).sort((a,b)=>String(_regCode(a.id)||"~"+a.name).localeCompare(String(_regCode(b.id)||"~"+b.name),undefined,{numeric:true}));
 }
 function openClients(){
   if(isStaffView()){ _shellTab="clients"; }
@@ -3588,11 +3592,11 @@ function openClientDetail(encKey){
       <div class="fs-cell"><span class="fs-k">Received</span><span class="fs-v">${fmtINR(c.received)}</span></div>
       <div class="fs-cell ${out>0?"fs-due":"fs-clear"}"><span class="fs-k">Outstanding</span><span class="fs-v">${fmtINR(out)}</span></div>
     </div>` : "";
-  const matterRows=c.matters.sort((a,b)=>(b.opened||"").localeCompare(a.opened||"")).map(m=>{
+  const matterRows=c.matters.slice().sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true})).map(m=>{
     const next=m.nextDate?fmtDate(m.nextDate):"\u2014";
     return `<tr>
       <td class="mono"><a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code||"")}</a></td>
-      <td><b>${esc(m.parties||m.client||"")}</b>${m.caseNo?`<div class="hint">${esc(m.caseNo)}</div>`:""}</td>
+      <td><b>${esc(m.parties||m.client||"")}</b>${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
       <td>${next}</td>
       <td><span class="tag ${m.status==="Concluded"?"":"active"}">${esc(m.status||"Active")}</span></td>
     </tr>`;
@@ -3638,7 +3642,7 @@ function _buildRefAdvs(){
     }
     map[key].matters.push(m);
   });
-  return Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  return Object.values(map).sort((a,b)=>String(_regCode(a.id)||"~"+a.name).localeCompare(String(_regCode(b.id)||"~"+b.name),undefined,{numeric:true}));
 }
 function openRefAdvocates(){
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
@@ -3685,9 +3689,9 @@ function openRefAdvDetail(encKey){
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
   panel.classList.add("active");
   if(!a){ panel.innerHTML=`<div class="subnav"><button class="subnav-back" onclick="openRefAdvocates()">&lsaquo;</button></div><div class="empty">Advocate not found.</div>`; return; }
-  const rows=a.matters.slice().sort((x,y)=>(y.opened||"").localeCompare(x.opened||"")).map(m=>`<tr>
+  const rows=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true})).map(m=>`<tr>
       <td class="mono"><a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code||"")}</a></td>
-      <td><b>${esc(m.parties||m.client||"")}</b>${m.caseNo?`<div class="hint">${esc(m.caseNo)}</div>`:""}</td>
+      <td><b>${esc(m.parties||m.client||"")}</b>${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
       <td>${esc(m.client||"")||"&mdash;"}</td>
       <td><span class="tag ${m.status==="Concluded"?"":"active"}">${esc(m.status||"Active")}</span>${m.historical&&m.concludedYear?`<div class="hint">${esc(m.concludedYear)}</div>`:""}</td>
     </tr>`).join("");
@@ -3710,16 +3714,19 @@ function openRefAdvDetail(encKey){
 /* ===== Success record \u2014 wins scored from side-appeared-for + result ===== */
 function _successStats(){
   const concluded=(DB.matters||[]).filter(m=>!isVoided(m) && m.status==="Concluded");
-  const s={total:concluded.length, wins:[], losses:[], neutral:[], pending:[], moving:{w:0,l:0}, opposing:{w:0,l:0}};
+  const s={total:concluded.length, wins:[], partial:[], losses:[], neutral:[], pending:[], moving:{w:0,l:0}, opposing:{w:0,l:0}};
   concluded.forEach(m=>{
     const r=_matterSuccess(m), sd=_partySide(m.appearFor);
     if(r==="success"){ s.wins.push(m); if(sd==="moving")s.moving.w++; else if(sd==="opposing")s.opposing.w++; }
+    else if(r==="partial"){ s.partial.push(m); }
     else if(r==="unfavourable"){ s.losses.push(m); if(sd==="moving")s.moving.l++; else if(sd==="opposing")s.opposing.l++; }
     else if(r==="neutral"){ s.neutral.push(m); }
     else s.pending.push(m);
   });
-  s.decided=s.wins.length+s.losses.length;
-  s.rate = s.decided ? Math.round(s.wins.length/s.decided*100) : 0;
+  // Decided = wins + partial + losses; a partial counts as half a win towards the rate.
+  s.decided=s.wins.length+s.partial.length+s.losses.length;
+  const weighted=s.wins.length + 0.5*s.partial.length;
+  s.rate = s.decided ? Math.round(weighted/s.decided*100) : 0;
   return s;
 }
 function openSuccessStats(){
@@ -3736,28 +3743,30 @@ function renderSuccessStats(){
   const caseRow=(m)=>{
     const tag=_matterSuccess(m);
     const badge = tag==="success"?`<span class="tag active" style="background:var(--green,#2e7d32);color:#fff">Win</span>`
+      : tag==="partial"?`<span class="tag" style="background:var(--brass);color:#fff">½ Win</span>`
       : tag==="unfavourable"?`<span class="tag" style="background:#8c2f39;color:#fff">Lost</span>`
       : `<span class="tag">&mdash;</span>`;
     return `<tr>
       <td class="mono"><a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code||"")}</a></td>
-      <td><b>${esc(m.parties||m.client||"")}</b>${m.caseNo?`<div class="hint">${esc(m.caseNo)}</div>`:""}</td>
+      <td><b>${esc(m.parties||m.client||"")}</b>${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
       <td>${esc(m.appearFor||"")||"&mdash;"}</td>
       <td>${esc(m.result||"")||"&mdash;"}</td>
       <td>${badge}</td>
     </tr>`;
   };
-  const scored=s.wins.concat(s.losses).sort((a,b)=>(b.concludedAt||b.opened||"").localeCompare(a.concludedAt||a.opened||""));
+  const scored=s.wins.concat(s.partial, s.losses).sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true}));
   const stat=(k,v,cls)=>`<div class="stat ${cls||""}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
   document.getElementById("panel-success").innerHTML=`
     <div class="subnav"><button class="subnav-back" onclick="${back}">&lsaquo;</button><span style="align-self:center;font-weight:600;color:var(--seal)">Success record</span></div>
     <div class="card">
-      <div class="card-head"><div><h2>Success record</h2><div class="hint">Wins scored from the side you appeared for and the recorded result. Only <b>decided</b> cases (allowed/dismissed) count towards the rate.</div></div></div>
+      <div class="card-head"><div><h2>Success record</h2><div class="hint">Wins scored from the side you appeared for and the recorded result. Only <b>decided</b> cases (allowed / dismissed / partly allowed) count towards the rate; a <b>partly allowed</b> matter counts as half a win.</div></div></div>
       <div class="stats" style="margin-top:6px">
         ${stat("Success rate", s.rate+"%", "green")}
         ${stat("Wins", s.wins.length, "green")}
         ${stat("Unfavourable", s.losses.length)}
       </div>
       <div class="tpl-dl" style="margin-top:12px">
+        <div class="row"><span class="k">Partly allowed (½ win each)</span><b>${s.partial.length}</b></div>
         <div class="row"><span class="k">Decided cases (scored)</span><b>${s.decided}</b></div>
         <div class="row"><span class="k">As Petitioner/Appellant side</span><b>${s.moving.w} won &middot; ${s.moving.l} lost</b></div>
         <div class="row"><span class="k">As Respondent side</span><b>${s.opposing.w} won &middot; ${s.opposing.l} lost</b></div>
@@ -9287,7 +9296,8 @@ function numToWords(n){
    =========================================================== */
 function matterFormHTML(m, mode){
   m = m||{};
-  const past = mode==="past";      // Past-cases entry: same form, PC- code, fixed Concluded
+  const past = mode==="past";      // Past-cases entry/edit: same form, PC- code, fixed Concluded
+  const concluded = past || m.status==="Concluded" || m.historical;   // show outcome fields
   const isNew = !m.id;
   const kind = past ? "case" : (m.kind || "case");
   const codeVal = m.code || (past?peekNextPastCode():(kind==="query"?peekNextQueryCode():peekNextMatterCode()));
@@ -9366,8 +9376,7 @@ function matterFormHTML(m, mode){
         <select class="in" id="mfAppearFor">
           <option value="">— Select the party we represent —</option>
           ${PARTY_ROLES.map(r=>`<option ${m.appearFor===r?"selected":""}>${esc(r)}</option>`).join("")}
-        </select>
-        <div class="hint" style="margin-top:4px">Used to score wins: a Petitioner/Appellant succeeds when the matter is <b>allowed</b>; a Respondent when it is <b>dismissed</b>.</div></div>
+        </select></div>
       <div class="grid g2" style="margin-top:10px" id="mfNumsRow">
         <div><label class="fld">Diary No. <span style="color:var(--muted);font-weight:400">(optional)</span></label>
           <input class="in mono" id="mfDiary" value="${esc(m.diaryNo||"")}" placeholder="12345/2026"></div>
@@ -9377,7 +9386,7 @@ function matterFormHTML(m, mode){
       </div>
       <div style="margin-top:10px"><label class="fld">Notes</label>
         <textarea class="in" id="mfNotes" placeholder="Retainer terms, fee agreed, etc.">${esc(m.notes||"")}</textarea></div>
-      ${past?`<div class="grid g2" style="margin-top:10px">
+      ${concluded?`<div class="grid g2" style="margin-top:10px">
         <div><label class="fld">Result</label>
           <select class="in" id="pcResult">
             <option value="">— Select result —</option>
@@ -9390,7 +9399,7 @@ function matterFormHTML(m, mode){
     ${m.originQuery?`<div class="note">Originally query <b>${esc(m.originQuery)}</b>, converted to a case.</div>`:""}
     <div class="btn-row" style="margin-top:16px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn seal" onclick="${past?"doAddPastCase()":`saveMatter('${m.id||""}')`}">${past?"Add to register":(m.id?"Update":"Save")}</button>
+      <button class="btn seal" onclick="${past?`doSavePastCase('${m.id||""}')`:`saveMatter('${m.id||""}')`}">${past?(m.id?"Update":"Add to register"):(m.id?"Update":"Save")}</button>
     </div>`;
 }
 function setMatterKind(k){
@@ -9451,7 +9460,12 @@ function _dupCheck(field, val, selfId){
   }
 }
 function addMatter(){ openModal("New matter", matterFormHTML()); setTimeout(()=>_attachClientAutofill("mfClient",{addr:"mfAddress",phone:"mfContact",email:"mfEmail"}),60); }
-function editMatter(id){ const m=matterById(id); openModal("Edit matter", matterFormHTML(m)); }
+function editMatter(id){
+  const m=matterById(id); if(!m) return;
+  if(m.historical){ openModal("Edit past case", matterFormHTML(m,"past")); }
+  else { openModal("Edit matter", matterFormHTML(m)); }
+  setTimeout(()=>_attachClientAutofill("mfClient",{addr:"mfAddress",phone:"mfContact",email:"mfEmail"}),60);
+}
 /* Finding 13 — conflict of interest.
    Splits the cause title on "v." / "vs" to find the opposing party, then
    checks whether that party name matches any existing client of the chamber
@@ -9540,6 +9554,9 @@ function saveMatter(id){
     notes: document.getElementById("mfNotes").value.trim(),
     status: document.getElementById("mfStatus").value
   };
+  // Outcome fields are shown for concluded cases — persist them when present.
+  if(document.getElementById("pcResult")) data.result = document.getElementById("pcResult").value;
+  if(document.getElementById("pcNote")) data.concludedNote = document.getElementById("pcNote").value.trim();
   // Finding 12 — resolve/create the canonical client id for this name.
   try{ data.clientId=_resolveClientId(data.client, {addr:data.address, phone:data.contact, email:data.email}); }catch(e){}
   // Same for the referring advocate (cleared if the name was removed on edit).
@@ -10103,7 +10120,7 @@ function renderMatterDetail(){
         ${m.court?`<div class="row"><span class="k" style="min-width:96px">Court</span><b>${esc(m.court)}</b></div>`:""}
         ${m.matterType?`<div class="row"><span class="k" style="min-width:96px">Type</span><b>${esc(m.matterType)}</b></div>`:""}
         ${m.appearFor?`<div class="row"><span class="k" style="min-width:96px">We appear for</span><b>${esc(m.appearFor)}</b></div>`:""}
-        <div class="row"><span class="k" style="min-width:96px">Status</span><b>${esc(m.status||"Active")}</b>${(m.status==="Concluded"&&m.result)?` <span class="tag ${_matterSuccess(m)==="success"?"active":""}" style="${_matterSuccess(m)==="success"?"background:var(--green,#2e7d32);color:#fff":(_matterSuccess(m)==="unfavourable"?"background:#8c2f39;color:#fff":"")}">${esc(m.result)}${_matterSuccess(m)==="success"?" · Win":(_matterSuccess(m)==="unfavourable"?" · Lost":"")}</span>`:""}</div>
+        <div class="row"><span class="k" style="min-width:96px">Status</span><b>${esc(m.status||"Active")}</b>${(m.status==="Concluded"&&m.result)?(function(){const r=_matterSuccess(m);const bg=r==="success"?"background:var(--green,#2e7d32);color:#fff":(r==="partial"?"background:var(--brass);color:#fff":(r==="unfavourable"?"background:#8c2f39;color:#fff":""));const sfx=r==="success"?" · Win":(r==="partial"?" · ½ Win":(r==="unfavourable"?" · Lost":""));return ` <span class="tag ${r==="success"?"active":""}" style="${bg}">${esc(m.result)}${sfx}</span>`;})():""}</div>
       </div>
       ${m.status!=="Concluded"?`<div class="btn-row" style="margin-top:12px"><button class="btn seal sm" onclick="markConcluded('${m.id}')">Mark concluded</button></div>`:`<div class="note" style="margin-top:10px">This case is concluded and appears in the Past cases register.</div>`}
     </div>
@@ -11425,13 +11442,13 @@ function addPastCase(){
     + matterFormHTML({status:"Concluded"}, "past"));
   setTimeout(()=>_attachClientAutofill("mfClient",{addr:"mfAddress",phone:"mfContact",email:"mfEmail"}),60);
 }
-function doAddPastCase(){
-  const g=id=>((document.getElementById(id)||{}).value||"").trim();
+// Add (id="") or UPDATE (id set) a past-cases entry from the shared past-mode form.
+function doSavePastCase(id){
+  const g=idv=>((document.getElementById(idv)||{}).value||"").trim();
   const client=g("mfClient");
   if(!client && !g("mfParties")){ toast("Enter client or parties.", true); return; }
   const year=g("pcYear");
-  const rec=_auditStamp({ id:uid(), code:nextPastCode(), kind:"case", historical:true,
-    opened: year?year+"-01-01":todayISO(),
+  const data={
     client:client, contact:g("mfContact"), email:g("mfEmail"), address:g("mfAddress"),
     refName:g("mfRefName"), refContact:g("mfRefContact"), refEmail:g("mfRefEmail"),
     refAddress:g("mfRefAddress"), invoiceReferrer:!!(document.getElementById("mfInvoiceRef")||{}).checked,
@@ -11439,11 +11456,18 @@ function doAddPastCase(){
     matterType:(function(){ const v=g("mfType"); return v==="__custom__"?g("mfCustomType"):v; })(),
     court:g("mfCourt"), appearFor:g("mfAppearFor"),
     diaryNo:g("mfDiary"), caseNo:g("mfCase"), notes:g("mfNotes"),
-    status:"Concluded", result:g("pcResult"), concludedNote:g("pcNote"), concludedYear:year, dates:[] }, true);
+    status:"Concluded", result:g("pcResult"), concludedNote:g("pcNote"),
+    concludedYear:year, opened: year?year+"-01-01":todayISO()
+  };
+  let rec;
+  if(id){ rec=matterById(id); if(!rec){ toast("Case not found.",true); return; } Object.assign(rec,data); _auditStamp(rec,false); }
+  else { rec=_auditStamp(Object.assign({id:uid(), code:nextPastCode(), kind:"case", historical:true, dates:[]}, data), true); DB.matters.push(rec); }
   if(client){ try{ rec.clientId=_resolveClientId(client,{addr:rec.address,phone:rec.contact,email:rec.email}); }catch(e){} }
   if(rec.refName){ try{ rec.refAdvId=_resolveRefAdvId(rec.refName,{phone:rec.refContact,email:rec.refEmail,addr:rec.refAddress}); }catch(e){} }
-  DB.matters.push(rec); save(); closeModal(); renderPastCases(isStaffView()); toast("Added to Past cases register.");
+  save(); closeModal(); renderPastCases(isStaffView()); toast(id?"Past case updated.":"Added to Past cases register.");
 }
+// Backwards-compatible alias (older buttons/paths may still call it).
+function doAddPastCase(){ doSavePastCase(""); }
 function openPastCases(){
   if(isStaffView()){
     _shellTab="pastcases"; renderStaffBotNav&&renderStaffBotNav();
@@ -11458,19 +11482,22 @@ function openPastCases(){
 function renderPastCases(staffBack){
   const panel=document.getElementById("panel-pastcases");
   const concluded=DB.matters.filter(m=>m.status==="Concluded" && !isVoided(m));
-  const fromActive=concluded.filter(m=>!m.historical).sort((a,b)=>(b.concludedAt||"").localeCompare(a.concludedAt||""));
-  const historical=concluded.filter(m=>m.historical).sort((a,b)=>(b.code||"").localeCompare(a.code||""));
+  const byCode=(a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true});
+  const fromActive=concluded.filter(m=>!m.historical).sort(byCode);
+  const historical=concluded.filter(m=>m.historical).sort(byCode);
   const staff=isStaffView();
   const backBar = staff ? `<div class="subnav"><button class="subnav-back" onclick="staffGo('matters')">‹</button><span style="align-self:center;font-weight:600;color:var(--seal)">Past cases</span></div>` : "";
   const row=(m)=>{
     const codeCell=`<a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code||"\u2014")}</a>`;
     const title=m.parties||m.client||"\u2014";
+    const numCell = m.caseNo ? esc(m.caseNo) : (m.diaryNo ? "Diary "+esc(m.diaryNo) : "\u2014");
+    const outCell = [m.result, m.concludedNote].filter(Boolean).map(esc).join(" \u2014 ") || "\u2014";
     return `<tr>
       <td class="mono">${codeCell}</td>
       <td><b>${esc(title)}</b></td>
-      <td>${esc(m.caseNo||"\u2014")}</td>
+      <td>${numCell}</td>
       <td>${esc(m.court||"\u2014")}</td>
-      <td>${esc(m.concludedNote||"\u2014")}</td>
+      <td>${outCell}</td>
       <td style="white-space:nowrap">${!staff?`<button class="row-act" onclick="reopenCase('${m.id}')">Reopen</button><button class="row-act" onclick="deleteMatterPrompt('${m.id}','past')" title="Delete this entry" style="color:var(--seal)">Delete</button>`:""}</td>
     </tr>`;
   };
@@ -11877,7 +11904,7 @@ function doEditAdvanceEntry(id){
 }
 
 function renderMatters(){
-  const rows = DB.matters.filter(m=>m.status!=="Concluded").sort((a,b)=>(b.opened||"").localeCompare(a.opened||"")).map(m=>{
+  const rows = DB.matters.filter(m=>m.status!=="Concluded").sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true})).map(m=>{
     const cancelled = isVoided(m);
     const st = cancelled?"":(m.status==="Closed"?"closed":(m.status==="Active"?"active":""));
     const statusTag = cancelled
@@ -11886,10 +11913,11 @@ function renderMatters(){
     const codeCell = cancelled ? `<span style="text-decoration:line-through;color:var(--muted)">${esc(m.code)}</span>` : `<a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code)}</a>`;
     const title = m.parties || m.client || "\u2014";
     const nextCell = m.nextDate ? fmtDate(m.nextDate) : "\u2014";
+    const numCell = m.caseNo ? esc(m.caseNo) : (m.diaryNo ? "Diary "+esc(m.diaryNo) : "\u2014");
     return `<tr>
       <td class="mono">${codeCell}</td>
       <td><b>${esc(title)}</b></td>
-      <td>${esc(m.caseNo||"\u2014")}</td>
+      <td>${numCell}</td>
       <td>${nextCell}</td>
       <td>${statusTag}</td>
       <td style="white-space:nowrap">
@@ -13904,7 +13932,7 @@ try{ window.DB = DB; window.go = go; window.addMatter = addMatter; window.saveMa
   window.issueReceipt = issueReceipt; window.addExpense = addExpense; window.saveExpense = saveExpense;
   window.grossReceiptsFY = grossReceiptsFY; window.presumptive = presumptive; window.netActual = netActual;
   window.numToWords = numToWords; window.exportData = exportData; window.save = save;
-  window.renderAll = renderAll; window.todayISO = todayISO; window.onForumChange = onForumChange; window.typesForForum = typesForForum; window.FORUMS = FORUMS; window.onExpenseHeadChange = onExpenseHeadChange; window.onProofPicked = onProofPicked; window.viewProof = viewProof; window.removeProof = removeProof; window.addExpense = addExpense; window.saveExpense = saveExpense; window.EXPENSE_HEADS = EXPENSE_HEADS; window.attachLater = attachLater; window.saveLateProof = saveLateProof; window.peekNextVoucherNo = peekNextVoucherNo; window.peekNextNoticeNo = peekNextNoticeNo; window.openNoticeRegister = openNoticeRegister; window.openNoticeAssistant = openNoticeAssistant; window._naPick = _naPick; window._naCompose = _naCompose; window._draftNoticeBody = _draftNoticeBody; window._noticeBodyLayout = _noticeBodyLayout; window._renderNoticeRegister = _renderNoticeRegister; window._reprintNotice = _reprintNotice; window._delNotice = _delNotice; window._editNotice = _editNotice; window._afterHearing=_afterHearing; window._ahSave=_ahSave; window._ahToggleNext=_ahToggleNext; window._limCalc=_limCalc; window._limCompute=_limCompute; window._limRemind=_limRemind; window._matterFeeStrip=_matterFeeStrip; window._upcomingItems=_upcomingItems; window.openClients=openClients; window.renderClients=renderClients; window.openClientDetail=openClientDetail; window._buildClients=_buildClients; window.openRefAdvocates=openRefAdvocates; window.renderRefAdvocates=renderRefAdvocates; window.openRefAdvDetail=openRefAdvDetail; window._buildRefAdvs=_buildRefAdvs; window._resolveRefAdvId=_resolveRefAdvId; window._backfillRefRegistry=_backfillRefRegistry; window._regCode=_regCode; window.openSuccessStats=openSuccessStats; window.renderSuccessStats=renderSuccessStats; window._matterSuccess=_matterSuccess; window.PARTY_ROLES=PARTY_ROLES; window.RESULT_OPTIONS=RESULT_OPTIONS; window._needsAttentionHTML=_needsAttentionHTML; window._reviewMatter=_reviewMatter; window._reviewDate=_reviewDate; window._checkConflict=_checkConflict; window._showConflictWarning=_showConflictWarning; window._partyTokens=_partyTokens; window.saveMatter=saveMatter; window._resolveClientId=_resolveClientId; window._backfillClientRegistry=_backfillClientRegistry; window._mergeClients=_mergeClients; window._clientGroupKey=_clientGroupKey; window._showNoticeConflict=_showNoticeConflict; window._fillSnapList=_fillSnapList; window.restoreSnapshot=restoreSnapshot; window._dataIntegrityIssues=_dataIntegrityIssues; window.requestNotifyPermission=requestNotifyPermission; window._fireDueNotifications=_fireDueNotifications; window._notifyEnabled=_notifyEnabled; window.nextNoticeNo = nextNoticeNo; window.openLegalNotice = openLegalNotice; window.printLegalNotice = printLegalNotice; window._lnGo = _lnGo; window.nextVoucherNo = nextVoucherNo; window.idbGet = idbGet; window.idbPut = idbPut; window.exportData = exportData; window.importData = importData; window.nextReceiptNo = nextReceiptNo; window.peekNextReceiptNo = peekNextReceiptNo; window.onMDocsPicked=onMDocsPicked; window.addMDoc=addMDoc; window.saveMDoc=saveMDoc; window.viewDoc=viewDoc; window.assignDoc=assignDoc; window.saveAssign=saveAssign; window.delMDoc=delMDoc; window.renderDocIn=renderDocIn; window.renderDocFiled=renderDocFiled; window.renderDocFolders=renderDocFolders; window.setDocSearch=setDocSearch; window.toggleDocFolder=toggleDocFolder; window.docRowHTML=docRowHTML; window.convertToCase=convertToCase; window.doConvertToCase=doConvertToCase; window.setMatterKind=setMatterKind; window.nextQueryCode=nextQueryCode; window.peekNextQueryCode=peekNextQueryCode; window.onMdMatterChange=onMdMatterChange; window.onAdMatterChange=onAdMatterChange; window.matterFolderTitle=matterFolderTitle; window.addBankRow=addBankRow; window.removeBankRow=removeBankRow; window.bankListHTML=bankListHTML; window.collectBanksFromDOM=collectBanksFromDOM; window.defaultBank=defaultBank; window.bankById=bankById; window.banksList=banksList; window.addUpiRow=addUpiRow; window.removeUpiRow=removeUpiRow; window.upiListHTML=upiListHTML; window.collectUpisFromDOM=collectUpisFromDOM; window.defaultUpi=defaultUpi; window.upiById=upiById; window.upisList=upisList; window.openSetSection=openSetSection; window.setSectionBack=setSectionBack; window.thisMonthReceipts=thisMonthReceipts; window.cloudLogout=cloudLogout; window.doCloudLogout=doCloudLogout; window._startIdleTimer=_startIdleTimer; window._stopIdleTimer=_stopIdleTimer; window._resetIdleTimer=_resetIdleTimer; window.idleTimeoutMin=idleTimeoutMin; window.toggleDesktopView=toggleDesktopView; window.applyViewPref=applyViewPref; window.isDesktopView=isDesktopView; window.logActivity=logActivity; window.openActivity=openActivity; window.renderActivity=renderActivity; window.unreadActivityCount=unreadActivityCount; window._refreshActivityBadge=_refreshActivityBadge; window._markActivitySeen=_markActivitySeen; window.renderAccess=renderAccess; window.addAccessEmail=addAccessEmail; window.removeAccessEmail=removeAccessEmail; window.doRemoveAccessEmail=doRemoveAccessEmail; window.setAccessListActive=setAccessListActive; window.setAccessLocked=setAccessLocked; window.loadAccess=loadAccess; window.saveAccess=saveAccess; window.wipeAll=wipeAll; window.doWipe=doWipe; window.showCounter=showCounter; window._wipeCheck=_wipeCheck; window._saveLoginBranding=_saveLoginBranding; window.delInvoice=delInvoice; window.doDelInvoice=doDelInvoice; window.voidInvoice=voidInvoice; window.doVoidInvoice=doVoidInvoice; window.doDeleteMatter=doDeleteMatter; window.deleteMatterPrompt=deleteMatterPrompt; window.doDeleteMatterFrom=doDeleteMatterFrom; window.cancelMatter=cancelMatter; window.doCancelMatter=doCancelMatter; window.delReceipt=delReceipt; window.doDelReceipt=doDelReceipt; window.voidReceiptPrompt=voidReceiptPrompt; window.doVoidReceipt=doVoidReceipt; window.editReceipt=editReceipt; window.doEditReceipt=doEditReceipt; window._edRcPreview=_edRcPreview; window.softDelete=softDelete; window.voidRecord=voidRecord; window.isVoided=isVoided; window.openBilling=openBilling; window.renderInvoiceLedger=renderInvoiceLedger; window.renderBooksOverview=renderBooksOverview; window.billedFY=billedFY; window.outstandingFY=outstandingFY; window.monthlyFeesFY=monthlyFeesFY; window.taxComparison=taxComparison; window.openRetainer=openRetainer; window._rtPreview=_rtPreview; window._retainerReceipt=_retainerReceipt; window._retainerInvoice=_retainerInvoice; window._rcMatterChange=_rcMatterChange; window._rcSetKind=_rcSetKind; window._ivMatterChange=_ivMatterChange; window._ivSetKind=_ivSetKind; window.invoiceTotal=invoiceTotal; window.fyInvoices=fyInvoices; window.renderAdvances=renderAdvances; window.doAcceptAdvance=doAcceptAdvance; window.doRejectAdvance=doRejectAdvance; window.doRejectAdvance2=doRejectAdvance2; window.ownerGiveAdvance=ownerGiveAdvance; window.doOwnerGiveAdvance=doOwnerGiveAdvance; window.ownerRecordReturn=ownerRecordReturn; window.doOwnerRecordReturn=doOwnerRecordReturn; window.acceptAdvance=acceptAdvance; window.rejectAdvance=rejectAdvance; window.addAdvanceEntry=addAdvanceEntry; window.allPending=allPending; window.staffBalance=staffBalance; window.pendingBalanceImpact=pendingBalanceImpact; window.staffGo=staffGo; window.renderStaffHome=renderStaffHome; window.renderStaffRecord=renderStaffRecord; window.renderStaffUpload=renderStaffUpload; window.staffSubmitExpense=staffSubmitExpense; window.staffRecordReturn=staffRecordReturn; window.staffSubmitReturn=staffSubmitReturn; window.staffSubmitDoc=staffSubmitDoc; window.approveStaff=approveStaff; window.blockStaff=blockStaff; window.pushStaffBalance=pushStaffBalance; window.pushBrandingToAllStaff=pushBrandingToAllStaff; window._applyStaffBranding=_applyStaffBranding; window.staffRecTab=staffRecTab; window.staffSubmitAdvance=staffSubmitAdvance; window.renderStaffBilling=renderStaffBilling; window.staffMyBillTab=staffMyBillTab; window.staffEditBillProfile=staffEditBillProfile; window.staffSaveBillProfile=staffSaveBillProfile; window.staffMakeReceipt=staffMakeReceipt; window.staffPrintMyReceipt=staffPrintMyReceipt; window.staffMakeInvoice=staffMakeInvoice; window.staffPrintMyInvoice=staffPrintMyInvoice; window._staffRegister=_staffRegister; window._staffDocSave=_staffDocSave; window._myBillFoot=_myBillFoot; window._chamberDocSettings=_chamberDocSettings; window.openMatterDetail=openMatterDetail; window.renderMatterDetail=renderMatterDetail; window.isStaffView=isStaffView; window._matterListingsCard=_matterListingsCard; window._mlAddDate=_mlAddDate; window.addFiling=addFiling; window.doAddFiling=doAddFiling; window.delFiling=delFiling; window.addDocToMatter=addDocToMatter; window.doAddDocToMatter=doAddDocToMatter; window.delMatterDoc=delMatterDoc; window.addCaseExpense=addCaseExpense; window.doAddCaseExpense=doAddCaseExpense; window.delCaseExpense=delCaseExpense; window.renderStaffDocs=renderStaffDocs; window.renderStaffExpenses=renderStaffExpenses; window.staffAddDocGeneral=staffAddDocGeneral; window.doStaffAddDocGeneral=doStaffAddDocGeneral; window.staffAddExpenseGeneral=staffAddExpenseGeneral; window.doStaffAddExpenseGeneral=doStaffAddExpenseGeneral; window._geOpenFolder=_geOpenFolder; window._geFolderHint=_geFolderHint; window.staffRecordAdvance=staffRecordAdvance; window.doStaffRecordAdvance=doStaffRecordAdvance; window.rejectExpense=rejectExpense; window.doRejectExpense=doRejectExpense; window.rejectAdvanceEntry=rejectAdvanceEntry; window.doRejectAdvanceEntry=doRejectAdvanceEntry; window.deleteAdvanceEntry=deleteAdvanceEntry; window._canEditEntry=_canEditEntry; window.editAdvanceEntry=editAdvanceEntry; window.doEditAdvanceEntry=doEditAdvanceEntry; window.editCaseExpense=editCaseExpense; window.doEditCaseExpense=doEditCaseExpense; window.isRejected=isRejected; window._canDeleteOwn=_canDeleteOwn; window.removeStaff=removeStaff; window.doRemoveStaff=doRemoveStaff; window.addDate=addDate; window.doAddDate=doAddDate; window._adReasonChange=_adReasonChange; window.delDate=delDate; window.editDate=editDate; window.scHoliday=scHoliday; window.scIsPartial=scIsPartial; window.scDayKind=scDayKind; window.scDayLabel=scDayLabel; window.scOverlayOn=scOverlayOn; window._adDateCheck=_adDateCheck; window.markConcluded=markConcluded; window.doMarkConcluded=doMarkConcluded; window.reopenCase=reopenCase; window.addPastCase=addPastCase; window.doAddPastCase=doAddPastCase; window.renderPastCases=renderPastCases; window.openPastCases=openPastCases; window.peekNextPastCode=peekNextPastCode; window.peekNextMatterCode=peekNextMatterCode; window._maxSeq=_maxSeq; window.findDuplicateNumbers=findDuplicateNumbers; window.duplicateWarningHTML=duplicateWarningHTML; window.printVoucher=printVoucher; window.needsVoucher=needsVoucher; window.voucherThreshold=voucherThreshold; window._expenseFolderUrl=_expenseFolderUrl; window.openLedger=openLedger; window.renderLedger=renderLedger; window.renderReceiptLedger=renderReceiptLedger; window.openTodos=openTodos; window.addTodo=addTodo; window.doAddTodo=doAddTodo; window.editTodo=editTodo; window.doEditTodo=doEditTodo; window.resolveTodo=resolveTodo; window.doResolveTodo=doResolveTodo; window.reopenTodo=reopenTodo; window.deleteTodo=deleteTodo; window.renderTodos=renderTodos; window.TODO_PRIORITIES=TODO_PRIORITIES; window.BCI_TYPES=BCI_TYPES; window.staffEditMyName=staffEditMyName; window.pickMatterForDate=pickMatterForDate; window.todayWidgetHTML=todayWidgetHTML; window._todayItems=_todayItems; window.staffSaveMyName=staffSaveMyName; window.openAppointments=openAppointments; window.addAppointment=addAppointment; window._apKindChange=_apKindChange; window.doAddAppointment=doAddAppointment; window.editAppointment=editAppointment; window.doEditAppointment=doEditAppointment; window.delAppointment=delAppointment; window.renderAppointments=renderAppointments; window.openCalendar=openCalendar; window.renderCalendar=renderCalendar; window._calShift=_calShift; window._calGoToday=_calGoToday; window._calDayView=_calDayView; window._calSelect=_calSelect; window.calAddOnDate=calAddOnDate; window.calAddHearing=calAddHearing; window._chReasonChange=_chReasonChange; window.doCalAddHearing=doCalAddHearing; window.openDriveFolderHelp=openDriveFolderHelp; window._chamberFolderUrl=_chamberFolderUrl; window._caseFolderName=_caseFolderName; window._caseFolderBanner=_caseFolderBanner; window.setupCaseFolder=setupCaseFolder; window.saveCaseFolder=saveCaseFolder; window.openUnassigned=openUnassigned; window.renderUnassigned=renderUnassigned; window.setupUnassignedFolder=setupUnassignedFolder; window.saveUnassignedFolder=saveUnassignedFolder; window._reassignPicker=_reassignPicker; window.doReassign=doReassign; window._isUnassigned=_isUnassigned; window.matterCodeFor=matterCodeFor; window.addMatter=window.addMatter||addMatter; window.acceptedFor=acceptedFor; window.pendingFor=pendingFor; window.idbDel=idbDel; window.exportMatterToFolder=exportMatterToFolder; window.exportAllToFolder=exportAllToFolder; window.fsSupported=fsSupported; window.buildZip=buildZip; window.matterFolderName=matterFolderName; window.buildIndexText=buildIndexText; window.fileNameFor=fileNameFor; window.renderInvoice=renderInvoice; window.onInvStyleChange=onInvStyleChange; window.addInvLine=addInvLine; window.rmInvLine=rmInvLine; window.updInvLine=updInvLine; window.addInvExpense=addInvExpense; window.rmInvExp=rmInvExp; window.updInvExp=updInvExp; window.saveAndPrintInvoice=saveAndPrintInvoice; window.reprintInvoice=reprintInvoice; window.delInvoice=delInvoice; window.printInvoice=printInvoice; window.peekNextInvoiceNo=peekNextInvoiceNo; window.nextInvoiceNo=nextInvoiceNo; window.onDueModeChange=onDueModeChange; window.defaultAppName=defaultAppName; window.openSetPw=openSetPw; window.doSetPw=doSetPw; window.openChangePw=openChangePw; window.doChangePw=doChangePw; window.lockNow=lockNow; window.showLockScreen=showLockScreen; window.showRecovery=showRecovery; window.tryUnlock=tryUnlock; window.tryRecovery=tryRecovery; window.copyText=copyText; window.encEnabled=encEnabled; window.encSetup=encSetup; window.encUnlock=encUnlock; window.loadDecrypted=loadDecrypted; window.showRecoveryCode=showRecoveryCode; window.renderArchive=renderArchive; window.toggleArchMonth=toggleArchMonth; window.exportArchiveCSV=exportArchiveCSV; window.exportReceiptsCSV=exportReceiptsCSV; window.exportInvoicesCSV=exportInvoicesCSV; window.exportExpensesCSV=exportExpensesCSV; window.micButton=micButton; window._micToggle=_micToggle; window._verifyQRBlock=_verifyQRBlock; window.updFee=updFee; window.setTdsMode=setTdsMode; window.setTdsRate=setTdsRate; window.focusCustomRate=focusCustomRate; window.computeFee=computeFee; window.tdsFY=tdsFY; window.newRegimeTax=newRegimeTax; window.chamberLogoSVG=chamberLogoSVG; window.showGroup=showGroup; window.subGo=subGo; window.setActiveTab=setActiveTab; window._labelizeTables=_labelizeTables; window._startTableLabeler=_startTableLabeler; window._activityGoTo=_activityGoTo; window._activityHasTarget=_activityHasTarget; window.clearActivity=clearActivity; window.doClearActivity=doClearActivity; window.openSearch=openSearch; window._gsRun=_gsRun; window._gsGo=_gsGo; window._gsSearch=_gsSearch; window._docPrintChooser=_docPrintChooser; window.onSigPicked=onSigPicked; window._applyStripToggle=_applyStripToggle; window.removeSignature=removeSignature; window.printReceipt=printReceipt; window.shareDoc=shareDoc; window._knownClients=_knownClients; window._lookupClient=_lookupClient; window._attachClientAutofill=_attachClientAutofill; window.reprint=reprint; window.renderSalary=renderSalary; window.openAddPerson=openAddPerson; window.doAddPerson=doAddPerson; window.openEditPerson=openEditPerson; window.doEditPerson=doEditPerson; window.doRemovePerson=doRemovePerson; window.openSalaryAdvance=openSalaryAdvance; window.doGiveSalaryAdvance=doGiveSalaryAdvance; window.openSalarySlip=openSalarySlip; window.doGenerateSlip=doGenerateSlip; window.printSalarySlip=printSalarySlip; window.reprintSalarySlip=reprintSalarySlip; window._slToggleAdv=_slToggleAdv; window._slToggleLeave=_slToggleLeave; window._slLeaveMode=_slLeaveMode; window._slUpdateLeaveCalc=_slUpdateLeaveCalc; window.openPersonDetail=openPersonDetail; window.renderPersonDetail=renderPersonDetail; window.delSalaryAdv=delSalaryAdv; window.openRecordRepayment=openRecordRepayment; window.doRecordRepayment=doRecordRepayment; window.roleLabel=roleLabel; window.renderPeople=renderPeople; window.peopleGo=peopleGo; window.openPeople=openPeople; window._renderRegisterInto=_renderRegisterInto; window._renderApprovalsInto=_renderApprovalsInto; window._renderAccessInto=_renderAccessInto; window._advancesRefresh=_advancesRefresh; window._accessRefresh=_accessRefresh; window._saveCloudLink=_saveCloudLink; window._docFolderUrl=_docFolderUrl; window._rememberFolder=_rememberFolder; window._docDestLine=_docDestLine; window._cloudSaveBlock=_cloudSaveBlock; window.onTypeChange=onTypeChange; window.casePrefixFor=casePrefixFor; window.reasonsForForum=reasonsForForum; window._resolveReminder=_resolveReminder; window.addReminder=addReminder; window.doAddReminder=doAddReminder; window.delReminder=delReminder; window.renderReminders=renderReminders; window.addTaskOrReminder=addTaskOrReminder; window._chMatterChange=_chMatterChange; window._numberTables=_numberTables; window.printTodayList=printTodayList; window.openCauseList=openCauseList; window._loadCourtUpdates=_loadCourtUpdates; window.printCauseList=printCauseList; window._clRenderRefList=_clRenderRefList; window.monthlyBackup=monthlyBackup; window.autoSnapshotIfDue=autoSnapshotIfDue; window.listSnapshots=listSnapshots; window.downloadSnapshot=downloadSnapshot; window._backupReminderHTML=_backupReminderHTML; window._adTimingMode=_adTimingMode; window.ownerAddDate=ownerAddDate; window._ownerAddDateGo=_ownerAddDateGo; }catch(e){}
+  window.renderAll = renderAll; window.todayISO = todayISO; window.onForumChange = onForumChange; window.typesForForum = typesForForum; window.FORUMS = FORUMS; window.onExpenseHeadChange = onExpenseHeadChange; window.onProofPicked = onProofPicked; window.viewProof = viewProof; window.removeProof = removeProof; window.addExpense = addExpense; window.saveExpense = saveExpense; window.EXPENSE_HEADS = EXPENSE_HEADS; window.attachLater = attachLater; window.saveLateProof = saveLateProof; window.peekNextVoucherNo = peekNextVoucherNo; window.peekNextNoticeNo = peekNextNoticeNo; window.openNoticeRegister = openNoticeRegister; window.openNoticeAssistant = openNoticeAssistant; window._naPick = _naPick; window._naCompose = _naCompose; window._draftNoticeBody = _draftNoticeBody; window._noticeBodyLayout = _noticeBodyLayout; window._renderNoticeRegister = _renderNoticeRegister; window._reprintNotice = _reprintNotice; window._delNotice = _delNotice; window._editNotice = _editNotice; window._afterHearing=_afterHearing; window._ahSave=_ahSave; window._ahToggleNext=_ahToggleNext; window._limCalc=_limCalc; window._limCompute=_limCompute; window._limRemind=_limRemind; window._matterFeeStrip=_matterFeeStrip; window._upcomingItems=_upcomingItems; window.openClients=openClients; window.renderClients=renderClients; window.openClientDetail=openClientDetail; window._buildClients=_buildClients; window.openRefAdvocates=openRefAdvocates; window.renderRefAdvocates=renderRefAdvocates; window.openRefAdvDetail=openRefAdvDetail; window._buildRefAdvs=_buildRefAdvs; window._resolveRefAdvId=_resolveRefAdvId; window._backfillRefRegistry=_backfillRefRegistry; window._regCode=_regCode; window.openSuccessStats=openSuccessStats; window.renderSuccessStats=renderSuccessStats; window._matterSuccess=_matterSuccess; window.PARTY_ROLES=PARTY_ROLES; window.RESULT_OPTIONS=RESULT_OPTIONS; window._needsAttentionHTML=_needsAttentionHTML; window._reviewMatter=_reviewMatter; window._reviewDate=_reviewDate; window._checkConflict=_checkConflict; window._showConflictWarning=_showConflictWarning; window._partyTokens=_partyTokens; window.saveMatter=saveMatter; window._resolveClientId=_resolveClientId; window._backfillClientRegistry=_backfillClientRegistry; window._mergeClients=_mergeClients; window._clientGroupKey=_clientGroupKey; window._showNoticeConflict=_showNoticeConflict; window._fillSnapList=_fillSnapList; window.restoreSnapshot=restoreSnapshot; window._dataIntegrityIssues=_dataIntegrityIssues; window.requestNotifyPermission=requestNotifyPermission; window._fireDueNotifications=_fireDueNotifications; window._notifyEnabled=_notifyEnabled; window.nextNoticeNo = nextNoticeNo; window.openLegalNotice = openLegalNotice; window.printLegalNotice = printLegalNotice; window._lnGo = _lnGo; window.nextVoucherNo = nextVoucherNo; window.idbGet = idbGet; window.idbPut = idbPut; window.exportData = exportData; window.importData = importData; window.nextReceiptNo = nextReceiptNo; window.peekNextReceiptNo = peekNextReceiptNo; window.onMDocsPicked=onMDocsPicked; window.addMDoc=addMDoc; window.saveMDoc=saveMDoc; window.viewDoc=viewDoc; window.assignDoc=assignDoc; window.saveAssign=saveAssign; window.delMDoc=delMDoc; window.renderDocIn=renderDocIn; window.renderDocFiled=renderDocFiled; window.renderDocFolders=renderDocFolders; window.setDocSearch=setDocSearch; window.toggleDocFolder=toggleDocFolder; window.docRowHTML=docRowHTML; window.convertToCase=convertToCase; window.doConvertToCase=doConvertToCase; window.setMatterKind=setMatterKind; window.nextQueryCode=nextQueryCode; window.peekNextQueryCode=peekNextQueryCode; window.onMdMatterChange=onMdMatterChange; window.onAdMatterChange=onAdMatterChange; window.matterFolderTitle=matterFolderTitle; window.addBankRow=addBankRow; window.removeBankRow=removeBankRow; window.bankListHTML=bankListHTML; window.collectBanksFromDOM=collectBanksFromDOM; window.defaultBank=defaultBank; window.bankById=bankById; window.banksList=banksList; window.addUpiRow=addUpiRow; window.removeUpiRow=removeUpiRow; window.upiListHTML=upiListHTML; window.collectUpisFromDOM=collectUpisFromDOM; window.defaultUpi=defaultUpi; window.upiById=upiById; window.upisList=upisList; window.openSetSection=openSetSection; window.setSectionBack=setSectionBack; window.thisMonthReceipts=thisMonthReceipts; window.cloudLogout=cloudLogout; window.doCloudLogout=doCloudLogout; window._startIdleTimer=_startIdleTimer; window._stopIdleTimer=_stopIdleTimer; window._resetIdleTimer=_resetIdleTimer; window.idleTimeoutMin=idleTimeoutMin; window.toggleDesktopView=toggleDesktopView; window.applyViewPref=applyViewPref; window.isDesktopView=isDesktopView; window.logActivity=logActivity; window.openActivity=openActivity; window.renderActivity=renderActivity; window.unreadActivityCount=unreadActivityCount; window._refreshActivityBadge=_refreshActivityBadge; window._markActivitySeen=_markActivitySeen; window.renderAccess=renderAccess; window.addAccessEmail=addAccessEmail; window.removeAccessEmail=removeAccessEmail; window.doRemoveAccessEmail=doRemoveAccessEmail; window.setAccessListActive=setAccessListActive; window.setAccessLocked=setAccessLocked; window.loadAccess=loadAccess; window.saveAccess=saveAccess; window.wipeAll=wipeAll; window.doWipe=doWipe; window.showCounter=showCounter; window._wipeCheck=_wipeCheck; window._saveLoginBranding=_saveLoginBranding; window.delInvoice=delInvoice; window.doDelInvoice=doDelInvoice; window.voidInvoice=voidInvoice; window.doVoidInvoice=doVoidInvoice; window.doDeleteMatter=doDeleteMatter; window.deleteMatterPrompt=deleteMatterPrompt; window.doDeleteMatterFrom=doDeleteMatterFrom; window.cancelMatter=cancelMatter; window.doCancelMatter=doCancelMatter; window.delReceipt=delReceipt; window.doDelReceipt=doDelReceipt; window.voidReceiptPrompt=voidReceiptPrompt; window.doVoidReceipt=doVoidReceipt; window.editReceipt=editReceipt; window.doEditReceipt=doEditReceipt; window._edRcPreview=_edRcPreview; window.softDelete=softDelete; window.voidRecord=voidRecord; window.isVoided=isVoided; window.openBilling=openBilling; window.renderInvoiceLedger=renderInvoiceLedger; window.renderBooksOverview=renderBooksOverview; window.billedFY=billedFY; window.outstandingFY=outstandingFY; window.monthlyFeesFY=monthlyFeesFY; window.taxComparison=taxComparison; window.openRetainer=openRetainer; window._rtPreview=_rtPreview; window._retainerReceipt=_retainerReceipt; window._retainerInvoice=_retainerInvoice; window._rcMatterChange=_rcMatterChange; window._rcSetKind=_rcSetKind; window._ivMatterChange=_ivMatterChange; window._ivSetKind=_ivSetKind; window.invoiceTotal=invoiceTotal; window.fyInvoices=fyInvoices; window.renderAdvances=renderAdvances; window.doAcceptAdvance=doAcceptAdvance; window.doRejectAdvance=doRejectAdvance; window.doRejectAdvance2=doRejectAdvance2; window.ownerGiveAdvance=ownerGiveAdvance; window.doOwnerGiveAdvance=doOwnerGiveAdvance; window.ownerRecordReturn=ownerRecordReturn; window.doOwnerRecordReturn=doOwnerRecordReturn; window.acceptAdvance=acceptAdvance; window.rejectAdvance=rejectAdvance; window.addAdvanceEntry=addAdvanceEntry; window.allPending=allPending; window.staffBalance=staffBalance; window.pendingBalanceImpact=pendingBalanceImpact; window.staffGo=staffGo; window.renderStaffHome=renderStaffHome; window.renderStaffRecord=renderStaffRecord; window.renderStaffUpload=renderStaffUpload; window.staffSubmitExpense=staffSubmitExpense; window.staffRecordReturn=staffRecordReturn; window.staffSubmitReturn=staffSubmitReturn; window.staffSubmitDoc=staffSubmitDoc; window.approveStaff=approveStaff; window.blockStaff=blockStaff; window.pushStaffBalance=pushStaffBalance; window.pushBrandingToAllStaff=pushBrandingToAllStaff; window._applyStaffBranding=_applyStaffBranding; window.staffRecTab=staffRecTab; window.staffSubmitAdvance=staffSubmitAdvance; window.renderStaffBilling=renderStaffBilling; window.staffMyBillTab=staffMyBillTab; window.staffEditBillProfile=staffEditBillProfile; window.staffSaveBillProfile=staffSaveBillProfile; window.staffMakeReceipt=staffMakeReceipt; window.staffPrintMyReceipt=staffPrintMyReceipt; window.staffMakeInvoice=staffMakeInvoice; window.staffPrintMyInvoice=staffPrintMyInvoice; window._staffRegister=_staffRegister; window._staffDocSave=_staffDocSave; window._myBillFoot=_myBillFoot; window._chamberDocSettings=_chamberDocSettings; window.openMatterDetail=openMatterDetail; window.renderMatterDetail=renderMatterDetail; window.isStaffView=isStaffView; window._matterListingsCard=_matterListingsCard; window._mlAddDate=_mlAddDate; window.addFiling=addFiling; window.doAddFiling=doAddFiling; window.delFiling=delFiling; window.addDocToMatter=addDocToMatter; window.doAddDocToMatter=doAddDocToMatter; window.delMatterDoc=delMatterDoc; window.addCaseExpense=addCaseExpense; window.doAddCaseExpense=doAddCaseExpense; window.delCaseExpense=delCaseExpense; window.renderStaffDocs=renderStaffDocs; window.renderStaffExpenses=renderStaffExpenses; window.staffAddDocGeneral=staffAddDocGeneral; window.doStaffAddDocGeneral=doStaffAddDocGeneral; window.staffAddExpenseGeneral=staffAddExpenseGeneral; window.doStaffAddExpenseGeneral=doStaffAddExpenseGeneral; window._geOpenFolder=_geOpenFolder; window._geFolderHint=_geFolderHint; window.staffRecordAdvance=staffRecordAdvance; window.doStaffRecordAdvance=doStaffRecordAdvance; window.rejectExpense=rejectExpense; window.doRejectExpense=doRejectExpense; window.rejectAdvanceEntry=rejectAdvanceEntry; window.doRejectAdvanceEntry=doRejectAdvanceEntry; window.deleteAdvanceEntry=deleteAdvanceEntry; window._canEditEntry=_canEditEntry; window.editAdvanceEntry=editAdvanceEntry; window.doEditAdvanceEntry=doEditAdvanceEntry; window.editCaseExpense=editCaseExpense; window.doEditCaseExpense=doEditCaseExpense; window.isRejected=isRejected; window._canDeleteOwn=_canDeleteOwn; window.removeStaff=removeStaff; window.doRemoveStaff=doRemoveStaff; window.addDate=addDate; window.doAddDate=doAddDate; window._adReasonChange=_adReasonChange; window.delDate=delDate; window.editDate=editDate; window.scHoliday=scHoliday; window.scIsPartial=scIsPartial; window.scDayKind=scDayKind; window.scDayLabel=scDayLabel; window.scOverlayOn=scOverlayOn; window._adDateCheck=_adDateCheck; window.markConcluded=markConcluded; window.doMarkConcluded=doMarkConcluded; window.reopenCase=reopenCase; window.addPastCase=addPastCase; window.doAddPastCase=doAddPastCase; window.doSavePastCase=doSavePastCase; window.renderPastCases=renderPastCases; window.openPastCases=openPastCases; window.peekNextPastCode=peekNextPastCode; window.peekNextMatterCode=peekNextMatterCode; window._maxSeq=_maxSeq; window.findDuplicateNumbers=findDuplicateNumbers; window.duplicateWarningHTML=duplicateWarningHTML; window.printVoucher=printVoucher; window.needsVoucher=needsVoucher; window.voucherThreshold=voucherThreshold; window._expenseFolderUrl=_expenseFolderUrl; window.openLedger=openLedger; window.renderLedger=renderLedger; window.renderReceiptLedger=renderReceiptLedger; window.openTodos=openTodos; window.addTodo=addTodo; window.doAddTodo=doAddTodo; window.editTodo=editTodo; window.doEditTodo=doEditTodo; window.resolveTodo=resolveTodo; window.doResolveTodo=doResolveTodo; window.reopenTodo=reopenTodo; window.deleteTodo=deleteTodo; window.renderTodos=renderTodos; window.TODO_PRIORITIES=TODO_PRIORITIES; window.BCI_TYPES=BCI_TYPES; window.staffEditMyName=staffEditMyName; window.pickMatterForDate=pickMatterForDate; window.todayWidgetHTML=todayWidgetHTML; window._todayItems=_todayItems; window.staffSaveMyName=staffSaveMyName; window.openAppointments=openAppointments; window.addAppointment=addAppointment; window._apKindChange=_apKindChange; window.doAddAppointment=doAddAppointment; window.editAppointment=editAppointment; window.doEditAppointment=doEditAppointment; window.delAppointment=delAppointment; window.renderAppointments=renderAppointments; window.openCalendar=openCalendar; window.renderCalendar=renderCalendar; window._calShift=_calShift; window._calGoToday=_calGoToday; window._calDayView=_calDayView; window._calSelect=_calSelect; window.calAddOnDate=calAddOnDate; window.calAddHearing=calAddHearing; window._chReasonChange=_chReasonChange; window.doCalAddHearing=doCalAddHearing; window.openDriveFolderHelp=openDriveFolderHelp; window._chamberFolderUrl=_chamberFolderUrl; window._caseFolderName=_caseFolderName; window._caseFolderBanner=_caseFolderBanner; window.setupCaseFolder=setupCaseFolder; window.saveCaseFolder=saveCaseFolder; window.openUnassigned=openUnassigned; window.renderUnassigned=renderUnassigned; window.setupUnassignedFolder=setupUnassignedFolder; window.saveUnassignedFolder=saveUnassignedFolder; window._reassignPicker=_reassignPicker; window.doReassign=doReassign; window._isUnassigned=_isUnassigned; window.matterCodeFor=matterCodeFor; window.addMatter=window.addMatter||addMatter; window.acceptedFor=acceptedFor; window.pendingFor=pendingFor; window.idbDel=idbDel; window.exportMatterToFolder=exportMatterToFolder; window.exportAllToFolder=exportAllToFolder; window.fsSupported=fsSupported; window.buildZip=buildZip; window.matterFolderName=matterFolderName; window.buildIndexText=buildIndexText; window.fileNameFor=fileNameFor; window.renderInvoice=renderInvoice; window.onInvStyleChange=onInvStyleChange; window.addInvLine=addInvLine; window.rmInvLine=rmInvLine; window.updInvLine=updInvLine; window.addInvExpense=addInvExpense; window.rmInvExp=rmInvExp; window.updInvExp=updInvExp; window.saveAndPrintInvoice=saveAndPrintInvoice; window.reprintInvoice=reprintInvoice; window.delInvoice=delInvoice; window.printInvoice=printInvoice; window.peekNextInvoiceNo=peekNextInvoiceNo; window.nextInvoiceNo=nextInvoiceNo; window.onDueModeChange=onDueModeChange; window.defaultAppName=defaultAppName; window.openSetPw=openSetPw; window.doSetPw=doSetPw; window.openChangePw=openChangePw; window.doChangePw=doChangePw; window.lockNow=lockNow; window.showLockScreen=showLockScreen; window.showRecovery=showRecovery; window.tryUnlock=tryUnlock; window.tryRecovery=tryRecovery; window.copyText=copyText; window.encEnabled=encEnabled; window.encSetup=encSetup; window.encUnlock=encUnlock; window.loadDecrypted=loadDecrypted; window.showRecoveryCode=showRecoveryCode; window.renderArchive=renderArchive; window.toggleArchMonth=toggleArchMonth; window.exportArchiveCSV=exportArchiveCSV; window.exportReceiptsCSV=exportReceiptsCSV; window.exportInvoicesCSV=exportInvoicesCSV; window.exportExpensesCSV=exportExpensesCSV; window.micButton=micButton; window._micToggle=_micToggle; window._verifyQRBlock=_verifyQRBlock; window.updFee=updFee; window.setTdsMode=setTdsMode; window.setTdsRate=setTdsRate; window.focusCustomRate=focusCustomRate; window.computeFee=computeFee; window.tdsFY=tdsFY; window.newRegimeTax=newRegimeTax; window.chamberLogoSVG=chamberLogoSVG; window.showGroup=showGroup; window.subGo=subGo; window.setActiveTab=setActiveTab; window._labelizeTables=_labelizeTables; window._startTableLabeler=_startTableLabeler; window._activityGoTo=_activityGoTo; window._activityHasTarget=_activityHasTarget; window.clearActivity=clearActivity; window.doClearActivity=doClearActivity; window.openSearch=openSearch; window._gsRun=_gsRun; window._gsGo=_gsGo; window._gsSearch=_gsSearch; window._docPrintChooser=_docPrintChooser; window.onSigPicked=onSigPicked; window._applyStripToggle=_applyStripToggle; window.removeSignature=removeSignature; window.printReceipt=printReceipt; window.shareDoc=shareDoc; window._knownClients=_knownClients; window._lookupClient=_lookupClient; window._attachClientAutofill=_attachClientAutofill; window.reprint=reprint; window.renderSalary=renderSalary; window.openAddPerson=openAddPerson; window.doAddPerson=doAddPerson; window.openEditPerson=openEditPerson; window.doEditPerson=doEditPerson; window.doRemovePerson=doRemovePerson; window.openSalaryAdvance=openSalaryAdvance; window.doGiveSalaryAdvance=doGiveSalaryAdvance; window.openSalarySlip=openSalarySlip; window.doGenerateSlip=doGenerateSlip; window.printSalarySlip=printSalarySlip; window.reprintSalarySlip=reprintSalarySlip; window._slToggleAdv=_slToggleAdv; window._slToggleLeave=_slToggleLeave; window._slLeaveMode=_slLeaveMode; window._slUpdateLeaveCalc=_slUpdateLeaveCalc; window.openPersonDetail=openPersonDetail; window.renderPersonDetail=renderPersonDetail; window.delSalaryAdv=delSalaryAdv; window.openRecordRepayment=openRecordRepayment; window.doRecordRepayment=doRecordRepayment; window.roleLabel=roleLabel; window.renderPeople=renderPeople; window.peopleGo=peopleGo; window.openPeople=openPeople; window._renderRegisterInto=_renderRegisterInto; window._renderApprovalsInto=_renderApprovalsInto; window._renderAccessInto=_renderAccessInto; window._advancesRefresh=_advancesRefresh; window._accessRefresh=_accessRefresh; window._saveCloudLink=_saveCloudLink; window._docFolderUrl=_docFolderUrl; window._rememberFolder=_rememberFolder; window._docDestLine=_docDestLine; window._cloudSaveBlock=_cloudSaveBlock; window.onTypeChange=onTypeChange; window.casePrefixFor=casePrefixFor; window.reasonsForForum=reasonsForForum; window._resolveReminder=_resolveReminder; window.addReminder=addReminder; window.doAddReminder=doAddReminder; window.delReminder=delReminder; window.renderReminders=renderReminders; window.addTaskOrReminder=addTaskOrReminder; window._chMatterChange=_chMatterChange; window._numberTables=_numberTables; window.printTodayList=printTodayList; window.openCauseList=openCauseList; window._loadCourtUpdates=_loadCourtUpdates; window.printCauseList=printCauseList; window._clRenderRefList=_clRenderRefList; window.monthlyBackup=monthlyBackup; window.autoSnapshotIfDue=autoSnapshotIfDue; window.listSnapshots=listSnapshots; window.downloadSnapshot=downloadSnapshot; window._backupReminderHTML=_backupReminderHTML; window._adTimingMode=_adTimingMode; window.ownerAddDate=ownerAddDate; window._ownerAddDateGo=_ownerAddDateGo; }catch(e){}
 
 /* ============================================================
    ONE-APP SHELL: role gate + bottom nav + home (Step 1)
