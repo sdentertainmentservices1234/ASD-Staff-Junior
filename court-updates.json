@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-18T06:56:21.251224Z",
+  "generated_at": "2026-07-18T07:37:12.195684Z",
   "window": [
     "2026-07-20",
     "2026-07-21",
@@ -63,6 +63,7 @@
         "Miscellaneous - Main",
         "Regular / Final - Main",
         "Registrar - Main",
+        "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
@@ -102,19 +103,9 @@
             "advocate"
           ],
           "confidence": "medium",
-          "text": "127. Connected SRI MANNADHESWARAR SRI PANCHAIMMAN"
+          "text": "127 SRI MANNADHESWARAR SRI PANCHAIMMAN"
         }
       ]
-    },
-    "2026-07-22": {
-      "lists_found": [
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": false,
-      "match_count": 0,
-      "matches": []
     },
     "2026-07-23": {
       "lists_found": [
@@ -140,7 +131,7 @@
             "advocate"
           ],
           "confidence": "medium",
-          "text": "238. Connected DHRUBOJYOTI CHAKRABORTY"
+          "text": "238 DHRUBOJYOTI CHAKRABORTY"
         }
       ]
     },
