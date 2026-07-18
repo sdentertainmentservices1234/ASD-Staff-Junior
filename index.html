@@ -722,6 +722,10 @@
   .cal-cell.has .cal-num::after{content:"";position:absolute;left:50%;transform:translateX(-50%);
     bottom:-6px;width:14px;height:2.5px;border-radius:2px;background:var(--brass)}
   .cal-cell.today.has .cal-num::after{background:#f2ead2}
+  /* Distinct signage for a day with an auto-fetched Supreme Court listing */
+  .cal-cell.haslist::before{content:"";position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;
+    background:var(--seal);box-shadow:0 0 0 1.5px var(--paper,#fff)}
+  .cal-cell.today.haslist::before{background:#f2ead2;box-shadow:0 0 0 1.5px var(--seal)}
   .cal-num{font-size:12.5px;color:var(--ink);line-height:1;font-weight:600;min-width:19px;height:19px;
     display:flex;align-items:center;justify-content:center;padding:0 2px}
   body.desktop-view .cal-grid{grid-auto-rows:76px}
@@ -758,6 +762,7 @@
   .dv-personal::before{background:#b08d3c}
   .dv-deadline::before{background:#d11}
   .dv-reminder::before{background:#6b4fa8}
+  .dv-listing::before{background:var(--brass)}
   .dv-time{flex:0 0 auto;width:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding-left:6px;border-right:1px solid var(--line);margin-right:2px}
   .dv-time-v{font-size:15px;font-weight:700;color:var(--ink);text-align:center;line-height:1.15}
@@ -771,6 +776,7 @@
   .dv-kind-personal{background:#f2e9d5;color:#8a6d1f}
   .dv-kind-deadline{background:#fbe0e0;color:#b11}
   .dv-kind-reminder{background:#e8e3f3;color:#6b4fa8}
+  .dv-kind-listing{background:#f2e9d5;color:#8a6d1f}
   .dv-code{font-size:11px;font-weight:600;color:var(--muted)}
   .dv-title{font-size:15px;font-weight:600;color:var(--ink);line-height:1.3;word-break:break-word}
   .dv-sub{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.4}
@@ -3643,18 +3649,21 @@ function openClientDetail(encKey){
 function _buildRefAdvs(){
   const map={};
   (DB.matters||[]).forEach(m=>{
-    if(isVoided(m) || !(m.refName||m.refAdvId)) return;
-    const key = (m.refAdvId && _refRegEntry(m.refAdvId)) ? "id:"+m.refAdvId : "nm:"+_refKey(m.refName);
-    if(key==="nm:") return;
+    if(isVoided(m) || !m.refName) return;
+    // Group by the NAME (honorific-blind), never by the raw id — so any duplicate
+    // ids for the same advocate collapse into ONE register entry.
+    const nk=_refKey(m.refName); if(!nk) return;
+    const key="nm:"+nk, id="ra_"+_refUid(m.refName), e=_refRegEntry(id);
     if(!map[key]){
-      const e=m.refAdvId?_refRegEntry(m.refAdvId):null;
-      map[key]={ key, id:m.refAdvId||null, name:(e&&e.name)||m.refName||"",
-        phone:(e&&e.phone)||m.refContact||"", email:(e&&e.email)||m.refEmail||"",
-        addr:(e&&e.addr)||m.refAddress||"", matters:[] };
+      map[key]={ key, id:id, name:(e&&e.name)||m.refName||"", phone:"", email:"", addr:"", matters:[] };
     }
+    // keep the first non-empty contact details seen across the merged matters
+    if(!map[key].phone) map[key].phone=(e&&e.phone)||m.refContact||"";
+    if(!map[key].email) map[key].email=(e&&e.email)||m.refEmail||"";
+    if(!map[key].addr) map[key].addr=(e&&e.addr)||m.refAddress||"";
     map[key].matters.push(m);
   });
-  return Object.values(map).sort((a,b)=>String(_regCode(a.id)||"~"+a.name).localeCompare(String(_regCode(b.id)||"~"+b.name),undefined,{numeric:true}));
+  return Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
 }
 function openRefAdvocates(){
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
@@ -4435,9 +4444,11 @@ function _assignRegCodes(seen, prefix){
 function _invalidateRegCodes(){ window.__regCodeCache=null; }
 function _regCode(id){
   if(!id) return "";
-  if(!window.__regCodeCache){ const s=_regFirstSeen(); window.__regCodeCache={ CL:_assignRegCodes(s.cl,"CL"), RA:_assignRegCodes(s.ra,"RA") }; }
-  const isRa=id.slice(0,3)==="ra_";
-  return (isRa?window.__regCodeCache.RA:window.__regCodeCache.CL)[id] || "";
+  // Referring advocates: a UNIQUE code from the deterministic name-hash id (no year/serial).
+  if(id.slice(0,3)==="ra_") return "RA-"+id.slice(3);
+  // Clients: financial-year + serial, derived from first-seen (their own series).
+  if(!window.__regCodeCache){ const s=_regFirstSeen(); window.__regCodeCache={ CL:_assignRegCodes(s.cl,"CL") }; }
+  return window.__regCodeCache.CL[id] || "";
 }
 /* ===== Referring-advocate registry — mirrors the client registry ===== */
 function _ensureRefRegistry(){
@@ -4467,16 +4478,20 @@ function _composeRefName(type, prefix, bare){
   if(type==="advocate" && prefix) return prefix+" "+bare;
   return bare;
 }
+// A stable, unique code for a referring advocate DERIVED FROM THE NAME (honorific-blind),
+// so the same advocate always gets the SAME id on every device/session — no duplicates,
+// and NOT tied to year or serial number (a djb2 hash of the normalised name).
+function _refUid(name){
+  const k=_refKey(name); if(!k) return "";
+  let h=5381; for(let i=0;i<k.length;i++){ h=(((h<<5)+h)+k.charCodeAt(i))>>>0; }
+  return h.toString(36).toUpperCase().padStart(6,"0").slice(0,6);
+}
 function _resolveRefAdvId(name, extra){
   const key=_refKey(name); if(!key) return null;
+  const id="ra_"+_refUid(name);          // deterministic — same name → same id everywhere
   const reg=_ensureRefRegistry();
-  for(const id of Object.keys(reg)){
-    const c=reg[id];
-    if(c.aliases && c.aliases.indexOf(key)>=0){ _absorbClientExtra(c,extra); return id; }
-    if(_refKey(c.name)===key){ if(!c.aliases) c.aliases=[]; if(c.aliases.indexOf(key)<0)c.aliases.push(key); _absorbClientExtra(c,extra); return id; }
-  }
-  const id="ra_"+Math.random().toString(36).slice(2,9);
-  reg[id]={ id, name:String(name).trim(), aliases:[key], addr:"", phone:"", email:"" };
+  if(!reg[id]) reg[id]={ id, name:String(name).trim(), aliases:[key], addr:"", phone:"", email:"" };
+  else { if(!reg[id].aliases) reg[id].aliases=[]; if(reg[id].aliases.indexOf(key)<0) reg[id].aliases.push(key); }
   _absorbClientExtra(reg[id], extra);
   return id;
 }
@@ -4485,12 +4500,10 @@ function _backfillRefRegistry(){
   _ensureRefRegistry();
   (DB.matters||[]).forEach(m=>{
     if(!m.refName) return;
-    if(!m.refAdvId){
-      m.refAdvId=_resolveRefAdvId(m.refName,{phone:m.refContact,email:m.refEmail,addr:m.refAddress});
-    } else {
-      const c=_refRegEntry(m.refAdvId);
-      if(c){ const k=_refKey(m.refName); if(c.aliases && c.aliases.indexOf(k)<0) c.aliases.push(k); }
-    }
+    // Always (re)resolve to the DETERMINISTIC id — this migrates old random ids and
+    // MERGES existing duplicate referring-advocate entries onto one id.
+    const newId=_resolveRefAdvId(m.refName,{phone:m.refContact,email:m.refEmail,addr:m.refAddress});
+    if(newId && m.refAdvId!==newId) m.refAdvId=newId;
   });
 }
 function _knownClients(){
@@ -11218,6 +11231,12 @@ function scOverlayOn(){ return (DB.settings && DB.settings.scOverlay===false) ? 
 var _calMonth=null; // 'YYYY-MM'
 function openCalendar(){
   if(!_calMonth) _calMonth=todayISO().slice(0,7);
+  // Load the auto-fetched Supreme Court cause list if not yet in memory, then repaint
+  // so listed cases show on the calendar.
+  if(!window.__cuCache){
+    fetch("court-updates.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+      .then(raw=>{ if(raw){ window.__cuCache=_normCourtUpdates(raw); try{ if(document.getElementById("panel-calendar").classList.contains("active")) renderCalendar(isStaffView()); }catch(e){} } });
+  }
   if(isStaffView()){
     _shellTab="calendar"; renderStaffBotNav&&renderStaffBotNav();
     document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
@@ -11266,6 +11285,27 @@ function _eventsOn(iso){
       ev.push({type:"reminder", title:"Reminder: "+(r.text||""), sub:(r.time?r.time+" · ":"")+(r.forWho||""), reminderId:r.id, time:r.time||""});
     }
   });
+  // Auto-fetched Supreme Court cause-list entries for this day — cases the Court has
+  // listed under your name that aren't (yet) entered as your own hearing dates.
+  try{
+    const cu=window.__cuCache, day=cu&&(cu.days||[]).find(d=>d.date===iso);
+    if(day && day.matches && day.matches.length){
+      const _n=x=>String(x||"").replace(/[^0-9]/g,"");
+      const have=new Set(ev.filter(e=>e.type==="hearing").map(e=>_n(e.caseNo)).filter(v=>v.length>=5));
+      day.matches.forEach(mt=>{
+        const info=_parseListing(mt.title);
+        const num=_n(info.number)||_n(info.caseNo)||_n(info.diaryNo);
+        if(num && num.length>=5 && have.has(num)) return;   // already your recorded hearing
+        const fb=(typeof _forumBadge==="function")?_forumBadge(mt):{big:mt.court||"",cap:"Court"};
+        const where=fb.big==="Ch."?"In Chamber":(String(fb.big).indexOf("R-")===0?"Registrar Court "+fb.big.slice(2):(fb.cap==="Court"?"Court "+fb.big:fb.big));
+        let mid=""; try{ const mm=_listingMatch(info); if(mm) mid=mm.id; }catch(_){}
+        ev.push({type:"listing",
+          title:(info.party||info.caseNo||String(mt.title||"").replace(/^\s*\d+[.\)]?\s*/,"").slice(0,60)),
+          sub:where+(mt.item?" · Item "+mt.item:"")+(day.hasMain===false?" · advance list":""),
+          caseNo:info.caseNo||info.diaryNo||"", court:where, item:mt.item||"", advance:(day.hasMain===false), matterId:mid});
+      });
+    }
+  }catch(e){}
   // sort by time (timed first, in clock order; untimed after)
   ev.sort((a,b)=>{
     const ta=a.time||"", tb=b.time||"";
@@ -11400,10 +11440,11 @@ function renderCalendar(staffBack){
     const we=(dow===0||dow===6)?" we":"";
     const ev=_eventsOn(iso);
     const has=ev.length?" has":"";
+    const hasList=ev.some(e=>e.type==="listing")?" haslist":"";
     const kind = scOn ? scDayKind(iso) : "full";
     const scCls = (kind==="holiday")?" sc-holiday" : (kind==="partial")?" sc-partial" : "";
     const scTitle = scOn ? scDayLabel(iso) : "";
-    cells+=`<div class="cal-cell${we}${has}${iso===today?" today":""}${iso===_calSelected?" sel":""}${scCls}" onclick="_calSelect('${iso}')"${scTitle?` title="${esc(scTitle)}"`:""}>
+    cells+=`<div class="cal-cell${we}${has}${hasList}${iso===today?" today":""}${iso===_calSelected?" sel":""}${scCls}" onclick="_calSelect('${iso}')"${scTitle?` title="${esc(scTitle)}"`:""}>
       <div class="cal-num">${d}</div></div>`;
   }
   panel.innerHTML=`${backBar}
@@ -11414,7 +11455,7 @@ function renderCalendar(staffBack){
         <button class="cal-nav" onclick="_calShift(1)" aria-label="Next month">›</button>
       </div>
       <div style="text-align:center;margin-bottom:10px"><button class="cal-today-btn" onclick="_calGoToday()">Today</button></div>
-      <div class="cal-legend"><span><span class="cal-lg-sched"></span>Has something</span><span><span class="cal-lg-today"></span>Today</span>${scOn?`<span><span class="sc-swatch sc-sw-hol"></span>Court holiday</span><span><span class="sc-swatch sc-sw-part"></span>Partial day</span>`:""}</div>
+      <div class="cal-legend"><span><span class="cal-lg-sched"></span>Has something</span><span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--seal);vertical-align:middle;margin-right:2px"></span>SC listing</span><span><span class="cal-lg-today"></span>Today</span>${scOn?`<span><span class="sc-swatch sc-sw-hol"></span>Court holiday</span><span><span class="sc-swatch sc-sw-part"></span>Partial day</span>`:""}</div>
       <div class="cal-grid-h">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i)=>`<div${(i===0||i===6)?' class="we"':''}>${d}</div>`).join("")}</div>
       <div class="cal-grid">${cells}</div>
       <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" onclick="exportUpcomingToCal()">📅 Add upcoming to my calendar</button></div>
@@ -11437,7 +11478,7 @@ function _calDayView(iso){
   const dayNum=d.getDate();
   const monShort=d.toLocaleDateString("en-IN",{month:"short",year:"numeric"});
   const isToday=iso===todayISO();
-  const typeLabel={hearing:"Hearing",appt:"Meeting",personal:"Personal",deadline:"Deadline",reminder:"Reminder"};
+  const typeLabel={hearing:"Hearing",appt:"Meeting",personal:"Personal",deadline:"Deadline",reminder:"Reminder",listing:"SC Listing"};
   const cards = ev.length ? ev.map(e=>{
     const clickable = e.matterId ? `onclick="openMatterDetail('${e.matterId}')" style="cursor:pointer"` : "";
     // build compact meta chips (only what exists)
@@ -11449,6 +11490,10 @@ function _calDayView(iso){
       if(e.coram) chips.push(`<span class="dv-chip">${esc(e.coram)}</span>`);
     } else if(e.type==="appt" || e.type==="personal"){
       if(e.location) chips.push(`<span class="dv-chip">${esc(e.location)}</span>`);
+    } else if(e.type==="listing"){
+      if(e.court) chips.push(`<span class="dv-chip">${esc(e.court)}${e.item?" · Item "+esc(e.item):""}</span>`);
+      if(e.caseNo) chips.push(`<span class="dv-chip mono">${esc(e.caseNo)}</span>`);
+      if(e.advance) chips.push(`<span class="dv-chip" style="background:var(--brass);color:#fff;border-color:var(--brass)">advance</span>`);
     }
     const timeBlock = e.time
       ? `<div class="dv-time"><span class="dv-time-v">${esc(e.time)}</span>${e.special?`<span class="dv-time-tag">fixed</span>`:""}</div>`
