@@ -183,6 +183,12 @@ FRESH_RE = re.compile(r"fresh\s*(?:matters)?\s*[:\-]?\s*([0-9]+)", re.I)
 ITEM_RE = re.compile(
     r"^\s*(\d{1,4})[.\)]?\s+(?:SLP|W\.?\s*P|C\.?\s*A|Crl|Cri|Diary|T\.?\s*P|R\.?\s*P|"
     r"M\.?\s*A|CONMT|SMC|SMW|Cont|Ref|Curative|Review|Comp|Connected)", re.I)
+# Connected sub-matter: "127. Connected <petitioner> <counsel>". It reuses the PARENT's
+# item number, and its own case number sits on the NEXT line ("1 Diary No. 25800-2025").
+CONNECTED_RE = re.compile(r"^\s*(\d{1,4})[.\)]?\s+Connected\b\s*", re.I)
+SUBCASE_RE = re.compile(
+    r"^\s*\d{1,3}\s+(?:SLP|W\.?\s*P|C\.?\s*A|Crl|Cri|Diary|T\.?\s*P|R\.?\s*P|M\.?\s*A|Cont|Ref|Comp)",
+    re.I)
 # Lines that END the parties block of an item (applications, notes, the next item, etc.).
 # Everything from the item line up to (but not including) one of these — with the party
 # column of each line — forms the cause title "PETITIONER Versus RESPONDENT".
@@ -218,6 +224,8 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
     # "Versus" + respondent, taken from the PARTY column so counsel never leaks in.
     item_titles = {}
     accumulating = False
+    pending_subcase = False   # just saw a "Connected" line; next line may be its case no.
+    conn_seq = 0              # distinct sub-key per Connected block
 
     for _rec in lines:
         line = _rec["full"]
@@ -252,18 +260,35 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
         if fm:
             cur_fresh = fm.group(1)
 
+        conn = CONNECTED_RE.match(line)
         im = ITEM_RE.match(line)
-        if im:
+        if conn:
+            # Connected sub-matter. It REUSES the parent's item number, so give it a
+            # DISTINCT key — otherwise it would clobber the parent item's already-built
+            # title (that exact bug lost the Mannadheswarar case no. and respondent).
+            conn_seq += 1
+            cur_item = conn.group(1)
+            cur_key = (list_kind, cur_court, cur_item + "#c" + str(conn_seq))
+            item_titles[cur_key] = CONNECTED_RE.sub(r"\1 ", left.strip())
+            accumulating = True
+            pending_subcase = True
+        elif im and pending_subcase and SUBCASE_RE.match(line):
+            # the Connected matter's case number sits on the NEXT line ("1 Diary No. ...");
+            # fold it into the sub-item's title instead of starting a bogus new item.
+            item_titles[cur_key] = (item_titles[cur_key] + " " +
+                                    re.sub(r"^\s*\d{1,3}\s+", "", left.strip())).strip()
+            pending_subcase = False
+        elif im:
             cur_item = im.group(1)
             cur_key = (list_kind, cur_court, cur_item)
             # Start the cause title from the item line ("left" = item no + case no +
             # petitioner). Following party-column lines (petitioner cont., Versus,
-            # respondent) are appended until a terminator line. Connected sub-matters
-            # read "238. Connected <party>" — drop the "Connected" marker from the title.
-            item_titles[cur_key] = re.sub(
-                r"^(\s*\d{1,4})[.\)]?\s+Connected\b\s*", r"\1 ", left.strip(), flags=re.I)
+            # respondent) are appended until a terminator line.
+            item_titles[cur_key] = left.strip()
             accumulating = True
+            pending_subcase = False
         elif cur_key and accumulating:
+            pending_subcase = False
             if VERSUS_RE.match(line):
                 item_titles[cur_key] += " Versus "
             elif TERM_RE.match(line):
@@ -402,10 +427,15 @@ def main():
         # daily copy of a matter wins over its advance-list copy.
         scan_family(DAILY_BASE, DAILY_LISTS, date_str, wl, day)
         scan_family(ADVANCE_BASE, ADVANCE_LISTS, date_str, wl, day)
-        # de-dup matches that appear in both advance and daily lists (same court+item) — keeps first
+        # de-dup matches that appear in both advance and daily lists — keeps first (daily).
+        # The key includes the case number (or a text prefix when none): Connected
+        # sub-matters share the parent's item number but are DIFFERENT cases, and must
+        # not be collapsed into one.
         seen, deduped = set(), []
         for m in day["matches"]:
-            k = (m["court"], m["item"], m["is_supplementary"])
+            nm = re.search(r"\d{1,6}\s*[-/]\s*\d{4}", m.get("text", ""))
+            k = (m["court"], m["item"], m["is_supplementary"],
+                 nm.group(0).replace(" ", "") if nm else m.get("text", "")[:40])
             if k in seen:
                 continue
             seen.add(k)
