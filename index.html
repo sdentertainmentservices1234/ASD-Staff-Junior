@@ -9039,11 +9039,12 @@ function numToWords(n){
 /* ===========================================================
    MATTERS
    =========================================================== */
-function matterFormHTML(m){
+function matterFormHTML(m, mode){
   m = m||{};
+  const past = mode==="past";      // Past-cases entry: same form, PC- code, fixed Concluded
   const isNew = !m.id;
-  const kind = m.kind || "case";
-  const codeVal = m.code || (kind==="query"?peekNextQueryCode():peekNextMatterCode());
+  const kind = past ? "case" : (m.kind || "case");
+  const codeVal = m.code || (past?peekNextPastCode():(kind==="query"?peekNextQueryCode():peekNextMatterCode()));
   const forumOpts = ['<option value="">— Select forum —</option>']
     .concat(FORUMS.map(f=>`<option ${m.court===f?"selected":""}>${esc(f)}</option>`)).join("");
   const typeList = typesForForum(m.court);
@@ -9051,7 +9052,7 @@ function matterFormHTML(m){
     .concat(typeList.map(t=>`<option ${m.matterType===t?"selected":""}>${esc(t)}</option>`))
     .concat([`<option value="__custom__" ${m.matterType&&typeList.indexOf(m.matterType)<0?"selected":""}>Custom / other type…</option>`]).join("");
   return `
-    ${isNew?`<div style="margin-bottom:13px">
+    ${(isNew&&!past)?`<div style="margin-bottom:13px">
       <label class="fld">This is a…</label>
       <div class="seg" id="mfKindSeg">
         <button type="button" class="seg-btn ${kind==="query"?"on":""}" data-k="query" onclick="setMatterKind('query')">Query (walk-in)</button>
@@ -9060,13 +9061,15 @@ function matterFormHTML(m){
       <div class="note" style="margin-top:6px">A <b>query</b> is a client bringing documents for advice with no case/diary number yet. It gets a Q-number and can be converted to a case later, carrying its documents and receipts across.</div>
     </div>`:""}
     <div class="grid g2">
-      <div><label class="fld">Chamber ${kind==="query"?"query":"file"} code</label>
+      <div><label class="fld">${past?"Register no.":"Chamber "+(kind==="query"?"query":"file")+" code"}</label>
         <input class="in mono" id="mfCode" value="${esc(codeVal)}" readonly
           style="background:#f1ece0;color:var(--muted)" title="Auto-assigned chamber index"></div>
-      <div><label class="fld">Status</label>
+      <div>${past?`<label class="fld">Year concluded</label>
+        <input class="in" id="pcYear" value="${esc(m.concludedYear||"")}" placeholder="e.g. 2023" inputmode="numeric">`
+        :`<label class="fld">Status</label>
         <select class="in" id="mfStatus">
           ${["Active","On hold","Closed","Concluded"].map(x=>`<option ${m.status===x?"selected":""}>${x}</option>`).join("")}
-        </select></div>
+        </select>`}</div>
     </div>
     <input type="hidden" id="mfKind" value="${kind}">
 
@@ -9122,11 +9125,13 @@ function matterFormHTML(m){
       </div>
       <div style="margin-top:10px"><label class="fld">Notes</label>
         <textarea class="in" id="mfNotes" placeholder="Retainer terms, fee agreed, etc.">${esc(m.notes||"")}</textarea></div>
+      ${past?`<div style="margin-top:10px"><label class="fld">Outcome / result</label>
+        <input class="in" id="pcNote" value="${esc(m.concludedNote||"")}" placeholder="e.g. allowed, dismissed, settled" maxlength="80"></div>`:""}
     </details>
     ${m.originQuery?`<div class="note">Originally query <b>${esc(m.originQuery)}</b>, converted to a case.</div>`:""}
     <div class="btn-row" style="margin-top:16px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn seal" onclick="saveMatter('${m.id||""}')">${m.id?"Update":"Save"}</button>
+      <button class="btn seal" onclick="${past?"doAddPastCase()":`saveMatter('${m.id||""}')`}">${past?"Add to register":(m.id?"Update":"Save")}</button>
     </div>`;
 }
 function setMatterKind(k){
@@ -11139,33 +11144,30 @@ function reopenCase(id){
   m.status="Active"; m.concludedNote=""; save(); renderPastCases(); toast("Case reopened.");
 }
 function addPastCase(){
-  openModal("Add a past (concluded) case", `
-    <div class="hint">For cases concluded before this record-keeping began. They get a separate <b>PC-</b> number.</div>
-    <div class="grid g2" style="margin-top:8px">
-      <div><label class="fld">Register no.</label><input class="in mono" id="pcCode" value="${esc(peekNextPastCode())}" readonly style="background:#f1ece0;color:var(--muted)"></div>
-      <div><label class="fld">Year concluded</label><input class="in" id="pcYear" placeholder="e.g. 2023"></div>
-    </div>
-    <label class="fld" style="margin-top:9px">Client name</label>
-    <input class="in" id="pcClient" placeholder="Client">
-    <label class="fld" style="margin-top:9px">Parties / title</label>
-    <input class="in" id="pcParties" placeholder="A v. B">
-    <label class="fld" style="margin-top:9px">Case no. (if any)</label>
-    <input class="in" id="pcCaseNo" placeholder="e.g. WP 123/2019">
-    <label class="fld" style="margin-top:9px">Court / forum</label>
-    <input class="in" id="pcCourt" placeholder="e.g. Bombay High Court">
-    <label class="fld" style="margin-top:9px">Outcome / note</label>
-    <input class="in" id="pcNote" placeholder="e.g. allowed, dismissed, settled" maxlength="80">
-    <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn seal" onclick="doAddPastCase()">Add to register</button></div>`);
+  // Same full form as a new matter (client, referring advocate, forum/type,
+  // diary/case no., notes) in "past" mode: PC- register number, Year concluded
+  // in place of Status, plus an Outcome field.
+  openModal("Add a past (concluded) case",
+    `<div class="hint" style="margin-bottom:10px">For cases concluded before this record-keeping began. They get a separate <b>PC-</b> number.</div>`
+    + matterFormHTML({status:"Concluded"}, "past"));
+  setTimeout(()=>_attachClientAutofill("mfClient",{addr:"mfAddress",phone:"mfContact",email:"mfEmail"}),60);
 }
 function doAddPastCase(){
-  const g=id=>(document.getElementById(id)||{}).value||"";
-  if(!g("pcClient").trim() && !g("pcParties").trim()){ toast("Enter client or parties.", true); return; }
+  const g=id=>((document.getElementById(id)||{}).value||"").trim();
+  const client=g("mfClient");
+  if(!client && !g("mfParties")){ toast("Enter client or parties.", true); return; }
+  const year=g("pcYear");
   const rec=_auditStamp({ id:uid(), code:nextPastCode(), kind:"case", historical:true,
-    opened: g("pcYear")?g("pcYear")+"-01-01":todayISO(), client:g("pcClient"), parties:g("pcParties"),
-    caseNo:g("pcCaseNo"), court:g("pcCourt"), matterType:"", status:"Concluded",
-    concludedNote:g("pcNote"), concludedYear:g("pcYear"), dates:[] }, true);
-  DB.matters.push(rec); save(); closeModal(); renderPastCases(); toast("Added to Past cases register.");
+    opened: year?year+"-01-01":todayISO(),
+    client:client, contact:g("mfContact"), email:g("mfEmail"), address:g("mfAddress"),
+    refName:g("mfRefName"), refContact:g("mfRefContact"), refEmail:g("mfRefEmail"),
+    refAddress:g("mfRefAddress"), invoiceReferrer:!!(document.getElementById("mfInvoiceRef")||{}).checked,
+    parties:g("mfParties"),
+    matterType:(function(){ const v=g("mfType"); return v==="__custom__"?g("mfCustomType"):v; })(),
+    court:g("mfCourt"), diaryNo:g("mfDiary"), caseNo:g("mfCase"), notes:g("mfNotes"),
+    status:"Concluded", concludedNote:g("pcNote"), concludedYear:year, dates:[] }, true);
+  if(client){ try{ rec.clientId=_resolveClientId(client,{addr:rec.address,phone:rec.contact,email:rec.email}); }catch(e){} }
+  DB.matters.push(rec); save(); closeModal(); renderPastCases(isStaffView()); toast("Added to Past cases register.");
 }
 function openPastCases(){
   if(isStaffView()){
