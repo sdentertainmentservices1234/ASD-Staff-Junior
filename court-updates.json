@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-18T07:37:12.195684Z",
+  "generated_at": "2026-07-18T08:10:13.367859Z",
   "window": [
     "2026-07-20",
     "2026-07-21",
@@ -103,9 +103,19 @@
             "advocate"
           ],
           "confidence": "medium",
-          "text": "127 SRI MANNADHESWARAR SRI PANCHAIMMAN"
+          "text": "127 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
         }
       ]
+    },
+    "2026-07-22": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     },
     "2026-07-23": {
       "lists_found": [
@@ -114,7 +124,7 @@
       "has_supplementary": false,
       "has_advance": true,
       "has_main": false,
-      "match_count": 1,
+      "match_count": 3,
       "matches": [
         {
           "for_date": "2026-07-23",
@@ -131,7 +141,41 @@
             "advocate"
           ],
           "confidence": "medium",
-          "text": "238 DHRUBOJYOTI CHAKRABORTY"
+          "text": "238 RUMI SAIKIA SLP(C) No. 682-685/2026 Versus THE STATE OF ASSAM AND ORS."
+        },
+        {
+          "for_date": "2026-07-23",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "238",
+          "coram": "HON'BLE COURT",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "238 VIKASH KUMAR PINCHA SLP(C) No. 2310/2026 Versus THE STATE OF ASSAM AND ANR."
+        },
+        {
+          "for_date": "2026-07-23",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "238",
+          "coram": "HON'BLE COURT",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "238 DHRUBOJYOTI CHAKRABORTY SLP(C) No. Versus THE STATE OF ASSAM AND ORS."
         }
       ]
     },
@@ -212,6 +256,6 @@
       "matches": []
     }
   },
-  "match_count": 7,
+  "match_count": 9,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
