@@ -11548,7 +11548,7 @@ function _calDayView(iso){
     </div>
     ${scBanner}
     <div class="dv-actions">
-      <button class="dv-actbtn" onclick="printCauseList('${iso}',true)"><span>📋</span> Cause list</button>
+      <button class="dv-actbtn" onclick="printCauseList('${iso}',true,{includeFetched:true})"><span>📋</span> Cause list</button>
       <button class="dv-actbtn" onclick="printTodayList('${iso}')"><span>🖨</span> Day list</button>
     </div>
     <div class="dv-list">${cards}</div>
