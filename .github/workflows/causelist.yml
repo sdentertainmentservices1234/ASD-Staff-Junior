@@ -43,5 +43,16 @@ jobs:
             echo "No change."
           else
             git commit -m "Cause-list refresh $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git push
+            # The fetch takes several minutes, so another push (e.g. an app
+            # deploy) can land on main meanwhile and reject our push. Rebase our
+            # single data commit onto the latest main and retry a few times.
+            for attempt in 1 2 3 4 5; do
+              if git push; then
+                echo "Pushed on attempt $attempt."
+                break
+              fi
+              echo "Push rejected (attempt $attempt) — rebasing onto latest main."
+              git pull --rebase --autostash origin main || exit 1
+              sleep 3
+            done
           fi
