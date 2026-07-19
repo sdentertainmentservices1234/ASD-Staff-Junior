@@ -4665,7 +4665,7 @@ function _openPrintView(title){
         ".__pgwrap{overflow:hidden}"+
         ".tpl{transform:scale(var(--pgscale,1))}"+
       "}"+
-      "@media print{body{background:#fff;padding:0}.tpl{box-shadow:none;transform:none !important}.__pbar{display:none !important}.__pgwrap{display:block}}"+
+      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}body{background:#fff;padding:0}.tpl{box-shadow:none;transform:none !important}.__pbar{display:none !important}.__pgwrap{display:block}}"+
       ".__pbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;"+
       "padding:12px;background:#fff;border-top:1px solid #e7e0d4;z-index:9}"+
       ".__pbar button{border:none;border-radius:8px;padding:12px 20px;font-size:15px;font-weight:600;cursor:pointer}"+
@@ -5782,11 +5782,14 @@ function _clRenderRefList(iso){
     <div class="hint" style="margin-bottom:8px">Tick a matter to print its referring advocate in the last column.</div>`+
     day.map(m=>{
       const label=esc(m.parties||m.client||m.code||"—");
+      // Default to the referring/engaging advocate already on the matter (m.refName),
+      // falling back to any cause-list-specific name (m.refAdv). Ticked by default when set.
+      const advNm=m.refAdv||m.refName||"";
       return `<div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0">
-        <input type="checkbox" id="clRef_${m.id}" ${m.refAdv?"checked":""} style="flex:0 0 auto;margin-top:6px">
+        <input type="checkbox" id="clRef_${m.id}" ${advNm?"checked":""} style="flex:0 0 auto;margin-top:6px">
         <div style="flex:1;min-width:0">
           <div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${label}</div>
-          <input class="in" id="clRefName_${m.id}" placeholder="Referring advocate's name" value="${esc(m.refAdv||"")}" style="margin-top:3px;font-size:12.5px;padding:7px 10px">
+          <input class="in" id="clRefName_${m.id}" placeholder="Referring advocate's name" value="${esc(advNm)}" style="margin-top:3px;font-size:12.5px;padding:7px 10px">
         </div>
       </div>`;
     }).join("");
@@ -5983,13 +5986,21 @@ function _hcShareText(){
 function _hcShare(){
   const text=_hcShareText();
   if(!text){ toast("No listings to share for this day."); return; }
-  if(navigator.share){
-    navigator.share({text:text}).catch(()=>{});
-  }else if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=>toast("List copied — paste it into WhatsApp or an email.")).catch(()=>toast("Could not copy the list.",true));
-  }else{
-    toast("Sharing isn't supported in this browser.",true);
-  }
+  const iso=window.__hcDay||todayISO();
+  const dstr=new Date(iso+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"});
+  openModal("Share cause list &middot; "+esc(dstr), `
+    <div class="hint" style="margin-bottom:12px">Send this day's Supreme Court list. A PDF opens in your print sheet — choose <b>Save as PDF</b>, then share it on WhatsApp.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn seal" onclick="closeModal();printCauseList('${iso}',true,{includeFetched:true})"><span>🖨</span> Colour PDF</button>
+      <button class="btn" onclick="closeModal();printCauseList('${iso}',true,{includeFetched:true,bw:true})"><span>🖨</span> Black &amp; white PDF</button>
+      <button class="btn ghost" onclick="closeModal();_hcShareTextNow()"><span>💬</span> Share as text (WhatsApp)</button>
+    </div>`);
+}
+function _hcShareTextNow(){
+  const text=_hcShareText(); if(!text){ toast("No listings to share for this day."); return; }
+  if(navigator.share){ navigator.share({text:text}).catch(()=>{}); }
+  else if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast("List copied — paste it into WhatsApp or an email.")).catch(()=>toast("Could not copy the list.",true)); }
+  else{ toast("Sharing isn't supported in this browser.",true); }
 }
 // Forum badge for a fetched SC listing. The court NUMBER alone is ambiguous:
 // "2" can be Judge's Court 2, Registrar Court 2, etc. Use the list family to
@@ -6032,7 +6043,7 @@ function _renderHomeCourt(){
         const fb=_forumBadge(m);
         // Referring advocate: if this listing matches one of your matters and that
         // matter has a referring advocate on file (set from the Cause-list dialog).
-        let adv=""; try{ const mt=_listingMatch(info); if(mt&&mt.refAdv) adv=mt.refAdv; }catch(e){}
+        let adv=""; try{ const mt=_listingMatch(info); if(mt) adv=mt.refAdv||mt.refName||""; }catch(e){}
         return `<div class="row">
           <div class="cbadges">
             <div class="ct"><b${fb.big.length>2?' style="font-size:14px"':''}>${esc(fb.big)}</b>${esc(fb.cap)}</div>
