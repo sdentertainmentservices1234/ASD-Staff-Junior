@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-18T20:14:46.440363Z",
+  "generated_at": "2026-07-19T13:09:42.239172Z",
   "window": [
     "2026-07-20",
     "2026-07-21",
@@ -32,7 +32,7 @@
           "is_supplementary": false,
           "court": "13",
           "item": "52",
-          "coram": "",
+          "coram": "HON'BLE MR. JUSTICE K.V. VISWANATHAN; HON'BLE MR. JUSTICE ARUN PALLI",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -49,7 +49,7 @@
           "is_supplementary": false,
           "court": "16",
           "item": "5",
-          "coram": "",
+          "coram": "HON'BLE MR. JUSTICE SATISH CHANDRA SHARMA; HON'BLE MR. JUSTICE NONGMEIKAPAM KOTISWAR SINGH",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -81,7 +81,7 @@
           "is_supplementary": false,
           "court": "7",
           "item": "49",
-          "coram": "",
+          "coram": "HON'BLE MR. JUSTICE SANJAY KAROL; HON'BLE MR. JUSTICE AUGUSTINE GEORGE MASIH",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -98,7 +98,7 @@
           "is_supplementary": false,
           "court": "8",
           "item": "127",
-          "coram": "",
+          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -139,7 +139,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "238",
-          "coram": "HON'BLE COURT",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -156,7 +156,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "238",
-          "coram": "HON'BLE COURT",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -173,7 +173,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "238",
-          "coram": "HON'BLE COURT",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -201,7 +201,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "1094",
-          "coram": "Hon'ble Court's",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -239,7 +239,7 @@
           "is_supplementary": false,
           "court": "",
           "item": "421",
-          "coram": "HOn'ble Court's order dated",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
