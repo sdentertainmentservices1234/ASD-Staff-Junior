@@ -5855,11 +5855,14 @@ function _parseListing(rawText){
 }
 // Does this listing's number match a matter already in the app?
 function _listingMatch(info){
-  const t=String((info&&info.number)||"").replace(/[^0-9]/g,"");
-  if(!t||t.length<5) return null;
+  const _n=x=>String(x||"").replace(/[^0-9]/g,"");
+  // try the listing's number, and its own case/diary numbers, as candidates
+  const cands=[_n(info&&info.number), _n(info&&info.caseNo), _n(info&&info.diaryNo)].filter(t=>t&&t.length>=5);
+  if(!cands.length) return null;
+  const overlaps=(a,b)=>a&&b&&a.length>=5&&b.length>=5&&(a.indexOf(b)>=0||b.indexOf(a)>=0);
   return (DB.matters||[]).find(m=>{ if(isVoided(m)) return false;
-    const cn=String(m.caseNo||"").replace(/[^0-9]/g,""); const dn=String(m.diaryNo||"").replace(/[^0-9]/g,"");
-    return (cn&&cn.indexOf(t)>=0)||(dn&&dn.indexOf(t)>=0); })||null;
+    const cn=_n(m.caseNo), dn=_n(m.diaryNo);
+    return cands.some(t=>overlaps(cn,t)||overlaps(dn,t)); })||null;
 }
 // One-tap: add the listing date to the matched matter (pre-filled), or create a new matter.
 function _listingAct(idx){
@@ -6113,13 +6116,18 @@ function printCauseList(iso, includeMeetings, opts){
       const num=_n(info.number)||_n(info.caseNo)||_n(info.diaryNo);
       if(num && have.has(num)) return;
       if(num) have.add(num);
+      // LINK the fetched listing to an existing matter (by case/diary number) so it can
+      // carry your record's referring advocate, and tap through to that matter.
+      const matched=_listingMatch(info);
+      const refAdv = matched ? ((opts.refAdvMap&&opts.refAdvMap[matched.id]) || matched.refName || "") : "";
       rows.push({ forum:"Supreme Court of India", court:(m.court&&m.court!=="—")?m.court:"", item:m.item||"",
-        family:m.family||"",
+        family:m.family||"", matterId:matched?matched.id:"",
         timingMode:"default", courtFrom:"", courtTo:"", specialTime:"",
         __defaultTiming:_courtDefaultTiming("Supreme Court of India").replace(/ (AM|PM)/g,"").replace(" – ","–"),
-        coram:m.coram||"", caseNo:info.caseNo||"", diaryNo:info.diaryNo||"",
-        title:info.party||String(m.title||"").replace(/^\s*\d+\s*/,""), team:"",
-        mainTotal:"", mainFresh:"", suppTotal:"", suppFresh:"", seqPos:"", __fetched:true });
+        coram:m.coram||"", caseNo:(matched&&matched.caseNo)||info.caseNo||"", diaryNo:(matched&&matched.diaryNo)||info.diaryNo||"",
+        title:info.party||(matched&&(matched.parties||matched.client))||String(m.title||"").replace(/^\s*\d+\s*/,""), team:"",
+        refAdv:refAdv,
+        mainTotal:"", mainFresh:"", suppTotal:"", suppFresh:"", seqPos:"", __fetched:true, __linked:!!matched });
     });
   }
   // Grouping key + label per row.
