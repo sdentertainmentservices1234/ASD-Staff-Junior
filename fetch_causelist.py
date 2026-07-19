@@ -219,6 +219,8 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
 
     grouped, order = {}, []
     cur_court = cur_coram = cur_total = cur_fresh = cur_item = ""
+    coram_open = False   # collecting the (possibly multi-judge) bench right after a court header
+    court_coram = {}     # court number -> bench, remembered across page-repeats of the header
     cur_key = None
     # Cause title accumulated per item key: item line + petitioner continuation +
     # "Versus" + respondent, taken from the PARTY column so counsel never leaks in.
@@ -239,20 +241,33 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
 
         # Court header — but never from a bracketed "[... WILL SIT IN COURT NO.N ...]"
         # bench note, which would otherwise hijack the running court number.
+        just_court = False
         if not is_bench_note(line):
             cm = COURT_RE.search(line)
-            if cm:
-                cur_court = cm.group(1)
-                cur_coram = ""
+            newc = cm.group(1) if cm else ("1" if CJ_RE.search(line) else None)
+            if newc is not None:
+                just_court = True
+                cur_court = newc
                 cur_total = cur_fresh = ""
-            elif CJ_RE.search(line):
-                cur_court = "1"          # Chief Justice's Court is Court No. 1
-                cur_coram = ""
-                cur_total = cur_fresh = ""
-        if not cur_coram and not is_bench_note(line):
-            cmatch = re.search(r"(hon'?ble.*)", line, re.I)
-            if cmatch:
-                cur_coram = re.sub(r"\s+", " ", cmatch.group(1)).strip()[:120]
+                if newc in court_coram:      # header repeats each page — reuse known bench
+                    cur_coram = court_coram[newc]; coram_open = False
+                else:
+                    cur_coram = ""; coram_open = True   # bench follows the FIRST header
+        # Bench (coram): capture EVERY consecutive "HON'BLE …" line after the court header so a
+        # two/three-judge bench is kept in full, and remember it per court (the header repeats
+        # on every page but the judges are printed only on the court's first page).
+        # Skip the header line itself — otherwise it trips the "non-judge line ends bench" rule
+        # before the judges printed on the next line are ever seen.
+        if coram_open and not just_court and not is_bench_note(line):
+            if re.match(r"^\s*hon'?ble\b", line, re.I):
+                judge = re.sub(r"\s+", " ", line).strip()
+                cur_coram = (cur_coram + "; " + judge) if cur_coram else judge
+                cur_coram = cur_coram[:200]
+                court_coram[cur_court] = cur_coram
+            elif re.search(r"daily cause list|^\s*$", line, re.I):
+                pass                     # page header / blank — keep collecting
+            else:
+                coram_open = False       # first non-judge line ends the bench
         tm = TOTAL_RE.search(line)
         if tm:
             cur_total = tm.group(1)
