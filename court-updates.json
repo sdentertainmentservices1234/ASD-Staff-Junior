@@ -1,74 +1,26 @@
 {
-  "generated_at": "2026-07-20T15:39:45.978492Z",
+  "generated_at": "2026-07-20T19:23:13.437068Z",
   "window": [
-    "2026-07-20",
     "2026-07-21",
     "2026-07-22",
     "2026-07-23",
     "2026-07-24",
     "2026-07-27",
     "2026-07-28",
-    "2026-07-29"
+    "2026-07-29",
+    "2026-07-30"
   ],
   "by_date": {
-    "2026-07-20": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Registrar - Main",
-        "Registrar - Supplementary",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 2,
-      "matches": [
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "13",
-          "item": "52",
-          "coram": "HON'BLE MR. JUSTICE K.V. VISWANATHAN; HON'BLE MR. JUSTICE ARUN PALLI",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "52 SLP(C) No. 3574/2026 SANJEEV KUMAR Versus NATRAJ COMMERCIAL COMPLEX PVT. LTD AND ANR."
-        },
-        {
-          "for_date": "2026-07-20",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "16",
-          "item": "5",
-          "coram": "HON'BLE MR. JUSTICE SATISH CHANDRA SHARMA; HON'BLE MR. JUSTICE NONGMEIKAPAM KOTISWAR SINGH",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "5 SLP(Crl) No. 8841/2026 FAVAS RAHIMT Versus STATE OF KERALA"
-        }
-      ]
-    },
     "2026-07-21": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Registrar - Main",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
       "match_count": 2,
@@ -125,63 +77,47 @@
     },
     "2026-07-23": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
-      "match_count": 3,
+      "has_main": true,
+      "match_count": 2,
       "matches": [
         {
           "for_date": "2026-07-23",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "238",
-          "coram": "",
+          "court": "9",
+          "item": "4",
+          "coram": "HON'BLE MR. JUSTICE AHSANUDDIN AMANULLAH; HON'BLE MR. JUSTICE MANMOHAN",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "238 RUMI SAIKIA SLP(C) No. 682-685/2026 Versus THE STATE OF ASSAM AND ORS."
+          "text": "4 SLP(C) No. 29588/2025 RAJARSHI SEN DEKA Versus STATE OF ASSAM AND ORS."
         },
         {
           "for_date": "2026-07-23",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "238",
-          "coram": "",
+          "court": "16",
+          "item": "21",
+          "coram": "HON'BLE MR. JUSTICE SATISH CHANDRA SHARMA; HON'BLE MR. JUSTICE NONGMEIKAPAM KOTISWAR SINGH",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "238 VIKASH KUMAR PINCHA SLP(C) No. 2310/2026 Versus THE STATE OF ASSAM AND ANR."
-        },
-        {
-          "for_date": "2026-07-23",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "238",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "238 DHRUBOJYOTI CHAKRABORTY SLP(C) No. Versus THE STATE OF ASSAM AND ORS."
+          "text": "21 T.P.(C) No. 302/2026 KAMNA ASHOK SUD Versus URMILA RATTANLAL SUD"
         }
       ]
     },
@@ -260,8 +196,18 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-07-30": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
-  "match_count": 9,
+  "match_count": 6,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
