@@ -6,12 +6,17 @@ name: Supreme Court cause-list fetch (multi-wave)
 # upcoming days. GitHub cron is UTC; IST = UTC + 5:30.
 on:
   schedule:
-    - cron: "30 3  * * 1-6"   # 09:00 IST - morning
-    - cron: "30 8  * * 1-6"   # 14:00 IST - midday (Thu/Fri main lists appear)
-    - cron: "30 13 * * 1-6"   # 19:00 IST - early evening
-    - cron: "30 14 * * 1-6"   # 20:00 IST - supplementary window
-    - cron: "30 15 * * 1-6"   # 21:00 IST - late supplementary
-    - cron: "30 16 * * 1-6"   # 22:00 IST - final catch for late lists
+    # Public repo → free unlimited Actions minutes, so we poll densely to cut the
+    # lag between the court publishing a list and it showing in the app. Most runs
+    # find nothing new and exit without committing; only a changed list is pushed.
+    # A concurrency guard (below) stops overlapping runs from piling up.
+    #   Every 15 min across the whole publishing window: UTC 02:00–19:45
+    #   = IST 07:30–01:15, which covers morning advance lists, afternoon main
+    #   lists, and evening / very-late supplementary lists (often 9–11 PM IST).
+    - cron: "*/15 2-19 * * *"
+    #   Overnight insurance for the rare list posted after 01:15 IST:
+    #   UTC 20:30 / 22:30 / 00:30 = IST 02:00 / 04:00 / 06:00.
+    - cron: "30 20,22,0 * * *"
   workflow_dispatch:           # manual "Run workflow" button
 
 # Never let two scheduled runs overlap and race on the commit.
