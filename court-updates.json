@@ -1,41 +1,26 @@
 {
-  "generated_at": "2026-07-22T16:13:57.573705Z",
+  "generated_at": "2026-07-22T20:41:07.378568Z",
   "window": [
-    "2026-07-22",
     "2026-07-23",
     "2026-07-24",
     "2026-07-27",
     "2026-07-28",
     "2026-07-29",
     "2026-07-30",
-    "2026-07-31"
+    "2026-07-31",
+    "2026-08-03"
   ],
   "by_date": {
-    "2026-07-22": {
+    "2026-07-23": {
       "lists_found": [
         "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
-        "Regular / Final - Supplementary",
         "Registrar - Main",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 0,
-      "matches": []
-    },
-    "2026-07-23": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Regular / Final - Main",
-        "Registrar - Main",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
       "match_count": 2,
@@ -173,8 +158,36 @@
           "text": "926 SLP(C) No. 27751/2025 SHAIKH PASHU S/O SHAIKH RAHEEM AND ORS. Versus SHAIKH RAFIK S/O SHAIKH MAHEBOOB AND ORS."
         }
       ]
+    },
+    "2026-08-03": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-08-03",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "660",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "660 SLP(Crl) No. 6256/2026 NARESH TUDU Versus STATE OF JHARKHAND"
+        }
+      ]
     }
   },
-  "match_count": 4,
+  "match_count": 5,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
