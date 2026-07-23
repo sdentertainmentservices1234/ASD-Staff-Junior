@@ -1,66 +1,16 @@
 {
-  "generated_at": "2026-07-23T16:21:21.140551Z",
+  "generated_at": "2026-07-23T20:42:23.276748Z",
   "window": [
-    "2026-07-23",
     "2026-07-24",
     "2026-07-27",
     "2026-07-28",
     "2026-07-29",
     "2026-07-30",
     "2026-07-31",
-    "2026-08-03"
+    "2026-08-03",
+    "2026-08-04"
   ],
   "by_date": {
-    "2026-07-23": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Registrar - Main",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 2,
-      "matches": [
-        {
-          "for_date": "2026-07-23",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "9",
-          "item": "4",
-          "coram": "HON'BLE MR. JUSTICE AHSANUDDIN AMANULLAH; HON'BLE MR. JUSTICE MANMOHAN",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "4 SLP(C) No. 29588/2025 RAJARSHI SEN DEKA Versus STATE OF ASSAM AND ORS."
-        },
-        {
-          "for_date": "2026-07-23",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "16",
-          "item": "21",
-          "coram": "HON'BLE MR. JUSTICE SATISH CHANDRA SHARMA; HON'BLE MR. JUSTICE NONGMEIKAPAM KOTISWAR SINGH",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "21 T.P.(C) No. 302/2026 KAMNA ASHOK SUD Versus URMILA RATTANLAL SUD"
-        }
-      ]
-    },
     "2026-07-24": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -208,8 +158,18 @@
           "text": "660 SLP(Crl) No. 6256/2026 NARESH TUDU Versus STATE OF JHARKHAND"
         }
       ]
+    },
+    "2026-08-04": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
-  "match_count": 6,
+  "match_count": 4,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
