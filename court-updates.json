@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T20:42:23.276748Z",
+  "generated_at": "2026-07-23T23:48:49.828165Z",
   "window": [
     "2026-07-24",
     "2026-07-27",
@@ -28,11 +28,10 @@
     "2026-07-27": {
       "lists_found": [
         "Miscellaneous - Main",
-        "Registrar - Main",
-        "Miscellaneous - Advance"
+        "Registrar - Main"
       ],
       "has_supplementary": false,
-      "has_advance": true,
+      "has_advance": false,
       "has_main": true,
       "match_count": 1,
       "matches": [
