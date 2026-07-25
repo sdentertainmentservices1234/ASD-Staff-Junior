@@ -6155,6 +6155,27 @@ function printCauseList(iso, includeMeetings, opts){
         mainTotal:"", mainFresh:"", suppTotal:"", suppFresh:"", seqPos:"", __fetched:true, __linked:!!matched });
     });
   }
+  // Final safety net: never print the same case twice. Rows are in order (your own matter
+  // rows first, fetched drafting-aid rows after). A later row is dropped when it's the same
+  // case as one already kept — exact normalized number for any row, plus overlapping number
+  // (e.g. a batch "682-685/2026" and its member "685/2026", or a case listed in both the
+  // main and advance lists) but ONLY for fetched rows, so one of your own records is never
+  // hidden by a coincidental number overlap.
+  (function(){
+    const _n=s=>String(s||"").replace(/[^0-9]/g,"");
+    const kept=[]; const keepRow=[];
+    rows.forEach(r=>{
+      const num=_n(r.caseNo)||_n(r.diaryNo);
+      if(num.length>=5){
+        const exact=kept.indexOf(num)>=0;
+        const overlap=r.__fetched && kept.some(k=>k && (k.indexOf(num)>=0 || num.indexOf(k)>=0));
+        if(exact||overlap) return;   // duplicate — skip
+        kept.push(num);
+      }
+      keepRow.push(r);
+    });
+    if(keepRow.length!==rows.length){ rows.length=0; Array.prototype.push.apply(rows, keepRow); }
+  })();
   // Grouping key + label per row.
   // Supreme Court matters group by courtroom ("Court No. 5"); matters before any
   // other forum (High Court, tribunal, arbitration, etc.) group under that forum's
@@ -16841,7 +16862,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.25-1800";
+  window.APP_VERSION = "2026.07.25-2000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
