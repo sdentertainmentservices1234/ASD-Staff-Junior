@@ -11445,6 +11445,10 @@ function _gatherUpcomingEvents(fromISO){
   try{ (_allApptsForMe()||[]).forEach(a=>{ if(a.date&&a.date>=from) out.push({ kind:(a.kind==="personal"?"personal":"meeting"), uid:"appt-"+(a.id||a.date), date:a.date, time:a.time||"", summary:(a.kind==="personal"?"":"Meeting: ")+(a.title||"Appointment"), desc:a.createdBy?("by "+a.createdBy):"", location:a.location||"", matterId:a.matterId||"" }); }); }catch(e){}
   (DB.todos||[]).forEach(t=>{ if(t.due&&t.due>=from&&t.status!=="resolved"){ const mt=t.matterId?matterById(t.matterId):null; out.push({ kind:"deadline", uid:"todo-"+(t.id||t.due), date:t.due, time:t.time||"", summary:"Deadline: "+(t.text||"task"), desc:mt?mt.code:"", location:"", matterId:t.matterId||"" }); } });
   (DB.reminders||[]).forEach(r=>{ if(r.date&&r.date>=from&&r.status!=="done"){ out.push({ kind:"reminder", uid:"rem-"+(r.id||r.date), date:r.date, time:r.time||"", summary:"Reminder: "+(r.text||""), desc:r.forWho||"", location:"" }); } });
+  // Court-detected hearings: matters the SC has listed (from the auto-fetched cause list)
+  // that haven't been hand-entered yet — so the agenda & calendar track the court's own
+  // list without anyone typing a date.
+  (_detectedHearingEvents(from)||[]).forEach(e=>out.push(e));
   out.sort((a,b)=>(a.date+"T"+(a.time||"99")).localeCompare(b.date+"T"+(b.time||"99")));
   return out;
 }
@@ -11460,6 +11464,95 @@ function exportUpcomingToCal(){
   if(!events.length){ toast("No upcoming hearings, meetings or deadlines to add."); return; }
   _downloadICS(_icsCalendar(events,(DB.settings&&DB.settings.chamberName)||"Chamber"), "chamber-calendar.ics");
   toast(events.length+" event(s) ready — open the file to add them to your calendar.");
+}
+// ===== Court Agenda: the auto-fetched cause list → your daily agenda, tracker-style =====
+// The scheduled fetcher matches your matters in the SC's published lists (by case/diary
+// number). This turns those matches into hearing events automatically — so your agenda
+// and calendar reflect the court's own list with no one typing a date. No API, no CAPTCHA.
+function _detectedHearingEvents(fromISO){
+  const from=fromISO||todayISO(); const out=[];
+  if(!window.__cuCache) return out;
+  (DB.matters||[]).forEach(m=>{
+    if(isVoided(m) || m.status==="Concluded") return;
+    const have=new Set(Array.isArray(m.dates)?m.dates.map(d=>d.date):[]);
+    (_matterListings(m)||[]).forEach(r=>{
+      if(!r.date || r.date<from || have.has(r.date)) return;   // future & not already hand-tracked
+      const b=r.badge||{};
+      const where = b.big==="Ch."?"In Chamber"
+        : (String(b.big||"").indexOf("R-")===0?"Registrar Court "+String(b.big).slice(2)
+        : (b.cap==="Court"?"Court "+b.big:(b.big==="Circ."?"Circulation":(r.court&&r.court!=="—"?"Court "+r.court:(b.big||"")))));
+      const cor=String(r.coram||"").replace(/court\s*no\.?\s*\d+/i,"").replace(/hon'?ble/gi,"").replace(/\s+/g," ").replace(/^[\s·,-]+/,"").trim();
+      const parts=[]; if(where) parts.push(where); if(r.item) parts.push("Item "+r.item); if(cor) parts.push(cor);
+      out.push({ kind:"hearing", detected:true, uid:"listing-"+m.id+"-"+r.date, date:r.date, time:"",
+        summary:(m.code?m.code+" — ":"")+(m.parties||m.client||"Hearing"),
+        desc:parts.join(" · "), location:m.court||"Supreme Court of India", matterId:m.id,
+        courtNo:(r.court&&r.court!=="—")?r.court:"", itemNo:r.item||"", coram:r.coram||"", advance:(r.hasMain===false) });
+    });
+  });
+  return out;
+}
+// One-tap: fold a court-detected listing into the matter's own hearing record (+ calendar).
+function _trackListing(mid, iso, courtNo, itemNo, coram){
+  const m=matterById(mid); if(!m||!iso) return;
+  if(!Array.isArray(m.dates)) m.dates=[];
+  if(m.dates.some(d=>d.date===iso)){ toast("Already on your dates."); return; }
+  m.dates.push(_auditStamp({ id:uid(), date:iso, time:"", reason:"Listed",
+    note:[courtNo?("Court "+courtNo):"", itemNo?("Item "+itemNo):"", coram||""].filter(Boolean).join(" · "),
+    courtNo:courtNo||"", itemNo:itemNo||"", coram:coram||"" }, true));
+  m.dates.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  const fut=m.dates.filter(d=>d.date>=todayISO()); const nx=fut.length?fut[0]:m.dates[m.dates.length-1];
+  m.nextDate=nx?nx.date:""; m.hearingNote=nx?nx.reason:"";
+  save(); toast("Tracked "+fmtDate(iso)+" — "+(m.code||"matter")+".");
+  openCourtAgenda();
+}
+function _trackDetected(i){ const e=(window.__caEvents||[])[i]; if(e) _trackListing(e.matterId,e.date,e.courtNo,e.itemNo,e.coram); }
+function _trackAllDetected(){
+  const evs=_detectedHearingEvents(todayISO()); let n=0;
+  evs.forEach(e=>{ const m=matterById(e.matterId); if(!m) return; if(!Array.isArray(m.dates)) m.dates=[];
+    if(m.dates.some(d=>d.date===e.date)) return;
+    m.dates.push(_auditStamp({ id:uid(), date:e.date, time:"", reason:"Listed", note:e.desc||"",
+      courtNo:e.courtNo||"", itemNo:e.itemNo||"", coram:e.coram||"" }, true));
+    m.dates.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+    const fut=m.dates.filter(d=>d.date>=todayISO()); const nx=fut.length?fut[0]:m.dates[m.dates.length-1];
+    m.nextDate=nx?nx.date:""; m.hearingNote="Listed"; n++;
+  });
+  if(n){ save(); toast("Tracked "+n+" hearing"+(n>1?"s":"")+" from the court list."); }
+  else toast("Nothing new to track.");
+  openCourtAgenda();
+}
+function openCourtAgenda(){
+  const from=todayISO();
+  const evs=_gatherUpcomingEvents(from).filter(e=>e.kind==="hearing");
+  evs.forEach((e,i)=>e._i=i); window.__caEvents=evs;
+  const detectedCount=evs.filter(e=>e.detected).length;
+  const grp={today:[],tomorrow:[],week:[],later:[]};
+  evs.forEach(e=>{ const b=(typeof _dateBucket==="function")?_dateBucket(e.date):"later"; (grp[b]||grp.later).push(e); });
+  const row=(e)=>{
+    const n=_daysUntil(e.date);
+    const when=n===0?"Today":n===1?"Tomorrow":`in ${n}d`;
+    const col=n===0?"background:#fbeee0;color:#8a5a12":n===1?"background:#e7efe8;color:var(--green)":"background:var(--line2);color:var(--muted)";
+    const tags=(e.advance?`<span class="tag" style="background:var(--brass);color:#fff;border:none">advance</span> `:"")
+      +(e.detected?`<span class="tag active">from court list</span>`:`<span class="tag" style="color:var(--green,#2e7d32)">✓ tracked</span>`);
+    const act=e.detected
+      ? `<button class="row-act" onclick="event.stopPropagation();_trackDetected(${e._i})">＋ Track</button>`
+      : `<span class="row-act" style="color:var(--green,#2e7d32)">✓</span>`;
+    const click=e.matterId?`onclick="closeModal();openMatterDetail('${e.matterId}')" style="cursor:pointer"`:"";
+    return `<div class="lrow"><div class="l" ${click}><div class="t">⚖️ ${esc(e.summary)}</div>
+      <div class="s">${fmtDate(e.date)}${e.desc?" · "+esc(e.desc):""} ${tags}</div></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="flex:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;${col}">${when}</span>${act}</div></div>`;
+  };
+  const sec=(title,arr)=>arr.length?`<div style="margin-top:14px"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px">${title} · ${arr.length}</div>${arr.map(row).join("")}</div>`:"";
+  const body=evs.length
+    ? sec("Today",grp.today)+sec("Tomorrow",grp.tomorrow)+sec("This week",grp.week)+sec("Later",grp.later)
+    : `<div class="empty" style="padding:24px">No upcoming listings found for your matters in the court's published lists yet. New lists are checked every 15 minutes — matters are matched by case/diary number.</div>`;
+  openModal("Court agenda", `
+    <div class="hint" style="margin-bottom:6px">Your matters as the Supreme Court has listed them — pulled automatically from the published cause lists, soonest first. <b>Track</b> saves the date onto the matter (and lets you add it to your calendar).</div>
+    ${body}
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      ${detectedCount?`<button class="btn ghost" onclick="_trackAllDetected()">＋ Track all (${detectedCount})</button>`:""}
+      ${evs.length?`<button class="btn seal" onclick="exportUpcomingToCal()">📅 Add all to calendar</button>`:""}
+    </div>`);
 }
 // ===== Deadlines dashboard: one urgency-sorted view of everything time-sensitive =====
 function _gatherAllDeadlines(){
@@ -15386,6 +15479,7 @@ function renderMoreMenu(){
     item("openPeople()",HOME_ICONS.matters,"People","Staff, juniors, interns · approvals · access"),
   ];
   const work=[
+    item("openCourtAgenda()",'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M7 6l-4 7h8zM17 6l-4 7h8zM3 13a4 4 0 0 0 8 0M13 13a4 4 0 0 0 8 0M12 6v13M8 21h8"/></svg>',"Court agenda","Your matters as the court has listed them — auto"),
     item("openSub('todos')",HOME_ICONS.reminder,"Tasks &amp; reminders","Work to do &amp; timed nudges"),
     item("openTaskTemplates()",HOME_ICONS.documents,"Checklist templates","Spawn standard task-sets in one tap"),
     item("openSub('calendar')",HOME_ICONS.calendar,"Calendar","Hearings &amp; appointments"),
@@ -16699,7 +16793,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.22-1400";
+  window.APP_VERSION = "2026.07.25-1200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
