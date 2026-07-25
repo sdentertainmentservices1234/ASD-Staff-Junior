@@ -3756,6 +3756,36 @@ function _waSendText(num, text){
   const url = num ? ("https://wa.me/"+num+"?text="+t) : ("https://wa.me/?text="+t);
   try{ window.open(url,"_blank","noopener"); }catch(e){}
 }
+function _raPrintCaseList(encKey){
+  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
+  if(!a.matters.length){ toast("No matters to list."); return; }
+  const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
+  const rows=list.map((m,i)=>`<tr>
+    <td style="text-align:center">${i+1}</td>
+    <td class="mono">${esc(m.code||"")}</td>
+    <td><b>${esc(m.parties||m.client||"")}</b>${(m.client&&m.parties&&m.client!==m.parties)?`<div style="color:#6b655c;font-size:11px;margin-top:1px">Client: ${esc(m.client)}</div>`:""}</td>
+    <td>${esc(m.caseNo||(m.diaryNo?("Diary "+m.diaryNo):"")||"—")}</td>
+    <td>${esc(m.court||"—")}</td>
+    <td>${m.nextDate?esc(fmtDate(m.nextDate)):"—"}</td>
+    <td>${esc(m.status||"Active")}</td>
+  </tr>`).join("");
+  const contact=[a.phone,a.email,a.addr].filter(Boolean).join(" · ");
+  const active=list.filter(m=>m.status!=="Concluded"&&m.status!=="Closed").length;
+  const area=document.getElementById("receiptArea");
+  area.innerHTML=`<div class="tpl-list">
+    ${_causeListHeader("Statement of Cases · "+fmtDate(todayISO()))}
+    <div style="margin:2px 0 12px">
+      <div style="font-weight:700;font-size:15px;color:#1e1a15">Cases referred by ${esc(a.name)}${a.id?` <span style="font-size:11px;color:#9a7b3f">${esc(_regCode(a.id))}</span>`:""}</div>
+      ${contact?`<div style="color:#6b655c;font-size:11.5px;margin-top:2px">${esc(contact)}</div>`:""}
+      <div style="color:#6b655c;font-size:11.5px;margin-top:2px">${list.length} matter${list.length!==1?"s":""} (${active} active) · as on ${esc(fmtDate(todayISO()))}</div>
+    </div>
+    <table class="tpl-tbl">
+      <thead><tr><th style="width:30px">#</th><th>Code</th><th>Cause title</th><th>Case / Diary No.</th><th>Court / Forum</th><th>Next date</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+  setTimeout(()=>_printAs("Cases referred by "+(a.name||"advocate")),150);
+}
 function _raShareCases(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
   const s=DB.settings||{};
@@ -3765,13 +3795,20 @@ function _raShareCases(encKey){
   const txt=`*${s.chamberName||s.advName||"Chamber"}* \u2014 matters referred by ${a.name}:\n\n`+lines.join("\n")+`\n\nTotal: ${list.length} matter${list.length!==1?"s":""}.`;
   const num=_waNumber(a.phone);
   openModal("Send case list \u2014 "+esc(a.name), `
-    <div class="hint">${list.length} matter${list.length!==1?"s":""} referred by <b>${esc(a.name)}</b>. Edit if needed, then share on WhatsApp or copy.</div>
-    <textarea class="in" id="raShareTxt" rows="11" style="font-family:inherit;white-space:pre-wrap;margin-top:8px">${esc(txt)}</textarea>
-    <div class="btn-row" style="margin-top:12px">
-      <button class="btn ghost" onclick="closeModal()">Close</button>
-      <button class="btn ghost" onclick="copyText((document.getElementById('raShareTxt')||{}).value||'');toast('Copied.')">Copy</button>
-      <button class="btn seal" onclick="_waSendText('${num}', (document.getElementById('raShareTxt')||{}).value||'')">WhatsApp</button>
-    </div>`);
+    <div class="hint">${list.length} matter${list.length!==1?"s":""} referred by <b>${esc(a.name)}</b>.</div>
+    <div style="font-weight:600;font-size:13px;margin:12px 0 6px;color:var(--ink)">\ud83d\udcc4 Full tabulated list (PDF)</div>
+    <div class="hint">A proper document on your letterhead \u2014 code, cause title, case/diary no., court, next date &amp; status \u2014 to save as PDF, print, or share.</div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn seal" onclick="closeModal();_raPrintCaseList('${encKey}')">\ud83d\udcc4 Make PDF</button>
+    </div>
+    <details class="form-grp" style="margin-top:14px"><summary>Or send a quick text (WhatsApp)</summary>
+      <textarea class="in" id="raShareTxt" rows="9" style="font-family:inherit;white-space:pre-wrap;margin-top:8px">${esc(txt)}</textarea>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn ghost" onclick="copyText((document.getElementById('raShareTxt')||{}).value||'');toast('Copied.')">Copy</button>
+        <button class="btn seal" onclick="_waSendText('${num}', (document.getElementById('raShareTxt')||{}).value||'')">WhatsApp</button>
+      </div>
+    </details>
+    <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
 function _raRaiseInvoice(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
@@ -16964,7 +17001,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.25-2200";
+  window.APP_VERSION = "2026.07.25-2330";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
