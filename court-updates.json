@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-25T12:19:18.776253Z",
+  "generated_at": "2026-07-25T15:58:06.757553Z",
   "window": [
     "2026-07-27",
     "2026-07-28",
@@ -14,10 +14,11 @@
     "2026-07-27": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
         "Registrar - Main",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
       "match_count": 2,
@@ -92,14 +93,34 @@
     },
     "2026-07-29": {
       "lists_found": [
+        "Miscellaneous - Main",
+        "Regular / Final - Main",
         "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 0,
-      "matches": []
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-07-29",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "12",
+          "item": "13",
+          "coram": "HON'BLE MR. JUSTICE ARAVIND KUMAR; HON'BLE MR. JUSTICE VIPUL M. PANCHOLI",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "13 SLP(C) No. 24612/2026 SATISH JAGANNATH CHAWARE Versus DEEPAK AND ORS."
+        }
+      ]
     },
     "2026-07-30": {
       "lists_found": [
@@ -188,6 +209,6 @@
       "matches": []
     }
   },
-  "match_count": 5,
+  "match_count": 6,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
