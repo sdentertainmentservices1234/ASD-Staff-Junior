@@ -5844,14 +5844,21 @@ function _advNameTokens(){
 // Best-effort parse of a listing line into {number, caseNo, diaryNo, party}.
 function _parseListing(rawText){
   let raw=String(rawText||"").trim();
-  raw=raw.replace(/^\s*\d{1,4}[.\)]?\s+/,"");   // drop a leading item number ("127" or "127.")
+  raw=raw.replace(/^\s*\d{1,4}(?:\.\d{1,3})?[.\)]?\s+/,"");   // drop a leading item number ("127", "127.", or a "4.1" connected sub-item)
   raw=raw.replace(/^connected\s+/i,"");          // drop the "Connected" sub-matter marker
   let diaryNo="",caseNo="",number="";
-  const dm=raw.match(/Diary\s*No\.?\s*(\d+[\/\-]\d{4})/i);
-  if(dm){ diaryNo=dm[1].replace("-","/"); number=diaryNo; }
-  const cm=raw.match(/((?:SLP|W\.?\s*P\.?|C\.?\s*A\.?|T\.?\s*P\.?|Crl\.?\s*A\.?|R\.?\s*P\.?|M\.?\s*A\.?|Cont\.?|Ref\.?)[^\d]*?No\.?\s*\d+[\/\-]\d{4})/i);
-  if(cm&&!diaryNo){ caseNo=cm[1].replace(/\s+/g," ").trim(); const nn=caseNo.match(/(\d+[\/\-]\d{4})/); if(nn) number=nn[1].replace("-","/"); }
-  if(!number){ const nn=raw.match(/(\d+[\/\-]\d{4})/); if(nn) number=nn[1].replace("-","/"); }
+  // Case/diary number, tolerant of ranges like "682-685/2026" (multiple SLPs heard together).
+  const NUM=/\d+(?:-\d+)?[\/\-]\d{4}/;
+  // Normalise: keep a real range ("682-685/2026") intact; only turn a "-YYYY" year
+  // separator into "/YYYY" ("8029-2026" → "8029/2026").
+  const normNum=(s)=>{ s=s.replace(/\s+/g,""); return s.indexOf("/")>=0 ? s : s.replace(/-(\d{4})$/,"/$1"); };
+  const dm=raw.match(/Diary\s*No\.?\s*(\d+(?:-\d+)?[\/\-]\d{4})/i);
+  if(dm){ diaryNo=normNum(dm[1]); number=diaryNo; }
+  // \b before the type so short tokens (M.A., C.A., R.P.) can't match inside a party
+  // name — e.g. the "MA" in "KUMAR" was being read as a Misc.-Application case type.
+  const cm=raw.match(/(\b(?:SLP|W\.?\s*P\.?|C\.?\s*A\.?|T\.?\s*P\.?|Crl\.?\s*A\.?|R\.?\s*P\.?|M\.?\s*A\.?|Cont\.?|Ref\.?)[^\d]*?No\.?\s*\d+(?:-\d+)?[\/\-]\d{4})/i);
+  if(cm&&!diaryNo){ caseNo=cm[1].replace(/\s+/g," ").trim(); const nn=caseNo.match(NUM); if(nn) number=normNum(nn[0]); }
+  if(!number){ const nn=raw.match(NUM); if(nn) number=normNum(nn[0]); }
   // party = the line minus the case/diary portion minus the advocate's OWN name
   let party=raw;
   if(cm) party=party.replace(cm[1]," ");
@@ -16692,7 +16699,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.19-1300";
+  window.APP_VERSION = "2026.07.22-1400";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){

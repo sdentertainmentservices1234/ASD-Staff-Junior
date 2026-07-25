@@ -183,12 +183,26 @@ FRESH_RE = re.compile(r"fresh\s*(?:matters)?\s*[:\-]?\s*([0-9]+)", re.I)
 ITEM_RE = re.compile(
     r"^\s*(\d{1,4})[.\)]?\s+(?:SLP|W\.?\s*P|C\.?\s*A|Crl|Cri|Diary|T\.?\s*P|R\.?\s*P|"
     r"M\.?\s*A|CONMT|SMC|SMW|Cont|Ref|Curative|Review|Comp|Connected)", re.I)
-# Connected sub-matter: "127. Connected <petitioner> <counsel>". It reuses the PARENT's
-# item number, and its own case number sits on the NEXT line ("1 Diary No. 25800-2025").
-CONNECTED_RE = re.compile(r"^\s*(\d{1,4})[.\)]?\s+Connected\b\s*", re.I)
+# Connected sub-matter. Two real formats, both handled here:
+#   "127. Connected <petitioner> <counsel>"  — reuses the parent's item number, and
+#      its own case number sits on the NEXT line ("1 Diary No. 25800-2025"); and
+#   "4.1 Connected <petitioner> <counsel>"   — a decimal sub-item under item 4, with
+#      the case type/number on the following line(s) ("SLP(C) No." / "682-685/2026").
+# The optional "\.\d{1,3}" is what lets "4.1"/"4.2" match; without it these connected
+# matters collapsed into the parent item and were lost (Court 9 item 4, 23-07-2026).
+CONNECTED_RE = re.compile(r"^\s*(\d{1,4}(?:\.\d{1,3})?)[.\)]?\s+Connected\b\s*", re.I)
 SUBCASE_RE = re.compile(
     r"^\s*\d{1,3}\s+(?:SLP|W\.?\s*P|C\.?\s*A|Crl|Cri|Diary|T\.?\s*P|R\.?\s*P|M\.?\s*A|Cont|Ref|Comp)",
     re.I)
+# A "4.1 Connected" sub-item prints its case type/number on the FOLLOWING line(s) in
+# the case-no column (party column empty): "SLP(C) No." then "682-685/2026", or a
+# single "SLP(C) No. 2310/2026". Match either a bare case-type header or a line that
+# starts with a case number (incl. ranges like 682-685/2026) so we can fold the case
+# number into the sub-item's title. Deliberately does NOT match roman-numeral
+# category lines ("XV", "II-E") or "[CAVEAT]".
+CONN_CASEREF_RE = re.compile(
+    r"^\s*(?:SLP|W\.?\s*P|C\.?\s*A|Crl|Cri|Diary|T\.?\s*P|R\.?\s*P|M\.?\s*A|CONMT|SMC|SMW|Cont|Ref|Curative|Review|Comp)\b"
+    r"|^\s*\d{1,5}\s*[-/]\s*\d", re.I)
 # Lines that END the parties block of an item (applications, notes, the next item, etc.).
 # Everything from the item line up to (but not including) one of these — with the party
 # column of each line — forms the cause title "PETITIONER Versus RESPONDENT".
@@ -278,13 +292,16 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
         conn = CONNECTED_RE.match(line)
         im = ITEM_RE.match(line)
         if conn:
-            # Connected sub-matter. It REUSES the parent's item number, so give it a
-            # DISTINCT key — otherwise it would clobber the parent item's already-built
-            # title (that exact bug lost the Mannadheswarar case no. and respondent).
+            # Connected sub-matter. It carries its own item number ("4.1") or reuses the
+            # parent's ("127"), so give it a DISTINCT key — otherwise it would clobber the
+            # parent item's already-built title (that bug lost the Mannadheswarar case no.
+            # and respondent). Drop the "N.N Connected" prefix from the title; the number
+            # is carried separately in the item field, and leaving it in clutters the
+            # displayed party name.
             conn_seq += 1
             cur_item = conn.group(1)
             cur_key = (list_kind, cur_court, cur_item + "#c" + str(conn_seq))
-            item_titles[cur_key] = CONNECTED_RE.sub(r"\1 ", left.strip())
+            item_titles[cur_key] = CONNECTED_RE.sub("", left.strip())
             accumulating = True
             pending_subcase = True
         elif im and pending_subcase and SUBCASE_RE.match(line):
@@ -293,6 +310,14 @@ def scan_text(lines, wl, list_label, list_kind, for_date, family=""):
             item_titles[cur_key] = (item_titles[cur_key] + " " +
                                     re.sub(r"^\s*\d{1,3}\s+", "", left.strip())).strip()
             pending_subcase = False
+        elif pending_subcase and CONN_CASEREF_RE.match(line) and not VERSUS_RE.match(line):
+            # Decimal-style "4.1 Connected" sub-item: its case type/number sits on the
+            # following case-no-column line(s) with an empty party column. Fold that text
+            # into the sub-item's title so the case number is captured. Stay in
+            # pending_subcase so a wrapped number line ("682-685/2026") is caught too.
+            add = left.strip()
+            if add:
+                item_titles[cur_key] = (item_titles[cur_key] + " " + add).strip()
         elif im:
             cur_item = im.group(1)
             cur_key = (list_kind, cur_court, cur_item)
