@@ -5972,7 +5972,7 @@ function _fillHomeCourtCard(){
   const el=document.getElementById("homeCourtCard");
   if(!el) return;
   fetch("court-updates.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-  .then((rawCU)=>{ window.__cuCache=_normCourtUpdates(rawCU); _renderHomeCourt(); });
+  .then((rawCU)=>{ window.__cuCache=_normCourtUpdates(rawCU); try{ _autoTrackListings(); }catch(e){} _renderHomeCourt(); });
 }
 // Move the home cause-list view to the previous / next day that has data in the fetched window.
 function _hcShift(delta){
@@ -9974,7 +9974,7 @@ function openMatterDetail(id){
   // home), pull it once and re-render so the "Listed in the cause list" card appears.
   if(!window.__cuCache){
     fetch("court-updates.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-      .then(raw=>{ if(raw){ window.__cuCache=_normCourtUpdates(raw); if(_currentMatterId===id) renderMatterDetail(); } });
+      .then(raw=>{ if(raw){ window.__cuCache=_normCourtUpdates(raw); try{ _autoTrackListings(); }catch(e){} if(_currentMatterId===id) renderMatterDetail(); } });
   }
 }
 /* Finding 4 — limitation calculator. From the impugned order's date and the
@@ -10408,7 +10408,7 @@ function renderMatterDetail(){
         <button class="btn ghost sm" onclick="_afterHearing('${m.id}')" style="margin-right:6px">After hearing</button>
         <button class="btn ghost sm" onclick="_limCalc('${m.id}')" style="margin-right:6px">Limitation</button>
         <button class="btn seal sm" onclick="addDate('${m.id}')">+ Add date</button></div>
-      ${(Array.isArray(m.dates)&&m.dates.length)?`<div class="lrows">${m.dates.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(d=>{const fut=d.date>=todayISO();return `<div class="lrow"><div class="l"><div class="t">${fmtDate(d.date)}${fut?` <span class="tag active">upcoming</span>`:""}</div><div class="s">${esc(d.reason||"")}${d.note?" · "+esc(d.note):""}${d.createdBy?" · "+esc(d.createdBy):""}</div></div><div style="display:flex;gap:6px">${fut?`<button class="row-act" onclick="addHearingToCal('${m.id}','${d.id}')" title="Add to my phone calendar with a reminder">＋Cal</button>`:""}<button class="row-act" onclick="editDate('${m.id}','${d.id}')">Edit</button><button class="row-act" onclick="delDate('${m.id}','${d.id}')">Delete</button></div></div>`;}).join("")}</div>`:`<div class="empty" style="padding:12px">No dates recorded. Add the first hearing date.</div>`}
+      ${(Array.isArray(m.dates)&&m.dates.length)?`<div class="lrows">${m.dates.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(d=>{const fut=d.date>=todayISO();return `<div class="lrow"><div class="l"><div class="t">${fmtDate(d.date)}${fut?` <span class="tag active">upcoming</span>`:""}${d.src==="cl"?` <span class="tag" style="background:var(--brass);color:#fff;border:none" title="Added automatically from the Supreme Court cause list — edit or delete if wrong">from cause list</span>`:""}</div><div class="s">${esc(d.reason||"")}${d.note?" · "+esc(d.note):""}${d.createdBy?" · "+esc(d.createdBy):""}</div></div><div style="display:flex;gap:6px">${fut?`<button class="row-act" onclick="addHearingToCal('${m.id}','${d.id}')" title="Add to my phone calendar with a reminder">＋Cal</button>`:""}<button class="row-act" onclick="editDate('${m.id}','${d.id}')">Edit</button><button class="row-act" onclick="delDate('${m.id}','${d.id}')">Delete</button></div></div>`;}).join("")}</div>`:`<div class="empty" style="padding:12px">No dates recorded. Add the first hearing date.</div>`}
     </div>
 
     <div class="card">
@@ -11314,7 +11314,7 @@ function openCalendar(){
   // so listed cases show on the calendar.
   if(!window.__cuCache){
     fetch("court-updates.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
-      .then(raw=>{ if(raw){ window.__cuCache=_normCourtUpdates(raw); try{ if(document.getElementById("panel-calendar").classList.contains("active")) renderCalendar(isStaffView()); }catch(e){} } });
+      .then(raw=>{ if(raw){ window.__cuCache=_normCourtUpdates(raw); try{ _autoTrackListings(); }catch(e){} try{ if(document.getElementById("panel-calendar").classList.contains("active")) renderCalendar(isStaffView()); }catch(e){} } });
   }
   if(isStaffView()){
     _shellTab="calendar"; renderStaffBotNav&&renderStaffBotNav();
@@ -11475,8 +11475,9 @@ function _detectedHearingEvents(fromISO){
   (DB.matters||[]).forEach(m=>{
     if(isVoided(m) || m.status==="Concluded") return;
     const have=new Set(Array.isArray(m.dates)?m.dates.map(d=>d.date):[]);
+    const skip=new Set(Array.isArray(m.clSkip)?m.clSkip:[]);   // listings the user deleted — don't resurface
     (_matterListings(m)||[]).forEach(r=>{
-      if(!r.date || r.date<from || have.has(r.date)) return;   // future & not already hand-tracked
+      if(!r.date || r.date<from || have.has(r.date) || skip.has(r.date)) return;   // future, not already tracked, not deleted
       const b=r.badge||{};
       const where = b.big==="Ch."?"In Chamber"
         : (String(b.big||"").indexOf("R-")===0?"Registrar Court "+String(b.big).slice(2)
@@ -11491,14 +11492,49 @@ function _detectedHearingEvents(fromISO){
   });
   return out;
 }
+// Auto-track: fold high-confidence (case/diary-number matched) upcoming listings from the
+// SC feed straight into each matter's hearing record — no tap needed. It's the default now.
+// Safe to run repeatedly: a listing the user DELETED is remembered in m.clSkip and never
+// re-added; an entry the user EDITED keeps its src/clDate markers so it isn't duplicated.
+// Only writes (and syncs) when something actually changed.
+function _autoTrackListings(){
+  if(!window.__cuCache || !Array.isArray(DB.matters)) return false;
+  const today=todayISO(); let any=false;
+  DB.matters.forEach(m=>{
+    if(isVoided(m) || m.status==="Concluded") return;
+    if(!Array.isArray(m.dates)) m.dates=[];
+    const skip=new Set(Array.isArray(m.clSkip)?m.clSkip:[]);
+    const haveCl=new Set(m.dates.filter(d=>d.src==="cl"&&d.clDate).map(d=>d.clDate));
+    const haveDate=new Set(m.dates.map(d=>d.date));
+    let mChanged=false;
+    (_matterListings(m)||[]).forEach(r=>{
+      if(!r.date || r.date<today) return;                       // only upcoming
+      if(skip.has(r.date) || haveCl.has(r.date) || haveDate.has(r.date)) return;
+      m.dates.push(_auditStamp({ id:uid(), date:r.date, time:"", reason:"Listed",
+        note:[ (r.court&&r.court!=="—")?("Court "+r.court):"", r.item?("Item "+r.item):"", r.coram||"" ].filter(Boolean).join(" · "),
+        courtNo:(r.court&&r.court!=="—")?r.court:"", itemNo:r.item||"", coram:r.coram||"",
+        src:"cl", clDate:r.date }, true));
+      haveCl.add(r.date); haveDate.add(r.date); mChanged=true; any=true;
+    });
+    if(mChanged){
+      m.dates.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+      const fut=m.dates.filter(d=>d.date>=today); const nx=fut.length?fut[0]:m.dates[m.dates.length-1];
+      m.nextDate=nx?nx.date:""; m.hearingNote=nx?nx.reason:"";
+    }
+  });
+  if(any) save();
+  return any;
+}
 // One-tap: fold a court-detected listing into the matter's own hearing record (+ calendar).
+// Also used to restore a listing you'd previously deleted (clears it from the skip list).
 function _trackListing(mid, iso, courtNo, itemNo, coram){
   const m=matterById(mid); if(!m||!iso) return;
   if(!Array.isArray(m.dates)) m.dates=[];
+  if(Array.isArray(m.clSkip)) m.clSkip=m.clSkip.filter(x=>x!==iso);   // un-suppress if re-tracking
   if(m.dates.some(d=>d.date===iso)){ toast("Already on your dates."); return; }
   m.dates.push(_auditStamp({ id:uid(), date:iso, time:"", reason:"Listed",
     note:[courtNo?("Court "+courtNo):"", itemNo?("Item "+itemNo):"", coram||""].filter(Boolean).join(" · "),
-    courtNo:courtNo||"", itemNo:itemNo||"", coram:coram||"" }, true));
+    courtNo:courtNo||"", itemNo:itemNo||"", coram:coram||"", src:"cl", clDate:iso }, true));
   m.dates.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   const fut=m.dates.filter(d=>d.date>=todayISO()); const nx=fut.length?fut[0]:m.dates[m.dates.length-1];
   m.nextDate=nx?nx.date:""; m.hearingNote=nx?nx.reason:"";
@@ -11510,8 +11546,9 @@ function _trackAllDetected(){
   const evs=_detectedHearingEvents(todayISO()); let n=0;
   evs.forEach(e=>{ const m=matterById(e.matterId); if(!m) return; if(!Array.isArray(m.dates)) m.dates=[];
     if(m.dates.some(d=>d.date===e.date)) return;
+    if(Array.isArray(m.clSkip)) m.clSkip=m.clSkip.filter(x=>x!==e.date);
     m.dates.push(_auditStamp({ id:uid(), date:e.date, time:"", reason:"Listed", note:e.desc||"",
-      courtNo:e.courtNo||"", itemNo:e.itemNo||"", coram:e.coram||"" }, true));
+      courtNo:e.courtNo||"", itemNo:e.itemNo||"", coram:e.coram||"", src:"cl", clDate:e.date }, true));
     m.dates.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
     const fut=m.dates.filter(d=>d.date>=todayISO()); const nx=fut.length?fut[0]:m.dates[m.dates.length-1];
     m.nextDate=nx?nx.date:""; m.hearingNote="Listed"; n++;
@@ -15159,6 +15196,10 @@ function _refreshCalendarIfOpen(){
 }
 function delDate(matterId, dateId){
   const m=matterById(matterId); if(!m||!Array.isArray(m.dates)) return;
+  // If this date was auto-added from the court feed, remember the deletion so the
+  // auto-tracker never re-adds it.
+  const gone=m.dates.find(d=>d.id===dateId);
+  if(gone && gone.src==="cl"){ if(!Array.isArray(m.clSkip)) m.clSkip=[]; const k=gone.clDate||gone.date; if(k && m.clSkip.indexOf(k)<0) m.clSkip.push(k); }
   m.dates=m.dates.filter(d=>d.id!==dateId);
   const future=(m.dates||[]).filter(d=>d.date>=todayISO()).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   const next = future.length? future[0] : (m.dates.length? m.dates.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||""))[m.dates.length-1] : null);
@@ -16793,7 +16834,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.25-1200";
+  window.APP_VERSION = "2026.07.25-1600";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
