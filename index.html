@@ -3738,12 +3738,114 @@ function openRefAdvDetail(encKey){
         ${a.email?`<div class="row"><span class="k" style="min-width:80px">Email</span><b>${esc(a.email)}</b></div>`:""}
         ${a.addr?`<div class="row"><span class="k" style="min-width:80px">Address</span><b>${esc(a.addr)}</b></div>`:""}
       </div>`:""}
+      ${a.matters.length?`<div class="btn-row" style="margin-top:12px">
+        <button class="btn seal sm" onclick="_raRaiseInvoice('${encKey}')">🧾 Raise invoice</button>
+        <button class="btn ghost sm" onclick="_raShareCases('${encKey}')">📤 Send case list</button>
+      </div>`:""}
     </div>
     <div class="card">
       <div class="card-head"><div><h2>Matters referred</h2><div class="hint">Newest first &mdash; includes past (concluded) cases.</div></div></div>
       ${a.matters.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Code</th><th>Cause title</th><th>Client</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:12px">No matters.</div>`}
     </div>`;
   window.scrollTo({top:0,behavior:"smooth"});
+}
+// ===== Referring advocate: share a case list, and raise a consolidated invoice =====
+function _raNum(v){ return +String(v==null?"":v).replace(/[^0-9.]/g,"")||0; }
+function _waSendText(num, text){
+  const t=encodeURIComponent(text||"");
+  const url = num ? ("https://wa.me/"+num+"?text="+t) : ("https://wa.me/?text="+t);
+  try{ window.open(url,"_blank","noopener"); }catch(e){}
+}
+function _raShareCases(encKey){
+  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
+  const s=DB.settings||{};
+  const active=a.matters.filter(m=>m.status!=="Concluded"&&m.status!=="Closed");
+  const list=(active.length?active:a.matters).slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
+  const lines=list.map((m,i)=>`${i+1}. ${m.parties||m.client||m.code||""}${(m.caseNo||m.diaryNo)?" ["+(m.caseNo||("Diary "+m.diaryNo))+"]":""}${m.nextDate?" \u2014 next "+fmtDate(m.nextDate):""}`);
+  const txt=`*${s.chamberName||s.advName||"Chamber"}* \u2014 matters referred by ${a.name}:\n\n`+lines.join("\n")+`\n\nTotal: ${list.length} matter${list.length!==1?"s":""}.`;
+  const num=_waNumber(a.phone);
+  openModal("Send case list \u2014 "+esc(a.name), `
+    <div class="hint">${list.length} matter${list.length!==1?"s":""} referred by <b>${esc(a.name)}</b>. Edit if needed, then share on WhatsApp or copy.</div>
+    <textarea class="in" id="raShareTxt" rows="11" style="font-family:inherit;white-space:pre-wrap;margin-top:8px">${esc(txt)}</textarea>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      <button class="btn ghost" onclick="copyText((document.getElementById('raShareTxt')||{}).value||'');toast('Copied.')">Copy</button>
+      <button class="btn seal" onclick="_waSendText('${num}', (document.getElementById('raShareTxt')||{}).value||'')">WhatsApp</button>
+    </div>`);
+}
+function _raRaiseInvoice(encKey){
+  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
+  if(!a.matters.length){ toast("No matters to bill for this advocate."); return; }
+  const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
+  const rows=list.map(m=>{
+    const active=m.status!=="Concluded"&&m.status!=="Closed";
+    return `<tr>
+      <td style="text-align:center"><input type="checkbox" class="ra-inv-ck" data-mid="${m.id}" ${active?"checked":""} onchange="_raInvTotal()"></td>
+      <td class="mono">${esc(m.code||"")}</td>
+      <td><b>${esc(m.parties||m.client||"")}</b>${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
+      <td><input class="in ra-inv-fee" data-mid="${m.id}" inputmode="numeric" placeholder="0" style="width:110px;text-align:right" oninput="_raInvTotal()"></td>
+    </tr>`;
+  }).join("");
+  openModal("Raise invoice \u2014 "+esc(a.name), `
+    <div class="hint">Tick the cases to bill <b>${esc(a.name)}</b> and enter a fee for each \u2014 one consolidated invoice is created with a line per case.</div>
+    <div class="grid g2" style="margin-top:10px">
+      <div><label class="fld">Invoice date</label><input class="in" type="date" id="raInvDate" value="${todayISO()}"></div>
+      <div><label class="fld">Invoice no.</label><input class="in mono" value="${esc(peekNextInvoiceNo())}" readonly style="background:#f1ece0;color:var(--muted)"></div>
+    </div>
+    <details class="form-grp" style="margin-top:10px"><summary>Bill-to details</summary>
+      <label class="fld" style="margin-top:6px">Name</label><input class="in" id="raInvName" value="${esc(a.name||"")}">
+      <label class="fld" style="margin-top:8px">Address</label><input class="in" id="raInvAddr" value="${esc(a.addr||"")}">
+      <div class="grid g2" style="margin-top:8px">
+        <div><label class="fld">Phone</label><input class="in" id="raInvPhone" value="${esc(a.phone||"")}"></div>
+        <div><label class="fld">Email</label><input class="in" id="raInvEmail" value="${esc(a.email||"")}"></div>
+      </div>
+    </details>
+    <div class="tbl-wrap" style="margin-top:12px;max-height:42vh;overflow:auto"><table><thead><tr><th style="width:30px"></th><th>Code</th><th>Cause title</th><th style="text-align:right">Fee (\u20b9)</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:8px;border-top:1px solid var(--line);font-weight:700">
+      <span id="raInvCount">Total</span><span id="raInvTotal" class="mono">${fmtINR(0)}</span></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_raDoInvoice()">Save &amp; print invoice</button>
+    </div>`);
+  setTimeout(_raInvTotal,30);
+}
+function _raInvTotal(){
+  let t=0,n=0;
+  document.querySelectorAll(".ra-inv-ck").forEach(ck=>{
+    if(!ck.checked) return;
+    const fee=_raNum((document.querySelector('.ra-inv-fee[data-mid="'+ck.dataset.mid+'"]')||{}).value);
+    if(fee>0){ t+=fee; n++; }
+  });
+  const el=document.getElementById("raInvTotal"); if(el) el.textContent=fmtINR(t);
+  const c=document.getElementById("raInvCount"); if(c) c.textContent=n?("Total \u2014 "+n+" case"+(n!==1?"s":"")):"Total";
+}
+function _raDoInvoice(){
+  const name=((document.getElementById("raInvName")||{}).value||"").trim();
+  const date=(document.getElementById("raInvDate")||{}).value||todayISO();
+  const lines=[];
+  document.querySelectorAll(".ra-inv-ck").forEach(ck=>{
+    if(!ck.checked) return;
+    const m=matterById(ck.dataset.mid); if(!m) return;
+    const fee=_raNum((document.querySelector('.ra-inv-fee[data-mid="'+ck.dataset.mid+'"]')||{}).value);
+    if(fee<=0) return;
+    const ref=[m.code, m.parties||m.client, m.caseNo||(m.diaryNo?("Diary "+m.diaryNo):"")].filter(Boolean).join(" \u00b7 ");
+    lines.push({desc:ref+" \u2014 Professional fees", amount:fee});
+  });
+  if(!name){ toast("Enter who to bill.",true); return; }
+  if(!lines.length){ toast("Tick at least one case and enter its fee.",true); return; }
+  const db=defaultBank(), du=defaultUpi();
+  const inv={ id:uid(), no:nextInvoiceNo(date), date, matterId:"", noMatter:true, refAdvBill:true,
+    to:name, toAddr:((document.getElementById("raInvAddr")||{}).value||"").trim(),
+    toPhone:((document.getElementById("raInvPhone")||{}).value||"").trim(),
+    toEmail:((document.getElementById("raInvEmail")||{}).value||"").trim(),
+    style:"itemised", dueMode:"onreceipt", due:0,
+    bankId: db?db.id:"", upiId: du?du.id:"", showQr: !!du,
+    lines, expenses:[], notes:"", status:"raised" };
+  DB.invoices.push(inv);
+  const tot=lines.reduce((s,l)=>s+l.amount,0);
+  logActivity("invoice", `Invoice ${inv.no||""} to ${name} \u2014 ${fmtINR(tot)} (${lines.length} case${lines.length!==1?"s":""})`, {ownerOnly:true, refId:inv.id});
+  save(); closeModal(); printInvoice(inv);
+  toast(`Invoice ${inv.no} raised to ${name}.`);
 }
 /* ===== Success record \u2014 wins scored from side-appeared-for + result ===== */
 function _successStats(){
@@ -16862,7 +16964,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.25-2000";
+  window.APP_VERSION = "2026.07.25-2200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
