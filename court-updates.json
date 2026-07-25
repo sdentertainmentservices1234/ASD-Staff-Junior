@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-25T00:19:31.802280Z",
+  "generated_at": "2026-07-25T07:14:13.439616Z",
   "window": [
     "2026-07-27",
     "2026-07-28",
@@ -20,7 +20,7 @@
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 1,
+      "match_count": 2,
       "matches": [
         {
           "for_date": "2026-07-27",
@@ -38,13 +38,29 @@
           ],
           "confidence": "medium",
           "text": "22 Diary No. 30644-2026 SONAJI Versus THE STATE OF MAHARASHTRA AND ORS."
+        },
+        {
+          "for_date": "2026-07-27",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "6",
+          "item": "22.1",
+          "coram": "HON'BLE MR. JUSTICE DIPANKAR DATTA; HON'BLE MR. JUSTICE SHEEL NAGU",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "ABDUL REHMAN AND ANR. Diary No. 39893-2026 Versus THE STATE OF MAHARASHTRA AND ORS."
         }
       ]
     },
     "2026-07-28": {
       "lists_found": [
         "Miscellaneous - Main",
-        "Regular / Final - Main",
         "Registrar - Main",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
@@ -170,6 +186,6 @@
       "matches": []
     }
   },
-  "match_count": 4,
+  "match_count": 5,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
