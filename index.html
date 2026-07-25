@@ -6102,12 +6102,15 @@ function printCauseList(iso, includeMeetings, opts){
   iso=iso||todayISO();
   const staff=isStaffView();
   const rows=[];
+  const shownIds=new Set();   // matters already printed, so a fetched listing that links to one isn't repeated
   (DB.matters||[]).forEach(m=>{
     if(isVoided(m)) return;
     const de=(m.dates||[]).find(d=>d.date===iso);
     if(m.nextDate===iso || de){
       const d=de||{};
+      shownIds.add(m.id);
       rows.push({
+        matterId:m.id,
         forum:m.court||"", court:d.courtNo||"", item:d.itemNo||"",
         timingMode:d.timingMode||"default", courtFrom:d.courtFrom||"", courtTo:d.courtTo||"",
         specialTime:d.specialTime||"", __defaultTiming:_courtDefaultTiming(m.court).replace(/ (AM|PM)/g,"").replace(" – ","–"),
@@ -6133,10 +6136,14 @@ function printCauseList(iso, includeMeetings, opts){
       const info=_parseListing(m.title);
       const num=_n(info.number)||_n(info.caseNo)||_n(info.diaryNo);
       if(num && have.has(num)) return;
-      if(num) have.add(num);
       // LINK the fetched listing to an existing matter (by case/diary number) so it can
       // carry your record's referring advocate, and tap through to that matter.
       const matched=_listingMatch(info);
+      // Skip if that matter is already printed above (e.g. auto-tracked onto its dates).
+      // The number dedup above is EXACT; _listingMatch overlaps ranges/diary-vs-case, so
+      // this catches doubles the exact check misses.
+      if(matched && shownIds.has(matched.id)) return;
+      if(num) have.add(num);
       const refAdv = matched ? ((opts.refAdvMap&&opts.refAdvMap[matched.id]) || matched.refName || "") : "";
       rows.push({ forum:"Supreme Court of India", court:(m.court&&m.court!=="—")?m.court:"", item:m.item||"",
         family:m.family||"", matterId:matched?matched.id:"",
@@ -16834,7 +16841,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.25-1600";
+  window.APP_VERSION = "2026.07.25-1800";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
