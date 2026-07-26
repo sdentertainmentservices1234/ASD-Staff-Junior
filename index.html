@@ -4050,11 +4050,15 @@ async function _raRenderStatementPDF(d){
       let data; try{ data=await idbGet(ax.pdfKey); }catch(e){}
       if(!data) continue;
       const imgs=await _pdfDataToImages(data);
-      annexHtml+=`<div class="tpl-list" style="page-break-before:always;padding:22px 26px">
-        <div style="text-align:center;font-weight:700;font-size:15px;letter-spacing:.08em;margin-bottom:3px">ANNEXURE ${ax.letter}</div>
-        <div style="text-align:center;color:#6b655c;font-size:11px;margin-bottom:14px">${esc(ax.label||ax.pdfName||"Previous list")}${ax.date?" — dated "+esc(ax.date):""}</div>
-        ${imgs.map(im=>`<div style="page-break-inside:avoid;margin-bottom:8px"><img src="${im}" style="display:block;width:100%;border:1px solid #ddd"></div>`).join("")}
-      </div>`;
+      if(!imgs.length) continue;
+      const head=`<div style="text-align:center;margin-bottom:10px"><div style="font-weight:700;font-size:14px;letter-spacing:.08em">ANNEXURE ${ax.letter}</div><div style="color:#6b655c;font-size:10.5px;margin-top:2px">${esc(ax.label||ax.pdfName||"Previous list")}${ax.date?" — dated "+esc(ax.date):""}</div></div>`;
+      // One PDF page per printed page. The ANNEXURE heading rides with the first
+      // image (not alone on its own page), and each image is scaled to fit the page
+      // (max-height in vh) so nothing spills over to leave a blank page.
+      annexHtml+=imgs.map((im,idx)=>`<div class="tpl-list" style="min-height:0;page-break-before:always;padding:16px 22px;text-align:center">
+        ${idx===0?head:""}
+        <img src="${im}" style="display:block;width:auto;height:auto;max-width:100%;max-height:${idx===0?"86vh":"94vh"};margin:0 auto;border:1px solid #ddd">
+      </div>`).join("");
     }
     if(annexHtml) area.insertAdjacentHTML("beforeend", annexHtml);
     setTimeout(()=>_printAs(title),200);
@@ -17447,7 +17451,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.27-2100";
+  window.APP_VERSION = "2026.07.28-1000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
