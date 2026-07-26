@@ -3751,11 +3751,13 @@ function openRefAdvDetail(encKey){
         ${a.email?`<div class="row"><span class="k" style="min-width:80px">Email</span><b>${esc(a.email)}</b></div>`:""}
         ${a.addr?`<div class="row"><span class="k" style="min-width:80px">Address</span><b>${esc(a.addr)}</b></div>`:""}
       </div>`:""}
-      ${a.matters.length?`<div class="btn-row" style="margin-top:12px">
-        <button class="btn seal sm" onclick="_raRaiseInvoice('${encKey}')">🧾 Raise invoice</button>
+      ${a.matters.length?`<div class="btn-row" style="margin-top:12px;flex-wrap:wrap">
         <button class="btn ghost sm" onclick="_raShareCases('${encKey}')">📤 Send case list</button>
+        <button class="btn seal sm" onclick="_raRaiseInvoice('${encKey}')">🧾 Raise invoice</button>
+        <button class="btn seal sm" onclick="_raRecordReceipt('${encKey}')">💰 Record receipt</button>
       </div>`:""}
     </div>
+    ${_raAccountCard(a)}
     <div class="card">
       <div class="card-head"><div><h2>Matters referred</h2><div class="hint">Newest first &mdash; includes past (concluded) cases.</div></div></div>
       ${a.matters.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Code</th><th>Cause title</th><th>Client</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:12px">No matters.</div>`}
@@ -3954,7 +3956,7 @@ function _raRaiseInvoice(encKey){
       <span id="raInvCount">Total</span><span id="raInvTotal" class="mono">${fmtINR(0)}</span></div>
     <div class="btn-row" style="margin-top:14px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn seal" onclick="_raDoInvoice()">Save &amp; print invoice</button>
+      <button class="btn seal" onclick="_raDoInvoice('${encKey}')">Save &amp; print invoice</button>
     </div>`);
   setTimeout(_raInvTotal,30);
 }
@@ -3968,7 +3970,8 @@ function _raInvTotal(){
   const el=document.getElementById("raInvTotal"); if(el) el.textContent=fmtINR(t);
   const c=document.getElementById("raInvCount"); if(c) c.textContent=n?("Total \u2014 "+n+" case"+(n!==1?"s":"")):"Total";
 }
-function _raDoInvoice(){
+function _raDoInvoice(encKey){
+  const a=encKey?_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)):null;
   const name=((document.getElementById("raInvName")||{}).value||"").trim();
   const date=(document.getElementById("raInvDate")||{}).value||todayISO();
   const lines=[];
@@ -3984,6 +3987,7 @@ function _raDoInvoice(){
   if(!lines.length){ toast("Tick at least one case and enter its fee.",true); return; }
   const db=defaultBank(), du=defaultUpi();
   const inv={ id:uid(), no:nextInvoiceNo(date), date, matterId:"", noMatter:true, refAdvBill:true,
+    refAdvId:(a&&a.id)||"", refAdvKey:(a&&a.key)||"",
     to:name, toAddr:((document.getElementById("raInvAddr")||{}).value||"").trim(),
     toPhone:((document.getElementById("raInvPhone")||{}).value||"").trim(),
     toEmail:((document.getElementById("raInvEmail")||{}).value||"").trim(),
@@ -3995,6 +3999,90 @@ function _raDoInvoice(){
   logActivity("invoice", `Invoice ${inv.no||""} to ${name} \u2014 ${fmtINR(tot)} (${lines.length} case${lines.length!==1?"s":""})`, {ownerOnly:true, refId:inv.id});
   save(); closeModal(); printInvoice(inv);
   toast(`Invoice ${inv.no} raised to ${name}.`);
+}
+// A referring advocate's account: invoices raised to them and receipts from them.
+// Matched by the stored refAdvId, or (for older records) by refAdvBill + name.
+function _raAccount(a){
+  if(!a) return {invs:[],recs:[],billed:0,received:0,outstanding:0};
+  const nk=_refKey(a.name);
+  const invs=(DB.invoices||[]).filter(v=>!isVoided(v) && ((a.id&&v.refAdvId===a.id) || (v.refAdvBill && !v.refAdvId && _refKey(v.to)===nk)));
+  const recs=(DB.receipts||[]).filter(r=>!isVoided(r) && ((a.id&&r.refAdvId===a.id) || (r.refAdvBill && !r.refAdvId && _refKey(r.payer)===nk)));
+  const invTot=v=>(v.lines||[]).reduce((t,l)=>t+(+l.amount||0),0)+(v.expenses||[]).reduce((t,l)=>t+(+l.amount||0),0);
+  const billed=invs.reduce((s,v)=>s+invTot(v),0);
+  const received=recs.reduce((s,r)=>s+(+r.amount||0),0);
+  return {invs, recs, billed, received, outstanding:billed-received, invTot};
+}
+function _raAccountCard(a){
+  const ac=_raAccount(a);
+  if(!ac.invs.length && !ac.recs.length) return "";
+  const invRows=ac.invs.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).map(v=>{
+    const tot=ac.invTot(v), paid=(v.status==="paid"||v.paid);
+    return `<tr><td class="mono">${esc(v.no)}</td><td>${fmtDate(v.date)}</td><td class="num">${fmtINR(tot)}</td>
+      <td><span class="tag ${paid?"":"active"}" style="${paid?"background:var(--green,#2e7d32);color:#fff":""}">${paid?"Paid":"Unpaid"}</span></td>
+      <td><button class="row-act" onclick="reprintInvoice('${v.id}')">Print</button></td></tr>`;
+  }).join("");
+  const recRows=ac.recs.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).map(r=>
+    `<tr><td class="mono">${esc(r.no)}</td><td>${fmtDate(r.date)}</td><td class="num">${fmtINR(r.amount)}</td><td>${esc(r.mode||"")}</td>
+     <td><button class="row-act" onclick="reprint('${r.id}')">Print</button></td></tr>`).join("");
+  return `<div class="card">
+    <div class="card-head"><div><h2>Billing &amp; payments</h2><div class="hint">This advocate's account \u2014 invoices raised &amp; payments received.</div></div></div>
+    <div class="tpl-dl" style="margin-top:4px">
+      <div class="row"><span class="k" style="min-width:96px">Billed</span><b>${fmtINR(ac.billed)}</b></div>
+      <div class="row"><span class="k" style="min-width:96px">Received</span><b>${fmtINR(ac.received)}</b></div>
+      <div class="row"><span class="k" style="min-width:96px">Outstanding</span><b style="${ac.outstanding>0?"color:var(--seal)":"color:var(--green,#2e7d32)"}">${fmtINR(ac.outstanding)}</b></div>
+    </div>
+    ${ac.invs.length?`<div style="font-weight:600;font-size:12px;margin:13px 0 4px;color:var(--muted)">Invoices</div><div class="tbl-wrap"><table class="sr-num"><thead><tr><th>No.</th><th>Date</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead><tbody>${invRows}</tbody></table></div>`:""}
+    ${ac.recs.length?`<div style="font-weight:600;font-size:12px;margin:13px 0 4px;color:var(--muted)">Receipts</div><div class="tbl-wrap"><table class="sr-num"><thead><tr><th>No.</th><th>Date</th><th class="num">Amount</th><th>Mode</th><th></th></tr></thead><tbody>${recRows}</tbody></table></div>`:""}
+  </div>`;
+}
+function _raRecordReceipt(encKey){
+  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
+  const ac=_raAccount(a);
+  const unpaid=ac.invs.filter(v=>!(v.status==="paid"||v.paid));
+  const invOpts=`<option value="">\u2014 Not against a specific invoice \u2014</option>`+unpaid.map(v=>`<option value="${v.id}" data-amt="${ac.invTot(v)}">${esc(v.no)} \u00b7 ${fmtDate(v.date)} \u00b7 ${fmtINR(ac.invTot(v))}</option>`).join("");
+  const defAmt = unpaid.length===1 ? ac.invTot(unpaid[0]) : (ac.outstanding>0?ac.outstanding:"");
+  openModal("Record receipt \u2014 "+esc(a.name), `
+    <div class="hint">Payment received from <b>${esc(a.name)}</b> against the statement of cases. Recorded to their account (not to a single matter).</div>
+    <div class="grid g2" style="margin-top:10px">
+      <div><label class="fld">Date</label><input class="in" type="date" id="raRcDate" value="${todayISO()}"></div>
+      <div><label class="fld">Amount received (\u20b9)</label><input class="in" id="raRcAmt" inputmode="numeric" value="${defAmt||""}" placeholder="0"></div>
+    </div>
+    ${unpaid.length?`<label class="fld" style="margin-top:10px">Against invoice</label>
+    <select class="in" id="raRcInv" onchange="(function(s){var o=s.options[s.selectedIndex];var v=o&&o.getAttribute('data-amt');var el=document.getElementById('raRcAmt');if(el&&v)el.value=v;})(this)">${invOpts}</select>`:`<input type="hidden" id="raRcInv" value="">`}
+    <div class="grid g2" style="margin-top:10px">
+      <div><label class="fld">Payment mode</label><select class="in" id="raRcMode">${["NEFT/RTGS","UPI","Cheque","Cash","IMPS","Bank transfer"].map(x=>`<option>${x}</option>`).join("")}</select></div>
+      <div><label class="fld">Receipt no.</label><input class="in mono" value="${esc(peekNextReceiptNo())}" readonly style="background:#f1ece0;color:var(--muted)"></div>
+    </div>
+    <label class="fld" style="margin-top:10px">Remarks (optional)</label>
+    <input class="in" id="raRcRemarks" placeholder="e.g. towards fees per statement of cases">
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_raDoReceipt('${encKey}')">Save &amp; print receipt</button>
+    </div>`);
+}
+function _raDoReceipt(encKey){
+  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
+  const date=(document.getElementById("raRcDate")||{}).value||todayISO();
+  const amt=_raNum((document.getElementById("raRcAmt")||{}).value);
+  if(amt<=0){ toast("Enter the amount received.",true); return; }
+  const invId=(document.getElementById("raRcInv")||{}).value||"";
+  const mode=(document.getElementById("raRcMode")||{}).value||"NEFT/RTGS";
+  const remarks=((document.getElementById("raRcRemarks")||{}).value||"").trim();
+  const inv=invId?(DB.invoices||[]).find(v=>v.id===invId):null;
+  const no=nextReceiptNo(date);
+  const rec={ id:uid(), no, date, matterId:"", noMatter:true, refAdvBill:true, refAdvId:a.id||"",
+    payer:a.name, payerLoc:a.addr||"", amount:amt, net:amt, tds:0, showTds:false, mode,
+    towards:"Professional fees"+(inv?(" \u2014 Invoice "+inv.no):" (per statement of cases)"),
+    remarks: remarks || (inv?("Against Invoice "+inv.no+" \u2014 statement of cases"):("Fees per statement of cases referred by "+a.name)),
+    invoiceId: invId||"" };
+  DB.receipts.push(rec);
+  if(!Array.isArray(DB.cash)) DB.cash=[];
+  DB.cash.push({id:uid(), date, particulars:`Receipt ${no} \u2014 ${a.name}`, type:"in", amount:amt, mode, ref:no});
+  if(inv){ inv.paid=true; inv.status="paid"; inv.paidDate=date; inv.paidReceiptId=rec.id; }
+  logActivity("receipt", `Receipt ${no} \u2014 ${fmtINR(amt)} from ${a.name}${inv?(" (Invoice "+inv.no+")"):""}`, {ownerOnly:true, refId:rec.id});
+  save(); closeModal(); printReceipt(rec);
+  try{ openRefAdvDetail(encKey); }catch(e){}
+  toast(`Receipt ${no} saved.`);
 }
 /* ===== Success record \u2014 wins scored from side-appeared-for + result ===== */
 function _successStats(){
@@ -17155,7 +17243,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.26-2000";
+  window.APP_VERSION = "2026.07.26-2230";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
