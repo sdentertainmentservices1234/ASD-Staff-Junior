@@ -378,6 +378,18 @@
       page-break-after:always; break-after:page;
     }
     #receiptArea .tpl:last-child{ page-break-after:auto; break-after:auto; }
+    /* Table-based documents: repeat letterhead (thead) & footer (tfoot) on every page,
+       browser-natively. Override the fixed-position rules so they don't double up.
+       The height chain (scoped to table docs so it can't affect the cause-list/notice)
+       lets the middle cell fill the page so the footer seats at the bottom. */
+    html:has(#receiptArea table.tpl-paged), body:has(#receiptArea table.tpl-paged){ height:100%; }
+    #receiptArea:has(table.tpl-paged){ height:100%; }
+    #receiptArea table.tpl-paged{ display:table; width:100%; height:100%; overflow:visible; }
+    #receiptArea table.tpl-paged>thead{ display:table-header-group; }
+    #receiptArea table.tpl-paged>tfoot{ display:table-footer-group; }
+    #receiptArea table.tpl-paged .tpl-foot{ position:static !important; height:auto !important; bottom:auto !important; }
+    #receiptArea table.tpl-paged .tpl-run-head{ position:static !important; top:auto !important; height:auto !important; }
+    #receiptArea table.tpl-paged>tbody>tr>td.tpl-b{ height:100%; }
     /* Running footer (and, for notices, running header). They are fixed to the
        page box; the REQUIRED companion is _tplReserveForPrint() which measures
        their real heights at print time and sets matching @page margins, so
@@ -449,6 +461,14 @@
     overflow:hidden;font-family:"Inter","Helvetica Neue",Arial,sans-serif;font-feature-settings:"tnum";
     display:flex;flex-direction:column;margin:0 auto;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+  /* Table-based page (built at print time): thead=letterhead+title, tfoot=footer,
+     tbody=body. The middle cell fills so the footer sits at the page bottom on screen;
+     in print, thead/tfoot repeat on every page. Overrides the flex .tpl above. */
+  table.tpl-paged{ display:table; width:794px; height:1123px; min-height:0;
+    table-layout:fixed; border-collapse:collapse; overflow:visible; margin:0 auto }
+  table.tpl-paged>tbody>tr>td.tpl-b{ height:100%; vertical-align:top; padding:0 }
+  table.tpl-paged>thead>tr>td.tpl-h, table.tpl-paged>tfoot>tr>td.tpl-f{ padding:0 }
+  table.tpl-paged .tpl-body{ display:block }
 
   /* legal notice blocks (share tpl tokens) */
   .tpl-nhead{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 8px}
@@ -5251,6 +5271,11 @@ function _tplReserveForPrint(){
   // only one document kind is ever in #receiptArea at print time.
   try{
     var area=document.getElementById("receiptArea"); if(!area) return;
+    var st0=document.getElementById("tplPrintReserve");
+    if(!st0){ st0=document.createElement("style"); st0.id="tplPrintReserve"; document.head.appendChild(st0); }
+    // Table-based documents (tableised at print time) repeat header/footer via
+    // thead/tfoot and reserve their own space — just give the page a plain margin.
+    if(area.querySelector(".tpl-paged")){ st0.textContent="@media print{@page{margin:7mm;size:A4;}}"; return; }
     var foot=area.querySelector(".tpl-foot");
     var rh=area.querySelector(".tpl-run-head");
     var isNotice=!!area.querySelector(".tpl-notice");
@@ -5273,7 +5298,39 @@ function _tplReserveForPrint(){
     st.textContent=css;
   }catch(e){}
 }
+// Browser-independent repeating header/footer: at print time, rebuild each document
+// (except the notice, which has its own running-head layout) into a table whose
+// <thead> is the letterhead+title and <tfoot> is the footer. The print engine then
+// repeats them on every page and reserves their space automatically — no fixed
+// positioning or @page-margin guessing. Idempotent; only touches the print scratch DOM.
+function _tplTableizeForPrint(){
+  try{
+    var area=document.getElementById("receiptArea"); if(!area) return;
+    var tpls=area.querySelectorAll(".tpl");
+    tpls.forEach(function(tpl){
+      if(tpl.tagName==="TABLE") return;                 // already tableised
+      if(tpl.classList.contains("tpl-notice")) return;  // notice keeps its own layout
+      var body=tpl.querySelector(":scope > .tpl-body"); if(!body) return;
+      var foot=tpl.querySelector(":scope > .tpl-foot");
+      var headNodes=[], n=tpl.firstElementChild;
+      while(n && n!==body){ var nx=n.nextElementSibling; if(n!==foot) headNodes.push(n); n=nx; }
+      var table=document.createElement("table");
+      table.className=tpl.className+" tpl-paged";
+      var thead=document.createElement("thead"), r1=document.createElement("tr"), h=document.createElement("td"); h.className="tpl-h";
+      headNodes.forEach(function(x){ h.appendChild(x); });
+      r1.appendChild(h); thead.appendChild(r1);
+      var tfoot=document.createElement("tfoot"), r3=document.createElement("tr"), f=document.createElement("td"); f.className="tpl-f";
+      if(foot) f.appendChild(foot);
+      r3.appendChild(f); tfoot.appendChild(r3);
+      var tbody=document.createElement("tbody"), r2=document.createElement("tr"), b=document.createElement("td"); b.className="tpl-b";
+      b.appendChild(body); r2.appendChild(b); tbody.appendChild(r2);
+      table.appendChild(thead); table.appendChild(tfoot); table.appendChild(tbody);
+      tpl.parentNode.replaceChild(table, tpl);
+    });
+  }catch(e){}
+}
 function _printAs(title){
+  _tplTableizeForPrint();
   _tplReserveForPrint();
   // On mobile / installed PWA, window.print() is unreliable (iOS Safari blocks or
   // hangs it). Route to a clean standalone page the user can reliably print/save.
@@ -17457,7 +17514,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.28-1900";
+  window.APP_VERSION = "2026.07.28-2200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
