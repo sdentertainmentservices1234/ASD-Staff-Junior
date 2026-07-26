@@ -3758,6 +3758,7 @@ function openRefAdvDetail(encKey){
       </div>`:""}
     </div>
     ${_raAccountCard(a)}
+    ${_raStatementsCard(a)}
     <div class="card">
       <div class="card-head"><div><h2>Matters referred</h2><div class="hint">Newest first &mdash; includes past (concluded) cases.</div></div></div>
       ${a.matters.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Code</th><th>Cause title</th><th>Client</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty" style="padding:12px">No matters.</div>`}
@@ -3810,7 +3811,49 @@ function _raGatherStatement(encKey){
   try{ if(a.id){ _ensureRefRegistry(); if(!DB.refAdvRegistry[a.id]) DB.refAdvRegistry[a.id]={id:a.id,name:a.name}; DB.refAdvRegistry[a.id].prevLists=prevAll.filter(p=>p.text||p.label||p.date); save(); } }catch(e){}
   return { a, selected, prevLists:prevAll.filter(p=>p.text) };
 }
-function _raMakeStatement(encKey){ const d=_raGatherStatement(encKey); if(!d) return; if(!d.selected.length && !d.prevLists.length){ toast("Tick at least one case."); return; } closeModal(); _raRenderStatementPDF(d); }
+// Record every statement generated for an advocate, so next time we know which of
+// their cases were already sent. De-duped: making the PDF and the WhatsApp text of the
+// same selection on the same day records it once.
+function _raRecordStatement(d){
+  if(!d||!d.a||!d.selected.length) return;
+  if(!Array.isArray(DB.refStatements)) DB.refStatements=[];
+  const advId=d.a.id||"", ids=d.selected.map(m=>m.id).slice().sort().join(",");
+  const last=(DB.refStatements||[]).filter(r=>r.refAdvId===advId).sort((x,y)=>(y.date||"").localeCompare(x.date||""))[0];
+  if(last && last.date===todayISO() && (last.matterIds||[]).slice().sort().join(",")===ids) return;
+  DB.refStatements.push({ id:uid(), refAdvId:advId, refAdvKey:d.a.key||"", name:d.a.name||"", date:todayISO(),
+    matterIds:d.selected.map(m=>m.id),
+    cases:d.selected.map(m=>({id:m.id, code:m.code||"", parties:m.parties||m.client||"", num:_caseNoOrDiary(m), court:m.court||""})),
+    prevLabels:(d.prevLists||[]).map(p=>p.label||"Previous list"),
+    count:d.selected.length });
+  save();
+}
+// Latest statement (for this advocate) that already included a given matter.
+function _raSentInfo(advId, matterId){
+  const recs=(DB.refStatements||[]).filter(r=>r.refAdvId===advId && (r.matterIds||[]).indexOf(matterId)>=0);
+  if(!recs.length) return null;
+  const latest=recs.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||""))[0];
+  return { date:latest.date, times:recs.length };
+}
+function _raStatementsCard(a){
+  if(!a||!a.id) return "";
+  const recs=(DB.refStatements||[]).filter(r=>r.refAdvId===a.id).sort((x,y)=>(y.date||"").localeCompare(x.date||""));
+  if(!recs.length) return "";
+  const rows=recs.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="num">${r.count||(r.matterIds||[]).length}</td><td><button class="row-act" onclick="_raViewStatement('${r.id}')">View</button></td></tr>`).join("");
+  return `<div class="card">
+    <div class="card-head"><div><h2>Statements sent</h2><div class="hint">Every statement of cases generated for ${esc(a.name)} — so nothing is repeated next time.</div></div></div>
+    <div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Date</th><th class="num">Cases</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div>`;
+}
+function _raViewStatement(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
+  const n=r.count||(r.cases||[]).length;
+  const rows=(r.cases||[]).map((c,i)=>`<tr><td style="text-align:center">${i+1}</td><td class="mono">${esc(c.code||"")}</td><td><b>${esc(c.parties||"")}</b></td><td>${esc(c.num||"—")}</td></tr>`).join("");
+  openModal("Statement dated "+fmtDate(r.date), `
+    <div class="hint">${n} case${n!==1?"s":""} sent to <b>${esc(r.name||"")}</b> on ${fmtDate(r.date)}.${(r.prevLabels&&r.prevLabels.length)?" Plus previous list(s): "+esc(r.prevLabels.join(", "))+".":""}</div>
+    <div class="tbl-wrap" style="margin-top:8px;max-height:50vh;overflow:auto"><table class="sr-num"><thead><tr><th>#</th><th>File no.</th><th>Cause title</th><th>Case / Diary no.</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="empty" style="padding:12px">No cases recorded.</td></tr>`}</tbody></table></div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+function _raMakeStatement(encKey){ const d=_raGatherStatement(encKey); if(!d) return; if(!d.selected.length && !d.prevLists.length){ toast("Tick at least one case."); return; } _raRecordStatement(d); closeModal(); _raRenderStatementPDF(d); }
 function _raRenderStatementPDF(d){
   const a=d.a, s=DB.settings||{};
   const cid=(typeof _chamberIdentity==="function")?_chamberIdentity():{name:s.chamberName||""};
@@ -3875,6 +3918,7 @@ function _raRenderStatementPDF(d){
 }
 function _raStatementText(encKey){
   const d=_raGatherStatement(encKey); if(!d) return;
+  _raRecordStatement(d);
   const s=DB.settings||{};
   let sr=0, out=`*${s.chamberName||s.advName||"Chamber"}* — Statement of cases referred by ${d.a.name} (as on ${fmtDate(todayISO())}):\n`;
   if(d.prevLists.length && d.selected.length) out+=`\n_On chamber record:_\n`;
@@ -3895,13 +3939,14 @@ function _raShareCases(encKey){
   const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
   const saved=(a.id&&DB.refAdvRegistry&&DB.refAdvRegistry[a.id]&&DB.refAdvRegistry[a.id].prevLists)||[];
   const pv=(i)=>saved[i]||{};
-  const caseRows=list.map(m=>`<tr>
-    <td style="text-align:center"><input type="checkbox" class="ra-st-ck" data-mid="${m.id}" checked></td>
+  const caseRows=list.map(m=>{ const sent=a.id?_raSentInfo(a.id,m.id):null;
+    return `<tr>
+    <td style="text-align:center"><input type="checkbox" class="ra-st-ck" data-mid="${m.id}" ${sent?"":"checked"}></td>
     <td class="mono" style="white-space:nowrap">${esc(m.code||"")}</td>
-    <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span class="tag" style="background:#6b1f1f;color:#fff">Caveat</span>`:""}<div class="hint">${esc(_caseNoOrDiary(m))}${m.court?" \u00b7 "+esc(m.court):""}</div></td>
-  </tr>`).join("");
+    <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span class="tag" style="background:#6b1f1f;color:#fff">Caveat</span>`:""}${sent?` <span class="tag" style="background:#8a8175;color:#fff" title="Included in an earlier statement \u2014 ${esc(fmtDate(sent.date))}${sent.times>1?" ("+sent.times+"\u00d7)":""}">Sent ${esc(fmtDate(sent.date))}</span>`:""}<div class="hint">${esc(_caseNoOrDiary(m))}${m.court?" \u00b7 "+esc(m.court):""}</div></td>
+  </tr>`; }).join("");
   openModal("Statement of cases \u2014 "+esc(a.name), `
-    <div class="hint">Untick any case you've already informed <b>${esc(a.name)}</b> about. You can also add up to two earlier lists (from before this app) so nothing looks repeated.</div>
+    <div class="hint">Cases already sent in an earlier statement are marked <b>Sent</b> and start unticked. Tick the ones to include; add up to two earlier lists (from before this app) if useful.</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:13px 0 5px">
       <div style="font-weight:600;font-size:12px;color:var(--seal);text-transform:uppercase;letter-spacing:.05em">Cases to include</div>
       <div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=true)">All</button><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=false)">None</button></div>
@@ -17243,7 +17288,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.26-2230";
+  window.APP_VERSION = "2026.07.27-1000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
