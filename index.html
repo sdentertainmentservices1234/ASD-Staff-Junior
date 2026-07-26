@@ -3769,6 +3769,16 @@ function _waSendText(num, text){
   const url = num ? ("https://wa.me/"+num+"?text="+t) : ("https://wa.me/?text="+t);
   try{ window.open(url,"_blank","noopener"); }catch(e){}
 }
+// Show the petition number when there is a real one; otherwise fall back to the diary
+// number. A matter's caseNo often holds only a type prefix ("SLP(C) No. ___/2026") with
+// no number filled in yet — in that case the diary number is what identifies the case.
+function _caseNoOrDiary(m){
+  const c=String((m&&m.caseNo)||"").trim();
+  const hasNum=/\d{1,6}\s*(?:[\/\-]|\s+of\s+)\s*\d{2,4}/i.test(c);   // e.g. 1234/2026 or 1234 of 2026
+  if(hasNum) return c;
+  if(m&&m.diaryNo) return "Diary No. "+m.diaryNo;
+  return c||"—";
+}
 function _raPrintCaseList(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
   if(!a.matters.length){ toast("No matters to list."); return; }
@@ -3777,9 +3787,9 @@ function _raPrintCaseList(encKey){
   const rows=list.map((m,i)=>`<tr>
     <td style="text-align:center">${i+1}</td>
     <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span style="font-size:8.5px;font-weight:700;color:#fff;background:#6b1f1f;padding:1px 6px;border-radius:9px;vertical-align:middle;letter-spacing:.04em">CAVEAT</span>`:""}</td>
-    <td>${esc(m.caseNo||(m.diaryNo?("Diary "+m.diaryNo):"")||"—")}</td>
+    <td>${esc(_caseNoOrDiary(m))}</td>
     <td>${esc(m.court||"—")}</td>
-    <td>${esc(m.status||"Active")}</td>
+    <td>${m.kind==="caveat" ? (m.caveatValidUntil ? (_daysUntil(m.caveatValidUntil)<0?"Lapsed":"Valid till "+esc(fmtDate(m.caveatValidUntil))) : "Filed") : esc(m.status||"Active")}</td>
   </tr>`).join("");
   const contact=[a.phone,a.email,a.addr].filter(Boolean).join(" · ");
   const caveats=list.filter(m=>m.kind==="caveat").length;
@@ -3803,7 +3813,7 @@ function _raShareCases(encKey){
   const s=DB.settings||{};
   const active=a.matters.filter(m=>m.status!=="Concluded"&&m.status!=="Closed");
   const list=(active.length?active:a.matters).slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
-  const lines=list.map((m,i)=>`${i+1}. ${m.parties||m.client||m.code||""}${m.kind==="caveat"?" (CAVEAT)":""}${(m.caseNo||m.diaryNo)?" ["+(m.caseNo||("Diary "+m.diaryNo))+"]":""}${m.nextDate?" \u2014 next "+fmtDate(m.nextDate):""}`);
+  const lines=list.map((m,i)=>{ const num=_caseNoOrDiary(m); return `${i+1}. ${m.parties||m.client||m.code||""}${m.kind==="caveat"?" (CAVEAT)":""}${(num&&num!=="\u2014")?" ["+num+"]":""}${m.nextDate?" \u2014 next "+fmtDate(m.nextDate):""}`; });
   const txt=`*${s.chamberName||s.advName||"Chamber"}* \u2014 matters referred by ${a.name}:\n\n`+lines.join("\n")+`\n\nTotal: ${list.length} matter${list.length!==1?"s":""}.`;
   const num=_waNumber(a.phone);
   openModal("Send case list \u2014 "+esc(a.name), `
@@ -9732,6 +9742,14 @@ function matterFormHTML(m, mode){
       </div>
       <div class="note" style="margin-top:6px">A <b>query</b> is a walk-in for advice with no number yet (gets a Q-number, convertible to a case later). A <b>caveat</b> is a caveat you've filed in court (§148A CPC) — the same details as a matter, filed defensively so you're heard before any order.</div>
     </div>`:""}
+    <div id="mfCaveatWrap" style="display:${kind==="caveat"?"block":"none"};margin-bottom:13px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--paper2)">
+      <div style="font-weight:600;font-size:13px;color:var(--seal);margin-bottom:8px">Caveat details</div>
+      <div class="grid g2">
+        <div><label class="fld">Caveat filed on</label><input class="in" type="date" id="mfCaveatFiled" value="${esc(m.caveatFiledOn||todayISO())}" onchange="_mfCaveatCalc()"></div>
+        <div><label class="fld">Valid until (90 days)</label><input class="in" id="mfCaveatValid" readonly style="background:#f1ece0;color:var(--muted)" value="${m.caveatValidUntil?esc(fmtDate(m.caveatValidUntil)):""}"></div>
+      </div>
+      <div class="note" style="margin-top:6px">A caveat (§148A CPC) lapses <b>90 days</b> after filing unless renewed. It shows up in your deadlines as it nears expiry.</div>
+    </div>
     <div class="grid g2">
       <div><label class="fld">${past?"Register no.":"Chamber "+(kind==="query"?"query":"file")+" code"}</label>
         <input class="in mono" id="mfCode" value="${esc(codeVal)}" readonly
@@ -9860,6 +9878,18 @@ function setMatterKind(k){
   // for a query, diary/case numbers are usually blank — keep the fields but hint
   const row=document.getElementById("mfNumsRow");
   if(row) row.style.opacity = k==="query"?".55":"1";
+  const cav=document.getElementById("mfCaveatWrap");
+  if(cav) cav.style.display = k==="caveat"?"block":"none";
+  if(k==="caveat"){ try{ _mfCaveatCalc(); }catch(e){} }
+}
+// Caveat validity = filed date + 90 days (§148A CPC). Shows the human date in the form.
+function _mfCaveatCalc(){
+  const f=(document.getElementById("mfCaveatFiled")||{}).value;
+  const el=document.getElementById("mfCaveatValid"); if(!el) return;
+  if(!f){ el.value=""; el.dataset.iso=""; return; }
+  const d=new Date(f+"T00:00:00"); d.setDate(d.getDate()+90);
+  const iso=d.toISOString().slice(0,10);
+  el.dataset.iso=iso; el.value=fmtDate(iso);
 }
 /* repopulate the matter-type dropdown when forum changes */
 function onForumChange(){
@@ -10011,6 +10041,13 @@ function saveMatter(id){
   // Outcome fields are shown for concluded cases — persist them when present.
   if(document.getElementById("pcResult")) data.result = document.getElementById("pcResult").value;
   if(document.getElementById("pcNote")) data.concludedNote = document.getElementById("pcNote").value.trim();
+  // Caveat: filed date + auto 90-day validity (§148A CPC).
+  if(kind==="caveat"){
+    const f=(document.getElementById("mfCaveatFiled")||{}).value||todayISO();
+    data.caveatFiledOn=f;
+    const d=new Date(f+"T00:00:00"); d.setDate(d.getDate()+90);
+    data.caveatValidUntil=d.toISOString().slice(0,10);
+  }
   // Finding 12 — resolve/create the canonical client id for this name.
   try{ data.clientId=_resolveClientId(data.client, {addr:data.address, phone:data.contact, email:data.email}); }catch(e){}
   // Same for the referring advocate (cleared if the name was removed on edit).
@@ -10571,7 +10608,7 @@ function renderMatterDetail(){
         <div style="display:flex;gap:6px;flex:none">${m.contact?`<button class="btn ghost sm" onclick="messageClient('${m.id}')" title="Message the client on WhatsApp">WhatsApp</button>`:""}<button class="btn ghost sm" onclick="editMatter('${m.id}')">Edit</button></div>
       </div>
       <div class="tpl-dl" style="margin-top:6px">
-        ${m.kind==="caveat"?`<div class="row"><span class="k" style="min-width:96px">Type</span><b><span class="tag" style="background:#6b1f1f;color:#fff">Caveat filed</span></b></div>`:""}
+        ${m.kind==="caveat"?`<div class="row"><span class="k" style="min-width:96px">Caveat</span><b><span class="tag" style="background:#6b1f1f;color:#fff">Caveat filed</span>${m.caveatFiledOn?" on "+esc(fmtDate(m.caveatFiledOn)):""}</b></div>${m.caveatValidUntil?`<div class="row"><span class="k" style="min-width:96px">Valid until</span><b>${esc(fmtDate(m.caveatValidUntil))}${(function(){const dl=_daysUntil(m.caveatValidUntil);return dl<0?` <span class="tag" style="background:#8c2f39;color:#fff">Lapsed</span>`:(dl<=15?` <span class="tag" style="background:var(--brass);color:#fff">${dl}d left</span>`:"");})()}</b></div>`:""}`:""}
         ${m.caseNo?`<div class="row"><span class="k" style="min-width:96px">Case No.</span><b>${esc(m.caseNo)}</b></div>`:""}
         ${m.court?`<div class="row"><span class="k" style="min-width:96px">Court</span><b>${esc(m.court)}</b></div>`:""}
         ${m.matterType?`<div class="row"><span class="k" style="min-width:96px">Type</span><b>${esc(m.matterType)}</b></div>`:""}
@@ -11631,6 +11668,15 @@ function _gatherUpcomingEvents(fromISO){
   // that haven't been hand-entered yet — so the agenda & calendar track the court's own
   // list without anyone typing a date.
   (_detectedHearingEvents(from)||[]).forEach(e=>out.push(e));
+  // Caveat lapse dates (§148A CPC — 90 days): surfaced as a deadline so it shows in the
+  // deadlines dashboard and calendar export, and can be renewed before it expires.
+  (DB.matters||[]).forEach(m=>{ if(isVoided(m)) return;
+    if(m.kind==="caveat" && m.caveatValidUntil && m.caveatValidUntil>=from){
+      out.push({ kind:"deadline", uid:"caveat-"+m.id, date:m.caveatValidUntil, time:"",
+        summary:"Caveat lapses: "+(m.parties||m.client||m.code||""),
+        desc:(m.code||"")+(m.court?" · "+m.court:""), location:"", matterId:m.id });
+    }
+  });
   out.sort((a,b)=>(a.date+"T"+(a.time||"99")).localeCompare(b.date+"T"+(b.time||"99")));
   return out;
 }
@@ -17016,7 +17062,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.26-1000";
+  window.APP_VERSION = "2026.07.26-1400";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
