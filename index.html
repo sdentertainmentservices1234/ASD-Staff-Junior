@@ -3879,11 +3879,18 @@ function _raStatementsCard(a){
   if(!a||!a.id) return "";
   const recs=(DB.refStatements||[]).filter(r=>r.refAdvId===a.id).sort((x,y)=>(y.date||"").localeCompare(x.date||""));
   if(!recs.length) return "";
-  const rows=recs.map(r=>`<tr><td>${fmtDate(r.date)}</td><td class="num">${r.count||(r.matterIds||[]).length}</td><td><button class="row-act" onclick="_raViewStatement('${r.id}')">View</button></td></tr>`).join("");
+  const rows=recs.map(r=>`<tr><td>${fmtDate(r.date)}${r.editedOn?` <span class="hint">(edited ${esc(fmtDate(r.editedOn))})</span>`:""}</td><td class="num">${r.count||(r.matterIds||[]).length}</td><td style="white-space:nowrap"><button class="row-act" onclick="_raViewStatement('${r.id}')">View</button><button class="row-act" onclick="_raEditStatement('${r.id}')">Edit</button></td></tr>`).join("");
   return `<div class="card">
     <div class="card-head"><div><h2>Statements sent</h2><div class="hint">Every statement of cases generated for ${esc(a.name)} — so nothing is repeated next time.</div></div></div>
     <div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Date</th><th class="num">Cases</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
   </div>`;
+}
+function _raEditStatement(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
+  const a=_buildRefAdvs().find(x=>x.id===r.refAdvId);
+  const key=(a&&a.key)||r.refAdvKey;
+  if(!key){ toast("Advocate not found for this statement.",true); return; }
+  _raShareCases(encodeURIComponent(key), sid);
 }
 function _raViewStatement(sid){
   const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
@@ -3906,12 +3913,57 @@ function _raEnclosuresPrompt(d){
     <div style="margin-top:10px">${btns}</div>
     <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Done</button></div>`);
 }
-function _raMakeStatement(encKey){ const d=_raGatherStatement(encKey); if(!d) return; if(!d.selected.length && !d.prevLists.length){ toast("Tick at least one case."); return; } _raRecordStatement(d); closeModal(); _raRenderStatementPDF(d); if((d.prevLists||[]).some(p=>p.pdfKey)){ setTimeout(()=>_raEnclosuresPrompt(d), 700); } }
-function _raRenderStatementPDF(d){
+function _raUpdateStatement(sid, d){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r){ _raRecordStatement(d); return; }
+  r.matterIds=d.selected.map(m=>m.id);
+  r.cases=d.selected.map(m=>({id:m.id, code:m.code||"", parties:m.parties||m.client||"", num:_caseNoOrDiary(m), court:m.court||""}));
+  r.prevLabels=(d.prevLists||[]).map(p=>p.label||"Previous list");
+  r.count=d.selected.length; r.editedOn=todayISO();
+  save();
+}
+function _raMakeStatement(encKey){ const d=_raGatherStatement(encKey); if(!d) return; if(!d.selected.length && !d.prevLists.length){ toast("Tick at least one case."); return; }
+  if(window.__raEditSid){ _raUpdateStatement(window.__raEditSid, d); window.__raEditSid=""; } else { _raRecordStatement(d); }
+  closeModal(); _raRenderStatementPDF(d); }
+// Load pdf.js on demand (only when annexing PDFs) so the app stays light & offline-first.
+let _pdfjsP=null;
+function _loadPdfJs(){
+  if(window.pdfjsLib&&window.pdfjsLib.getDocument) return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsP) return _pdfjsP;
+  _pdfjsP=new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload=()=>{ try{ if(window.pdfjsLib&&window.pdfjsLib.GlobalWorkerOptions) window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; res(window.pdfjsLib); }catch(e){ rej(e); } };
+    s.onerror=()=>rej(new Error("pdfjs load failed"));
+    document.head.appendChild(s);
+  });
+  return _pdfjsP;
+}
+async function _pdfDataToImages(dataUrl){
+  const pdfjs=await _loadPdfJs();
+  const b64=(String(dataUrl).split(",")[1])||""; const bin=atob(b64);
+  const arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+  const pdf=await pdfjs.getDocument({data:arr}).promise;
+  const out=[]; const maxW=1240;
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const v1=page.getViewport({scale:1});
+    const scale=Math.min(2.2, maxW/v1.width);
+    const vp=page.getViewport({scale});
+    const c=document.createElement("canvas"); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
+    await page.render({canvasContext:c.getContext("2d"), viewport:vp}).promise;
+    out.push(c.toDataURL("image/jpeg",0.82));
+  }
+  return out;
+}
+async function _raRenderStatementPDF(d){
   const a=d.a, s=DB.settings||{};
   const cid=(typeof _chamberIdentity==="function")?_chamberIdentity():{name:s.chamberName||""};
   const contact=[a.phone,a.email,a.addr].filter(Boolean).join(" · ");
   const caveats=d.selected.filter(m=>m.kind==="caveat").length;
+  const title="Statement of cases — "+(a.name||"advocate");
+  // PDF annexures (attached previous lists), lettered A, B…
+  const annexes=(d.prevLists||[]).filter(p=>p.pdfKey).map((p,i)=>Object.assign({},p,{letter:String.fromCharCode(65+i)}));
+  const annexOf=(pl)=>annexes.find(x=>x.pdfKey===pl.pdfKey);
   const band=(t)=>`<tr><td colspan="6" style="background:#efe9db;color:#4a3f28;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:7px 13px">${esc(t)}</td></tr>`;
   const cavTag=`<span style="font-size:8px;font-weight:700;color:#fff;background:#6b1f1f;padding:1px 5px;border-radius:8px;vertical-align:middle;letter-spacing:.04em">CAVEAT</span>`;
   let sr=0; const body=[];
@@ -3924,8 +3976,8 @@ function _raRenderStatementPDF(d){
     <td>${esc(m.court||"—")}</td>
     <td>${_raStatusCell(m)}</td>
   </tr>`); });
-  d.prevLists.forEach(pl=>{ const rows=_raParsePrev(pl.text); const hasPdf=!!pl.pdfKey; if(!rows.length && !hasPdf) return;
-    body.push(band((pl.label||"Previous list")+(pl.date?" — dated "+pl.date:"")+(hasPdf?" — enclosed separately":"")));
+  d.prevLists.forEach(pl=>{ const rows=_raParsePrev(pl.text); const ax=annexOf(pl); const hasPdf=!!pl.pdfKey; if(!rows.length && !hasPdf) return;
+    body.push(band((pl.label||"Previous list")+(pl.date?" — dated "+pl.date:"")+(ax?(" — Annexure "+ax.letter):"")));
     rows.forEach(r=>{ sr++; body.push(`<tr>
       <td style="text-align:center">${sr}</td>
       <td class="mono">—</td>
@@ -3934,8 +3986,11 @@ function _raRenderStatementPDF(d){
       <td>${esc(r.court||"—")}</td>
       <td>—</td>
     </tr>`); });
-    if(hasPdf && !rows.length){ body.push(`<tr><td></td><td colspan="5" style="color:#6b655c;font-style:italic">Enclosed separately as a PDF${pl.pdfName?" (“"+esc(pl.pdfName)+"”)":""} for your reference.</td></tr>`); }
+    if(hasPdf && !rows.length){ body.push(`<tr><td></td><td colspan="5" style="color:#6b655c;font-style:italic">Annexed hereto as <b>Annexure ${ax?ax.letter:""}</b>${pl.pdfName?" (“"+esc(pl.pdfName)+"”)":""}.</td></tr>`); }
   });
+  const annexNote = annexes.length
+    ? `<div style="margin-top:12px;font-size:10.5px;color:#4a3f28"><b>Annexures attached:</b> ${annexes.map(x=>"Annexure "+x.letter+" — "+esc(x.label||x.pdfName||"Previous list")).join("; ")}.</div>`
+    : "";
   const area=document.getElementById("receiptArea");
   area.innerHTML=`<div class="tpl-list">
     ${_causeListHeader("Statement of Cases")}
@@ -3960,15 +4015,37 @@ function _raRenderStatementPDF(d){
       </tr></thead>
       <tbody>${body.join("")}</tbody>
     </table>
-    <div style="margin-top:26px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px">
-      <div style="color:#8a8175;font-size:9.5px;max-width:58%;line-height:1.5">Drawn from chamber records${d.prevLists.length?" together with the earlier list(s) shown above":""}. Kindly verify against your own records and intimate any discrepancy.</div>
+    ${annexNote}
+    <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px">
+      <div style="color:#8a8175;font-size:9.5px;max-width:58%;line-height:1.5">Drawn from chamber records${d.prevLists.length?" together with the earlier list(s) shown above":""}.${annexes.length?" Earlier list(s) annexed hereto.":""} Kindly verify against your own records and intimate any discrepancy.</div>
       <div style="text-align:center;color:#1e1a15;font-size:11px">
         <div style="height:32px"></div>
         <div style="border-top:1px solid #b9b0a0;padding-top:4px;min-width:190px">For ${esc(cid.name||s.chamberName||"the Chamber")}</div>
       </div>
     </div>
   </div>`;
-  setTimeout(()=>_printAs("Statement of cases — "+(a.name||"advocate")),150);
+  if(!annexes.length){ setTimeout(()=>_printAs(title),150); return; }
+  // Rasterise each annexed PDF and append its pages into the same document.
+  toast("Preparing annexures…");
+  try{
+    let annexHtml="";
+    for(const ax of annexes){
+      let data; try{ data=await idbGet(ax.pdfKey); }catch(e){}
+      if(!data) continue;
+      const imgs=await _pdfDataToImages(data);
+      annexHtml+=`<div class="tpl-list" style="page-break-before:always;padding:22px 26px">
+        <div style="text-align:center;font-weight:700;font-size:15px;letter-spacing:.08em;margin-bottom:3px">ANNEXURE ${ax.letter}</div>
+        <div style="text-align:center;color:#6b655c;font-size:11px;margin-bottom:14px">${esc(ax.label||ax.pdfName||"Previous list")}${ax.date?" — dated "+esc(ax.date):""}</div>
+        ${imgs.map(im=>`<div style="page-break-inside:avoid;margin-bottom:8px"><img src="${im}" style="display:block;width:100%;border:1px solid #ddd"></div>`).join("")}
+      </div>`;
+    }
+    if(annexHtml) area.insertAdjacentHTML("beforeend", annexHtml);
+    setTimeout(()=>_printAs(title),200);
+  }catch(e){
+    toast("Couldn't merge the annexures here — printing the statement; the PDFs can be sent separately.",true);
+    setTimeout(()=>_printAs(title),150);
+    setTimeout(()=>_raEnclosuresPrompt(d),900);
+  }
 }
 function _raStatementText(encKey){
   const d=_raGatherStatement(encKey); if(!d) return;
@@ -3988,20 +4065,24 @@ function _raStatementText(encKey){
       <button class="btn seal" onclick="_waSendText('${num}', (document.getElementById('raShareTxt')||{}).value||'')">WhatsApp</button>
     </div>`);
 }
-function _raShareCases(encKey){
+function _raShareCases(encKey, editSid){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
   window.__raPrevStage={};   // fresh PDF-attach state for this builder session
+  const editRec = editSid ? (DB.refStatements||[]).find(r=>r.id===editSid) : null;
+  window.__raEditSid = editRec ? editSid : "";
+  const editSet = editRec ? new Set(editRec.matterIds||[]) : null;
   const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
   const saved=(a.id&&DB.refAdvRegistry&&DB.refAdvRegistry[a.id]&&DB.refAdvRegistry[a.id].prevLists)||[];
   const pv=(i)=>saved[i]||{};
   const caseRows=list.map(m=>{ const sent=a.id?_raSentInfo(a.id,m.id):null;
+    const checked = editSet ? editSet.has(m.id) : !sent;
     return `<tr>
-    <td style="text-align:center"><input type="checkbox" class="ra-st-ck" data-mid="${m.id}" ${sent?"":"checked"}></td>
+    <td style="text-align:center"><input type="checkbox" class="ra-st-ck" data-mid="${m.id}" ${checked?"checked":""}></td>
     <td class="mono" style="white-space:nowrap">${esc(m.code||"")}</td>
     <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span class="tag" style="background:#6b1f1f;color:#fff">Caveat</span>`:""}${sent?` <span class="tag" style="background:#8a8175;color:#fff" title="Included in an earlier statement \u2014 ${esc(fmtDate(sent.date))}${sent.times>1?" ("+sent.times+"\u00d7)":""}">Sent ${esc(fmtDate(sent.date))}</span>`:""}<div class="hint">${esc(_caseNoOrDiary(m))}${m.court?" \u00b7 "+esc(m.court):""}</div></td>
   </tr>`; }).join("");
-  openModal("Statement of cases \u2014 "+esc(a.name), `
-    <div class="hint">Cases already sent in an earlier statement are marked <b>Sent</b> and start unticked. Tick the ones to include; add up to two earlier lists (from before this app) if useful.</div>
+  openModal(editRec?("Edit statement \u2014 "+esc(fmtDate(editRec.date))):("Statement of cases \u2014 "+esc(a.name)), `
+    <div class="hint">${editRec?`Editing the statement dated <b>${esc(fmtDate(editRec.date))}</b> \u2014 its cases are pre-ticked. Adjust and regenerate.`:`Cases already sent in an earlier statement are marked <b>Sent</b> and start unticked. Tick the ones to include; add up to two earlier lists (from before this app) if useful.`}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:13px 0 5px">
       <div style="font-weight:600;font-size:12px;color:var(--seal);text-transform:uppercase;letter-spacing:.05em">Cases to include</div>
       <div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=true)">All</button><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=false)">None</button></div>
@@ -17349,7 +17430,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.27-1500";
+  window.APP_VERSION = "2026.07.27-1900";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
