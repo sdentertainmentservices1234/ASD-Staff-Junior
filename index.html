@@ -3779,58 +3779,146 @@ function _caseNoOrDiary(m){
   if(m&&m.diaryNo) return "Diary No. "+m.diaryNo;
   return c||"—";
 }
-function _raPrintCaseList(encKey){
-  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
-  if(!a.matters.length){ toast("No matters to list."); return; }
-  const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
-  // Concise: cause title, case/diary no., court, status — caveats flagged inline.
-  const rows=list.map((m,i)=>`<tr>
-    <td style="text-align:center">${i+1}</td>
-    <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span style="font-size:8.5px;font-weight:700;color:#fff;background:#6b1f1f;padding:1px 6px;border-radius:9px;vertical-align:middle;letter-spacing:.04em">CAVEAT</span>`:""}</td>
+// Parse a pasted "previous list" (one case per line; optional "Parties | Case no. | Court").
+function _raParsePrev(text){
+  return String(text||"").split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
+    const p=l.split("|").map(x=>x.trim());
+    return { parties:p[0]||l, num:(p[1]||""), court:(p[2]||"") };
+  });
+}
+function _raStatusCell(m){
+  if(m.kind==="caveat") return m.caveatValidUntil ? (_daysUntil(m.caveatValidUntil)<0?"Lapsed":"Valid till "+esc(fmtDate(m.caveatValidUntil))) : "Caveat filed";
+  return esc(m.status||"Active");
+}
+// Read the builder modal: chosen cases + up to two previous lists. Persists the previous
+// lists on the advocate's registry entry so they're remembered next time.
+function _raGatherStatement(encKey){
+  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return null;
+  const picked=new Set([...document.querySelectorAll(".ra-st-ck")].filter(c=>c.checked).map(c=>c.dataset.mid));
+  const selected=a.matters.slice()
+    .sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}))
+    .filter(m=>picked.has(m.id));
+  const prevAll=[0,1].map(i=>({
+    label:((document.getElementById("raPrevLabel"+i)||{}).value||"").trim(),
+    date:((document.getElementById("raPrevDate"+i)||{}).value||"").trim(),
+    text:((document.getElementById("raPrevText"+i)||{}).value||"").trim()
+  }));
+  try{ if(a.id){ _ensureRefRegistry(); if(!DB.refAdvRegistry[a.id]) DB.refAdvRegistry[a.id]={id:a.id,name:a.name}; DB.refAdvRegistry[a.id].prevLists=prevAll.filter(p=>p.text||p.label||p.date); save(); } }catch(e){}
+  return { a, selected, prevLists:prevAll.filter(p=>p.text) };
+}
+function _raMakeStatement(encKey){ const d=_raGatherStatement(encKey); if(!d) return; if(!d.selected.length && !d.prevLists.length){ toast("Tick at least one case."); return; } closeModal(); _raRenderStatementPDF(d); }
+function _raRenderStatementPDF(d){
+  const a=d.a, s=DB.settings||{};
+  const cid=(typeof _chamberIdentity==="function")?_chamberIdentity():{name:s.chamberName||""};
+  const contact=[a.phone,a.email,a.addr].filter(Boolean).join(" · ");
+  const caveats=d.selected.filter(m=>m.kind==="caveat").length;
+  const band=(t)=>`<tr><td colspan="6" style="background:#efe9db;color:#4a3f28;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:7px 13px">${esc(t)}</td></tr>`;
+  const cavTag=`<span style="font-size:8px;font-weight:700;color:#fff;background:#6b1f1f;padding:1px 5px;border-radius:8px;vertical-align:middle;letter-spacing:.04em">CAVEAT</span>`;
+  let sr=0; const body=[];
+  if(d.prevLists.length && d.selected.length) body.push(band("On chamber record"));
+  d.selected.forEach(m=>{ sr++; body.push(`<tr>
+    <td style="text-align:center">${sr}</td>
+    <td class="mono" style="white-space:nowrap">${esc(m.code||"—")}</td>
+    <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?" "+cavTag:""}</td>
     <td>${esc(_caseNoOrDiary(m))}</td>
     <td>${esc(m.court||"—")}</td>
-    <td>${m.kind==="caveat" ? (m.caveatValidUntil ? (_daysUntil(m.caveatValidUntil)<0?"Lapsed":"Valid till "+esc(fmtDate(m.caveatValidUntil))) : "Filed") : esc(m.status||"Active")}</td>
-  </tr>`).join("");
-  const contact=[a.phone,a.email,a.addr].filter(Boolean).join(" · ");
-  const caveats=list.filter(m=>m.kind==="caveat").length;
+    <td>${_raStatusCell(m)}</td>
+  </tr>`); });
+  d.prevLists.forEach(pl=>{ const rows=_raParsePrev(pl.text); if(!rows.length) return;
+    body.push(band((pl.label||"Previous list")+(pl.date?" — dated "+pl.date:"")));
+    rows.forEach(r=>{ sr++; body.push(`<tr>
+      <td style="text-align:center">${sr}</td>
+      <td class="mono">—</td>
+      <td><b>${esc(r.parties)}</b></td>
+      <td>${esc(r.num||"—")}</td>
+      <td>${esc(r.court||"—")}</td>
+      <td>—</td>
+    </tr>`); });
+  });
   const area=document.getElementById("receiptArea");
   area.innerHTML=`<div class="tpl-list">
-    ${_causeListHeader("Statement of Cases · "+fmtDate(todayISO()))}
-    <div style="margin:2px 0 12px">
-      <div style="font-weight:700;font-size:15px;color:#1e1a15">Cases referred by ${esc(a.name)}${a.id?` <span style="font-size:11px;color:#9a7b3f">${esc(_regCode(a.id))}</span>`:""}</div>
-      ${contact?`<div style="color:#6b655c;font-size:11.5px;margin-top:2px">${esc(contact)}</div>`:""}
-      <div style="color:#6b655c;font-size:11.5px;margin-top:2px">${list.length} matter${list.length!==1?"s":""}${caveats?" · incl. "+caveats+" caveat"+(caveats!==1?"s":""):""} · as on ${esc(fmtDate(todayISO()))}</div>
+    ${_causeListHeader("Statement of Cases")}
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin:2px 0 11px">
+      <div style="min-width:0">
+        <div style="font-weight:700;font-size:14px;color:#1e1a15">Cases referred by ${esc(a.name)}${a.id?` <span style="font-size:10px;color:#9a7b3f;font-weight:700">${esc(_regCode(a.id))}</span>`:""}</div>
+        ${contact?`<div style="color:#6b655c;font-size:11px;margin-top:2px">${esc(contact)}</div>`:""}
+      </div>
+      <div style="text-align:right;color:#6b655c;font-size:11px;white-space:nowrap">
+        <div>As on <b style="color:#1e1a15">${esc(fmtDate(todayISO()))}</b></div>
+        <div style="margin-top:2px">${sr} matter${sr!==1?"s":""}${caveats?" · "+caveats+" caveat"+(caveats!==1?"s":""):""}</div>
+      </div>
     </div>
     <table class="tpl-tbl">
-      <thead><tr><th style="width:28px">#</th><th>Cause title</th><th>Case / Diary No.</th><th>Court</th><th>Status</th></tr></thead>
-      <tbody>${rows}</tbody>
+      <thead><tr>
+        <th style="width:30px;text-align:center">Sr.</th>
+        <th style="width:92px">File No.</th>
+        <th>Cause Title</th>
+        <th style="width:118px">Case / Diary No.</th>
+        <th style="width:108px">Court / Forum</th>
+        <th style="width:86px">Status</th>
+      </tr></thead>
+      <tbody>${body.join("")}</tbody>
     </table>
+    <div style="margin-top:26px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px">
+      <div style="color:#8a8175;font-size:9.5px;max-width:58%;line-height:1.5">Drawn from chamber records${d.prevLists.length?" together with the earlier list(s) shown above":""}. Kindly verify against your own records and intimate any discrepancy.</div>
+      <div style="text-align:center;color:#1e1a15;font-size:11px">
+        <div style="height:32px"></div>
+        <div style="border-top:1px solid #b9b0a0;padding-top:4px;min-width:190px">For ${esc(cid.name||s.chamberName||"the Chamber")}</div>
+      </div>
+    </div>
   </div>`;
-  setTimeout(()=>_printAs("Cases referred by "+(a.name||"advocate")),150);
+  setTimeout(()=>_printAs("Statement of cases — "+(a.name||"advocate")),150);
+}
+function _raStatementText(encKey){
+  const d=_raGatherStatement(encKey); if(!d) return;
+  const s=DB.settings||{};
+  let sr=0, out=`*${s.chamberName||s.advName||"Chamber"}* — Statement of cases referred by ${d.a.name} (as on ${fmtDate(todayISO())}):\n`;
+  if(d.prevLists.length && d.selected.length) out+=`\n_On chamber record:_\n`;
+  d.selected.forEach(m=>{ sr++; const num=_caseNoOrDiary(m); out+=`${sr}. ${m.parties||m.client||m.code||""}${m.kind==="caveat"?" (CAVEAT)":""}${(num&&num!=="—")?" ["+num+"]":""}${m.code?" — "+m.code:""}\n`; });
+  d.prevLists.forEach(pl=>{ const rows=_raParsePrev(pl.text); if(!rows.length) return; out+=`\n_${pl.label||"Previous list"}${pl.date?" (dated "+pl.date+")":""}:_\n`; rows.forEach(r=>{ sr++; out+=`${sr}. ${r.parties}${r.num?" ["+r.num+"]":""}\n`; }); });
+  out+=`\nTotal: ${sr} matter${sr!==1?"s":""}.`;
+  const num=_waNumber(d.a.phone);
+  openModal("Statement — WhatsApp text", `
+    <textarea class="in" id="raShareTxt" rows="12" style="font-family:inherit;white-space:pre-wrap">${esc(out)}</textarea>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      <button class="btn ghost" onclick="copyText((document.getElementById('raShareTxt')||{}).value||'');toast('Copied.')">Copy</button>
+      <button class="btn seal" onclick="_waSendText('${num}', (document.getElementById('raShareTxt')||{}).value||'')">WhatsApp</button>
+    </div>`);
 }
 function _raShareCases(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
-  const s=DB.settings||{};
-  const active=a.matters.filter(m=>m.status!=="Concluded"&&m.status!=="Closed");
-  const list=(active.length?active:a.matters).slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
-  const lines=list.map((m,i)=>{ const num=_caseNoOrDiary(m); return `${i+1}. ${m.parties||m.client||m.code||""}${m.kind==="caveat"?" (CAVEAT)":""}${(num&&num!=="\u2014")?" ["+num+"]":""}${m.nextDate?" \u2014 next "+fmtDate(m.nextDate):""}`; });
-  const txt=`*${s.chamberName||s.advName||"Chamber"}* \u2014 matters referred by ${a.name}:\n\n`+lines.join("\n")+`\n\nTotal: ${list.length} matter${list.length!==1?"s":""}.`;
-  const num=_waNumber(a.phone);
-  openModal("Send case list \u2014 "+esc(a.name), `
-    <div class="hint">${list.length} matter${list.length!==1?"s":""} referred by <b>${esc(a.name)}</b>.</div>
-    <div style="font-weight:600;font-size:13px;margin:12px 0 6px;color:var(--ink)">\ud83d\udcc4 Full tabulated list (PDF)</div>
-    <div class="hint">A proper document on your letterhead \u2014 code, cause title, case/diary no., court, next date &amp; status \u2014 to save as PDF, print, or share.</div>
-    <div class="btn-row" style="margin-top:8px">
-      <button class="btn seal" onclick="closeModal();_raPrintCaseList('${encKey}')">\ud83d\udcc4 Make PDF</button>
+  const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
+  const saved=(a.id&&DB.refAdvRegistry&&DB.refAdvRegistry[a.id]&&DB.refAdvRegistry[a.id].prevLists)||[];
+  const pv=(i)=>saved[i]||{};
+  const caseRows=list.map(m=>`<tr>
+    <td style="text-align:center"><input type="checkbox" class="ra-st-ck" data-mid="${m.id}" checked></td>
+    <td class="mono" style="white-space:nowrap">${esc(m.code||"")}</td>
+    <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span class="tag" style="background:#6b1f1f;color:#fff">Caveat</span>`:""}<div class="hint">${esc(_caseNoOrDiary(m))}${m.court?" \u00b7 "+esc(m.court):""}</div></td>
+  </tr>`).join("");
+  openModal("Statement of cases \u2014 "+esc(a.name), `
+    <div class="hint">Untick any case you've already informed <b>${esc(a.name)}</b> about. You can also add up to two earlier lists (from before this app) so nothing looks repeated.</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:13px 0 5px">
+      <div style="font-weight:600;font-size:12px;color:var(--seal);text-transform:uppercase;letter-spacing:.05em">Cases to include</div>
+      <div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=true)">All</button><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=false)">None</button></div>
     </div>
-    <details class="form-grp" style="margin-top:14px"><summary>Or send a quick text (WhatsApp)</summary>
-      <textarea class="in" id="raShareTxt" rows="9" style="font-family:inherit;white-space:pre-wrap;margin-top:8px">${esc(txt)}</textarea>
-      <div class="btn-row" style="margin-top:10px">
-        <button class="btn ghost" onclick="copyText((document.getElementById('raShareTxt')||{}).value||'');toast('Copied.')">Copy</button>
-        <button class="btn seal" onclick="_waSendText('${num}', (document.getElementById('raShareTxt')||{}).value||'')">WhatsApp</button>
-      </div>
+    <div class="tbl-wrap" style="max-height:32vh;overflow:auto"><table><thead><tr><th style="width:30px"></th><th>File no.</th><th>Cause title</th></tr></thead><tbody>${caseRows||`<tr><td colspan="3" class="empty" style="padding:12px">No cases.</td></tr>`}</tbody></table></div>
+    <details class="form-grp" style="margin-top:12px"${(pv(0).text||pv(1).text)?" open":""}><summary>Add previous lists (prepared before this app)</summary>
+      <div class="hint" style="margin-top:6px">One case per line. Optional format <b>Parties | Case/Diary no. | Court</b> \u2014 the \u201c|\u201d splits it into columns; without it the whole line goes under Cause Title.</div>
+      ${[0,1].map(i=>`<div style="margin-top:10px;padding:9px 10px;border:1px solid var(--line);border-radius:9px">
+        <div class="grid g2">
+          <div><label class="fld">List ${i+1} label</label><input class="in" id="raPrevLabel${i}" value="${esc(pv(i).label||"")}" placeholder="e.g. Register upto 2022"></div>
+          <div><label class="fld">Dated (optional)</label><input class="in" id="raPrevDate${i}" value="${esc(pv(i).date||"")}" placeholder="e.g. 31-03-2022"></div>
+        </div>
+        <label class="fld" style="margin-top:8px">Cases (one per line)</label>
+        <textarea class="in" id="raPrevText${i}" rows="4" style="font-family:inherit" placeholder="Ramesh v. State | SLP(C) 1234/2020 | Supreme Court">${esc(pv(i).text||"")}</textarea>
+      </div>`).join("")}
     </details>
-    <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      <button class="btn ghost" onclick="_raStatementText('${encKey}')">WhatsApp text</button>
+      <button class="btn seal" onclick="_raMakeStatement('${encKey}')">\ud83d\udcc4 Make PDF</button>
+    </div>`);
 }
 function _raRaiseInvoice(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
@@ -17062,7 +17150,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.26-1400";
+  window.APP_VERSION = "2026.07.26-1800";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
