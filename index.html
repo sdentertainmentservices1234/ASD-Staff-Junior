@@ -5260,11 +5260,13 @@ function _tplReserveForPrint(){
     var topM=headH?(headH+14):0;
     var css="@media print{";
     css+="@page{margin:"+topM+"px 0 "+botM+"px 0;}";
-    // Footer: reserve its height, and (except for notices, which are unchanged) pull it
-    // DOWN by the reserved bottom margin so it sits flush at the paper's bottom edge
-    // instead of floating up and leaving a blank strip below it.
+    // The fixed header/footer are positioned relative to the page CONTENT box (inside the
+    // @page margins). So pull the header UP by the top margin and the footer DOWN by the
+    // bottom margin, seating each flush at the paper's edge with the body reserved between
+    // them — otherwise the header drops below its margin (blank above) and the footer
+    // floats above its margin (blank below). Notices are left exactly as they were.
     if(foot){ css+="#receiptArea .tpl-foot{height:"+footH+"px;"+(isNotice?"":"bottom:-"+botM+"px;")+"}"; }
-    if(rh){ css+="#receiptArea .tpl-run-head{height:"+headH+"px;}"; }
+    if(rh){ css+="#receiptArea .tpl-run-head{height:"+headH+"px;"+(isNotice?"":"top:-"+topM+"px;")+"}"; }
     css+="}";
     var st=document.getElementById("tplPrintReserve");
     if(!st){ st=document.createElement("style"); st.id="tplPrintReserve"; document.head.appendChild(st); }
@@ -17455,7 +17457,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.28-1600";
+  window.APP_VERSION = "2026.07.28-1900";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
