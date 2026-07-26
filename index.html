@@ -3879,7 +3879,7 @@ function _raStatementsCard(a){
   if(!a||!a.id) return "";
   const recs=(DB.refStatements||[]).filter(r=>r.refAdvId===a.id).sort((x,y)=>(y.date||"").localeCompare(x.date||""));
   if(!recs.length) return "";
-  const rows=recs.map(r=>`<tr><td>${fmtDate(r.date)}${r.editedOn?` <span class="hint">(edited ${esc(fmtDate(r.editedOn))})</span>`:""}</td><td class="num">${r.count||(r.matterIds||[]).length}</td><td style="white-space:nowrap"><button class="row-act" onclick="_raViewStatement('${r.id}')">View</button><button class="row-act" onclick="_raEditStatement('${r.id}')">Edit</button></td></tr>`).join("");
+  const rows=recs.map(r=>`<tr><td>${fmtDate(r.date)}${r.editedOn?` <span class="hint">(edited ${esc(fmtDate(r.editedOn))})</span>`:""}</td><td class="num">${r.count||(r.matterIds||[]).length}</td><td style="white-space:nowrap"><button class="row-act" onclick="_raViewStatement('${r.id}')">View</button><button class="row-act" onclick="_raEditStatement('${r.id}')">Edit</button><button class="row-act" onclick="_raDeleteStatement('${r.id}')">Delete</button></td></tr>`).join("");
   return `<div class="card">
     <div class="card-head"><div><h2>Statements sent</h2><div class="hint">Every statement of cases generated for ${esc(a.name)} — so nothing is repeated next time.</div></div></div>
     <div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Date</th><th class="num">Cases</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -3891,6 +3891,23 @@ function _raEditStatement(sid){
   const key=(a&&a.key)||r.refAdvKey;
   if(!key){ toast("Advocate not found for this statement.",true); return; }
   _raShareCases(encodeURIComponent(key), sid);
+}
+function _raDeleteStatement(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
+  const n=r.count||(r.matterIds||[]).length;
+  openModal("Delete this statement record?", `
+    <div class="hint">Removes the record of the statement dated <b>${esc(fmtDate(r.date))}</b> (${n} case${n!==1?"s":""}). Those cases will no longer show as “Sent”. Your matters, invoices and receipts are not affected.</div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_raDoDeleteStatement('${sid}')">Delete record</button>
+    </div>`);
+}
+function _raDoDeleteStatement(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid);
+  const key = r ? (((_buildRefAdvs().find(x=>x.id===r.refAdvId)||{}).key)||r.refAdvKey) : null;
+  DB.refStatements=(DB.refStatements||[]).filter(x=>x.id!==sid);
+  save(); closeModal(); toast("Statement record deleted.");
+  if(key){ try{ openRefAdvDetail(encodeURIComponent(key)); }catch(e){} }
 }
 function _raViewStatement(sid){
   const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
@@ -17430,7 +17447,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.27-1900";
+  window.APP_VERSION = "2026.07.27-2100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
