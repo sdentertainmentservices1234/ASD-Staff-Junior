@@ -2606,8 +2606,8 @@ function fmtINR(n){
 function fmtDate(iso){
   if(!iso) return "\u2014";
   const [y,m,d] = iso.split("-");
-  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1];
-  return `${d} ${mon} ${y}`;
+  if(!y||!m||!d) return iso;
+  return `${d.padStart(2,"0")}.${m.padStart(2,"0")}.${y}`;   // DD.MM.YYYY
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -3795,21 +3795,62 @@ function _raStatusCell(m){
   if(m.kind==="caveat") return m.caveatValidUntil ? (_daysUntil(m.caveatValidUntil)<0?"Lapsed":"Valid till "+esc(fmtDate(m.caveatValidUntil))) : "Caveat filed";
   return esc(m.status||"Active");
 }
-// Read the builder modal: chosen cases + up to two previous lists. Persists the previous
-// lists on the advocate's registry entry so they're remembered next time.
+// Previous-list PDF attachments: kept in IndexedDB (device-local), metadata in the
+// registry. window.__raPrevStage holds a freshly-picked/removed PDF per slot (0,1).
+function _raPrevPdfPick(input, slot){
+  const f=input.files&&input.files[0]; if(!f) return;
+  if(f.type!=="application/pdf"){ toast("Please choose a PDF file.",true); input.value=""; return; }
+  const r=new FileReader();
+  r.onload=()=>{ window.__raPrevStage=window.__raPrevStage||{}; window.__raPrevStage[slot]={name:f.name, data:r.result};
+    const nm=document.getElementById("raPrevPdfName"+slot); if(nm){ nm.textContent=f.name; nm.style.color="var(--ink)"; }
+    const ac=document.getElementById("raPrevPdfActs"+slot); if(ac) ac.style.display="";
+  };
+  r.readAsDataURL(f);
+}
+function _raRemovePrevPdf(slot){
+  window.__raPrevStage=window.__raPrevStage||{}; window.__raPrevStage[slot]={removed:true};
+  const nm=document.getElementById("raPrevPdfName"+slot); if(nm){ nm.textContent="No PDF attached"; nm.style.color="var(--muted)"; }
+  const ac=document.getElementById("raPrevPdfActs"+slot); if(ac) ac.style.display="none";
+  const fi=document.getElementById("raPrevPdfFile"+slot); if(fi) fi.value="";
+}
+async function _raOpenPrevPdf(encKey, slot){
+  const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey));
+  let data, name;
+  const st=window.__raPrevStage&&window.__raPrevStage[slot];
+  if(st&&st.data){ data=st.data; name=st.name; }
+  else { const reg=a&&a.id&&DB.refAdvRegistry&&DB.refAdvRegistry[a.id]; const pl=reg&&reg.prevLists&&reg.prevLists[slot];
+    if(pl&&pl.pdfKey){ try{ data=await idbGet(pl.pdfKey); }catch(e){} name=pl.pdfName; } }
+  if(!data){ toast("PDF not found on this device.",true); return; }
+  name=name||"previous-list.pdf";
+  // open in a new tab (preserves any open modal); blob URL avoids data:-URL blocking
+  const w=window.open("","_blank");
+  try{ const b=await (await fetch(data)).blob(); const u=URL.createObjectURL(b); if(w){ w.location=u; } else { const a2=document.createElement("a"); a2.href=u; a2.download=name; a2.click(); } }
+  catch(e){ if(w) try{ w.close(); }catch(_){}; toast("Could not open the PDF.",true); }
+}
+// Read the builder modal: chosen cases + up to two previous lists (typed and/or PDF).
+// Persists the previous lists on the advocate's registry so they're remembered next time.
 function _raGatherStatement(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return null;
   const picked=new Set([...document.querySelectorAll(".ra-st-ck")].filter(c=>c.checked).map(c=>c.dataset.mid));
   const selected=a.matters.slice()
     .sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}))
     .filter(m=>picked.has(m.id));
-  const prevAll=[0,1].map(i=>({
-    label:((document.getElementById("raPrevLabel"+i)||{}).value||"").trim(),
-    date:((document.getElementById("raPrevDate"+i)||{}).value||"").trim(),
-    text:((document.getElementById("raPrevText"+i)||{}).value||"").trim()
-  }));
-  try{ if(a.id){ _ensureRefRegistry(); if(!DB.refAdvRegistry[a.id]) DB.refAdvRegistry[a.id]={id:a.id,name:a.name}; DB.refAdvRegistry[a.id].prevLists=prevAll.filter(p=>p.text||p.label||p.date); save(); } }catch(e){}
-  return { a, selected, prevLists:prevAll.filter(p=>p.text) };
+  const savedReg=(a.id&&DB.refAdvRegistry&&DB.refAdvRegistry[a.id]&&DB.refAdvRegistry[a.id].prevLists)||[];
+  const stage=window.__raPrevStage||{};
+  const prevAll=[0,1].map(i=>{
+    const slot={
+      label:((document.getElementById("raPrevLabel"+i)||{}).value||"").trim(),
+      date:((document.getElementById("raPrevDate"+i)||{}).value||"").trim(),
+      text:((document.getElementById("raPrevText"+i)||{}).value||"").trim(),
+      pdfName:(savedReg[i]&&savedReg[i].pdfName)||"", pdfKey:(savedReg[i]&&savedReg[i].pdfKey)||""
+    };
+    const st=stage[i];
+    if(st&&st.data){ const key="raprev:"+(a.id||"x")+":"+i; try{ idbPut(key, st.data); }catch(e){} slot.pdfName=st.name; slot.pdfKey=key; }
+    else if(st&&st.removed){ if(slot.pdfKey){ try{ idbDel(slot.pdfKey); }catch(e){} } slot.pdfName=""; slot.pdfKey=""; }
+    return slot;
+  });
+  try{ if(a.id){ _ensureRefRegistry(); if(!DB.refAdvRegistry[a.id]) DB.refAdvRegistry[a.id]={id:a.id,name:a.name}; DB.refAdvRegistry[a.id].prevLists=prevAll; save(); } }catch(e){}
+  return { a, selected, prevLists:prevAll.filter(p=>p.text||p.pdfKey) };
 }
 // Record every statement generated for an advocate, so next time we know which of
 // their cases were already sent. De-duped: making the PDF and the WhatsApp text of the
@@ -3853,7 +3894,19 @@ function _raViewStatement(sid){
     <div class="tbl-wrap" style="margin-top:8px;max-height:50vh;overflow:auto"><table class="sr-num"><thead><tr><th>#</th><th>File no.</th><th>Cause title</th><th>Case / Diary no.</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="empty" style="padding:12px">No cases recorded.</td></tr>`}</tbody></table></div>
     <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
-function _raMakeStatement(encKey){ const d=_raGatherStatement(encKey); if(!d) return; if(!d.selected.length && !d.prevLists.length){ toast("Tick at least one case."); return; } _raRecordStatement(d); closeModal(); _raRenderStatementPDF(d); }
+// After the statement is generated, offer the attached previous-list PDF(s) so the user
+// can send them alongside it.
+function _raEnclosuresPrompt(d){
+  const pdfs=(d.prevLists||[]).filter(p=>p.pdfKey); if(!pdfs.length) return;
+  const ek=encodeURIComponent(d.a.key);
+  const reg=(d.a.id&&DB.refAdvRegistry&&DB.refAdvRegistry[d.a.id]&&DB.refAdvRegistry[d.a.id].prevLists)||[];
+  const btns=pdfs.map(p=>{ let slot=reg.findIndex(x=>x&&x.pdfKey===p.pdfKey); if(slot<0) slot=0; return `<button class="btn seal sm" style="margin:4px 6px 0 0" onclick="_raOpenPrevPdf('${ek}',${slot})">📄 ${esc(p.pdfName||"Previous list")}</button>`; }).join("");
+  openModal("Enclosures to send along", `
+    <div class="hint">Your statement PDF is ready. Open each previous list below to save/share it <b>alongside</b> the statement to ${esc(d.a.name)}.</div>
+    <div style="margin-top:10px">${btns}</div>
+    <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Done</button></div>`);
+}
+function _raMakeStatement(encKey){ const d=_raGatherStatement(encKey); if(!d) return; if(!d.selected.length && !d.prevLists.length){ toast("Tick at least one case."); return; } _raRecordStatement(d); closeModal(); _raRenderStatementPDF(d); if((d.prevLists||[]).some(p=>p.pdfKey)){ setTimeout(()=>_raEnclosuresPrompt(d), 700); } }
 function _raRenderStatementPDF(d){
   const a=d.a, s=DB.settings||{};
   const cid=(typeof _chamberIdentity==="function")?_chamberIdentity():{name:s.chamberName||""};
@@ -3871,8 +3924,8 @@ function _raRenderStatementPDF(d){
     <td>${esc(m.court||"—")}</td>
     <td>${_raStatusCell(m)}</td>
   </tr>`); });
-  d.prevLists.forEach(pl=>{ const rows=_raParsePrev(pl.text); if(!rows.length) return;
-    body.push(band((pl.label||"Previous list")+(pl.date?" — dated "+pl.date:"")));
+  d.prevLists.forEach(pl=>{ const rows=_raParsePrev(pl.text); const hasPdf=!!pl.pdfKey; if(!rows.length && !hasPdf) return;
+    body.push(band((pl.label||"Previous list")+(pl.date?" — dated "+pl.date:"")+(hasPdf?" — enclosed separately":"")));
     rows.forEach(r=>{ sr++; body.push(`<tr>
       <td style="text-align:center">${sr}</td>
       <td class="mono">—</td>
@@ -3881,6 +3934,7 @@ function _raRenderStatementPDF(d){
       <td>${esc(r.court||"—")}</td>
       <td>—</td>
     </tr>`); });
+    if(hasPdf && !rows.length){ body.push(`<tr><td></td><td colspan="5" style="color:#6b655c;font-style:italic">Enclosed separately as a PDF${pl.pdfName?" (“"+esc(pl.pdfName)+"”)":""} for your reference.</td></tr>`); }
   });
   const area=document.getElementById("receiptArea");
   area.innerHTML=`<div class="tpl-list">
@@ -3936,6 +3990,7 @@ function _raStatementText(encKey){
 }
 function _raShareCases(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
+  window.__raPrevStage={};   // fresh PDF-attach state for this builder session
   const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
   const saved=(a.id&&DB.refAdvRegistry&&DB.refAdvRegistry[a.id]&&DB.refAdvRegistry[a.id].prevLists)||[];
   const pv=(i)=>saved[i]||{};
@@ -3952,16 +4007,22 @@ function _raShareCases(encKey){
       <div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=true)">All</button><button class="btn ghost sm" onclick="document.querySelectorAll('.ra-st-ck').forEach(c=>c.checked=false)">None</button></div>
     </div>
     <div class="tbl-wrap" style="max-height:32vh;overflow:auto"><table><thead><tr><th style="width:30px"></th><th>File no.</th><th>Cause title</th></tr></thead><tbody>${caseRows||`<tr><td colspan="3" class="empty" style="padding:12px">No cases.</td></tr>`}</tbody></table></div>
-    <details class="form-grp" style="margin-top:12px"${(pv(0).text||pv(1).text)?" open":""}><summary>Add previous lists (prepared before this app)</summary>
-      <div class="hint" style="margin-top:6px">One case per line. Optional format <b>Parties | Case/Diary no. | Court</b> \u2014 the \u201c|\u201d splits it into columns; without it the whole line goes under Cause Title.</div>
-      ${[0,1].map(i=>`<div style="margin-top:10px;padding:9px 10px;border:1px solid var(--line);border-radius:9px">
+    <details class="form-grp" style="margin-top:12px"${(pv(0).text||pv(1).text||pv(0).pdfKey||pv(1).pdfKey)?" open":""}><summary>Add previous lists (prepared before this app)</summary>
+      <div class="hint" style="margin-top:6px">Attach the earlier list as a <b>PDF</b> to send alongside the statement, and/or type the cases (one per line \u2014 optional format <b>Parties | Case/Diary no. | Court</b>).</div>
+      ${[0,1].map(i=>{ const sv=pv(i); const hasPdf=!!sv.pdfKey; return `<div style="margin-top:10px;padding:9px 10px;border:1px solid var(--line);border-radius:9px">
         <div class="grid g2">
-          <div><label class="fld">List ${i+1} label</label><input class="in" id="raPrevLabel${i}" value="${esc(pv(i).label||"")}" placeholder="e.g. Register upto 2022"></div>
-          <div><label class="fld">Dated (optional)</label><input class="in" id="raPrevDate${i}" value="${esc(pv(i).date||"")}" placeholder="e.g. 31-03-2022"></div>
+          <div><label class="fld">List ${i+1} label</label><input class="in" id="raPrevLabel${i}" value="${esc(sv.label||"")}" placeholder="e.g. Register upto 2022"></div>
+          <div><label class="fld">Dated (optional)</label><input class="in" id="raPrevDate${i}" value="${esc(sv.date||"")}" placeholder="e.g. 31.03.2022"></div>
         </div>
-        <label class="fld" style="margin-top:8px">Cases (one per line)</label>
-        <textarea class="in" id="raPrevText${i}" rows="4" style="font-family:inherit" placeholder="Ramesh v. State | SLP(C) 1234/2020 | Supreme Court">${esc(pv(i).text||"")}</textarea>
-      </div>`).join("")}
+        <div style="margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input type="file" id="raPrevPdfFile${i}" accept="application/pdf" style="display:none" onchange="_raPrevPdfPick(this,${i})">
+          <button type="button" class="btn ghost sm" onclick="document.getElementById('raPrevPdfFile${i}').click()">\ud83d\udcce Attach PDF</button>
+          <span id="raPrevPdfName${i}" style="font-size:12px;color:${hasPdf?"var(--ink)":"var(--muted)"}">${hasPdf?esc(sv.pdfName||"attached.pdf"):"No PDF attached"}</span>
+          <span id="raPrevPdfActs${i}" style="${hasPdf?"":"display:none"}"><button type="button" class="btn ghost sm" onclick="_raOpenPrevPdf('${encKey}',${i})">Open</button> <button type="button" class="btn ghost sm" onclick="_raRemovePrevPdf(${i})">Remove</button></span>
+        </div>
+        <label class="fld" style="margin-top:9px">Or type cases (one per line)</label>
+        <textarea class="in" id="raPrevText${i}" rows="3" style="font-family:inherit" placeholder="Ramesh v. State | SLP(C) 1234/2020 | Supreme Court">${esc(sv.text||"")}</textarea>
+      </div>`; }).join("")}
     </details>
     <div class="btn-row" style="margin-top:14px">
       <button class="btn ghost" onclick="closeModal()">Close</button>
@@ -6043,7 +6104,7 @@ function printTodayList(iso){
   if(staff) ev=ev.filter(e=>e.type!=="personal");
   const groups={hearing:[],appt:[],deadline:[],reminder:[],personal:[]};
   ev.forEach(e=>{ (groups[e.type]||(groups[e.type]=[])).push(e); });
-  const dstr=new Date(iso+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const dstr=new Date(iso+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long"})+", "+fmtDate(iso);
   const sec=(label,arr)=> arr.length?`<div class="lst-sec"><div class="lst-sec-h">${label}</div>${arr.map(e=>`<div class="lst-row"><span class="lst-time">${e.time?esc(e.time):"—"}</span><span class="lst-txt"><b>${esc(e.title.replace(/^Deadline: |^Reminder: /,""))}</b>${e.sub?` <span class="lst-sub">${esc(e.sub)}</span>`:""}</span></div>`).join("")}</div>`:"";
   const body = ev.length? [
     sec("Court hearings", groups.hearing),
@@ -6593,7 +6654,7 @@ function printCauseList(iso, includeMeetings, opts){
     if(ka!==kb) return ka<kb?-1:1;
     return parseInt(a.item||"9999",10)-parseInt(b.item||"9999",10);
   });
-  const dstr=new Date(iso+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const dstr=new Date(iso+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long"})+", "+fmtDate(iso);
   const anyTeam=rows.some(r=>r.team);
   const anySeq=rows.some(r=>r.mainTotal||r.suppTotal||r.seqPos);
   // Court-level figures live in the court header: Coram, Total Matters (Main & Supp),
@@ -17288,7 +17349,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.27-1000";
+  window.APP_VERSION = "2026.07.27-1500";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
