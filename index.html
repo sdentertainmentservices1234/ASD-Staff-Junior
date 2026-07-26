@@ -385,14 +385,14 @@
        that measured margin, plain padding cannot prevent overlap on pages 2+. */
     #receiptArea .tpl-foot{
       position:fixed; bottom:0; left:0; right:0; width:100%;
-      margin-top:0; box-sizing:border-box; overflow:hidden;
+      margin-top:0; box-sizing:border-box; overflow:hidden; z-index:2;
     }
     #receiptArea .tpl{ overflow:visible; min-height:auto; padding-bottom:0; }
-    #receiptArea .tpl-notice .tpl-run-head{
+    /* Running header — repeats the letterhead on every printed page (was notice-only) */
+    #receiptArea .tpl-run-head{
       position:fixed; top:0; left:0; right:0; width:100%; background:#fff;
       box-sizing:border-box; overflow:hidden; z-index:2;
     }
-    #receiptArea .tpl-notice .tpl-foot{ z-index:2; }
     #receiptArea .tpl-notice .tpl-body{ padding-top:8px; }
     /* Cause list prints in clean black & white (colour is for screen only).
        Also repeat the column header on every printed page and avoid splitting
@@ -5252,15 +5252,19 @@ function _tplReserveForPrint(){
   try{
     var area=document.getElementById("receiptArea"); if(!area) return;
     var foot=area.querySelector(".tpl-foot");
-    var rh=area.querySelector(".tpl-notice .tpl-run-head");
+    var rh=area.querySelector(".tpl-run-head");
+    var isNotice=!!area.querySelector(".tpl-notice");
     var footH=foot?Math.ceil(foot.getBoundingClientRect().height):0;
     var headH=rh?Math.ceil(rh.getBoundingClientRect().height):0;
     var botM=footH?(footH+16):24;
     var topM=headH?(headH+14):0;
     var css="@media print{";
     css+="@page{margin:"+topM+"px 0 "+botM+"px 0;}";
-    if(foot){ css+="#receiptArea .tpl-foot{height:"+footH+"px;}"; }
-    if(rh){ css+="#receiptArea .tpl-notice .tpl-run-head{height:"+headH+"px;}"; }
+    // Footer: reserve its height, and (except for notices, which are unchanged) pull it
+    // DOWN by the reserved bottom margin so it sits flush at the paper's bottom edge
+    // instead of floating up and leaving a blank strip below it.
+    if(foot){ css+="#receiptArea .tpl-foot{height:"+footH+"px;"+(isNotice?"":"bottom:-"+botM+"px;")+"}"; }
+    if(rh){ css+="#receiptArea .tpl-run-head{height:"+headH+"px;}"; }
     css+="}";
     var st=document.getElementById("tplPrintReserve");
     if(!st){ st=document.createElement("style"); st.id="tplPrintReserve"; document.head.appendChild(st); }
@@ -5503,7 +5507,7 @@ function printReceipt(rec, opts){
       </div>`;
   area.innerHTML = `
    <div class="tpl${opts.bw?" bw":""}">
-     ${_tplMast(s)}
+     <div class="tpl-run-head">${_tplMast(s)}</div>
      <div class="tpl-dband"><div class="tpl-dtitle">Payment Receipt</div></div>
      <div class="tpl-body">
        ${_tplNoRow("Receipt No.", rec.no, _tplDate(rec.date))}
@@ -6071,7 +6075,7 @@ function printVoucher(expenseId, opts){
   ].filter(Boolean).join("");
   area.innerHTML=`
    <div class="tpl${opts.bw?" bw":""}">
-     ${_tplMast(s)}
+     <div class="tpl-run-head">${_tplMast(s)}</div>
      <div class="tpl-dband"><div class="tpl-dtitle">Expense Voucher</div></div>
      <div class="tpl-body">
        ${_tplNoRow("Voucher No.", e.voucherNo||"—", _tplDate(e.date))}
@@ -6131,7 +6135,7 @@ function printSalarySlip(slipId, opts){
   const stamp = _tplStamp(slip.genAt);
   area.innerHTML=`
    <div class="tpl${opts.bw?" bw":""}">
-     ${_tplMast(s)}
+     <div class="tpl-run-head">${_tplMast(s)}</div>
      <div class="tpl-dband"><div class="tpl-dtitle">Salary Slip</div><div class="tpl-dsub">For the month of ${esc(slip.period)}</div></div>
      <div class="tpl-body">
        ${_tplNoRow("Slip No.", slip.no, _tplDate(slip.payDate))}
@@ -7723,7 +7727,7 @@ function printInvoice(inv, opts){
 
   document.getElementById("receiptArea").innerHTML=`
    <div class="tpl${opts.bw?" bw":""}">
-     ${_tplMast(s)}
+     <div class="tpl-run-head">${_tplMast(s)}</div>
      <div class="tpl-dband"><div class="tpl-dtitle">Memorandum of Fees</div></div>
      <div class="tpl-body">
        ${_tplNoRow("Invoice No.", inv.no, _tplDate(inv.date))}
@@ -10698,7 +10702,7 @@ function printStatement(matterId){
   const net=totBilled-totRec;
   const closing = net>0?`Balance outstanding: ${fmtINR(net)}`:net<0?`Advance in hand: ${fmtINR(-net)}`:`Account settled — Nil`;
   document.getElementById("receiptArea").innerHTML=`<div class="tpl">
-    ${_tplMast(s)}
+    <div class="tpl-run-head">${_tplMast(s)}</div>
     <div class="tpl-dband"><div class="tpl-dtitle">Statement of Account</div></div>
     <div class="tpl-body" style="font-size:12.5px">
       <div class="tpl-cols solo"><div class="tpl-col"><div class="tpl-lbl">Client</div><div class="tpl-bigname">${esc(m.client||"—")}</div>${m.parties?`<div class="tpl-meta"><div>${esc(m.parties)}</div></div>`:""}${(m.caseNo||m.code)?`<div class="tpl-meta"><div>${esc(m.caseNo||m.code)}${m.court?" · "+esc(m.court):""}</div></div>`:""}</div></div>
@@ -17451,7 +17455,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.28-1000";
+  window.APP_VERSION = "2026.07.28-1600";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
