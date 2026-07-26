@@ -2979,6 +2979,19 @@ function peekNextQueryCode(){
   const seq = _maxSeq((DB.matters||[]).map(m=>m.code), /Q-\d{2}-(\d+)/) + 1;
   return `Q-${yr}-${String(seq).padStart(3,"0")}`;
 }
+// Caveats filed in court — a defensive filing (§148A CPC). Same fields as a matter,
+// its own CAV- series so it's tracked separately from regular cases.
+function nextCaveatCode(){
+  const yr = DB.settings.fyStart.slice(2,4);
+  const seq = _maxSeq((DB.matters||[]).map(m=>m.code), /CAV-\d{2}-(\d+)/) + 1;
+  DB.counters.caveat = Math.max(DB.counters.caveat||0, seq);
+  return `CAV-${yr}-${String(seq).padStart(3,"0")}`;
+}
+function peekNextCaveatCode(){
+  const yr = DB.settings.fyStart.slice(2,4);
+  const seq = _maxSeq((DB.matters||[]).map(m=>m.code), /CAV-\d{2}-(\d+)/) + 1;
+  return `CAV-${yr}-${String(seq).padStart(3,"0")}`;
+}
 function nextVoucherNo(){
   const yr = DB.settings.fyStart.slice(2,4);
   const seq = _maxSeq((DB.expenses||[]).map(e=>e.voucherNo), /V-\d{2}-(\d+)/) + 1;
@@ -3725,7 +3738,7 @@ function openRefAdvDetail(encKey){
   if(!a){ panel.innerHTML=`<div class="subnav"><button class="subnav-back" onclick="openRefAdvocates()">&lsaquo;</button></div><div class="empty">Advocate not found.</div>`; return; }
   const rows=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true})).map(m=>`<tr>
       <td class="mono"><a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code||"")}</a></td>
-      <td><b>${esc(m.parties||m.client||"")}</b>${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
+      <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span class="tag" style="background:#6b1f1f;color:#fff">Caveat</span>`:""}${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
       <td>${esc(m.client||"")||"&mdash;"}</td>
       <td><span class="tag ${m.status==="Concluded"?"":"active"}">${esc(m.status||"Active")}</span>${m.historical&&m.concludedYear?`<div class="hint">${esc(m.concludedYear)}</div>`:""}</td>
     </tr>`).join("");
@@ -3760,27 +3773,26 @@ function _raPrintCaseList(encKey){
   const a=_buildRefAdvs().find(x=>x.key===decodeURIComponent(encKey)); if(!a) return;
   if(!a.matters.length){ toast("No matters to list."); return; }
   const list=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
+  // Concise: cause title, case/diary no., court, status — caveats flagged inline.
   const rows=list.map((m,i)=>`<tr>
     <td style="text-align:center">${i+1}</td>
-    <td class="mono">${esc(m.code||"")}</td>
-    <td><b>${esc(m.parties||m.client||"")}</b>${(m.client&&m.parties&&m.client!==m.parties)?`<div style="color:#6b655c;font-size:11px;margin-top:1px">Client: ${esc(m.client)}</div>`:""}</td>
+    <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span style="font-size:8.5px;font-weight:700;color:#fff;background:#6b1f1f;padding:1px 6px;border-radius:9px;vertical-align:middle;letter-spacing:.04em">CAVEAT</span>`:""}</td>
     <td>${esc(m.caseNo||(m.diaryNo?("Diary "+m.diaryNo):"")||"—")}</td>
     <td>${esc(m.court||"—")}</td>
-    <td>${m.nextDate?esc(fmtDate(m.nextDate)):"—"}</td>
     <td>${esc(m.status||"Active")}</td>
   </tr>`).join("");
   const contact=[a.phone,a.email,a.addr].filter(Boolean).join(" · ");
-  const active=list.filter(m=>m.status!=="Concluded"&&m.status!=="Closed").length;
+  const caveats=list.filter(m=>m.kind==="caveat").length;
   const area=document.getElementById("receiptArea");
   area.innerHTML=`<div class="tpl-list">
     ${_causeListHeader("Statement of Cases · "+fmtDate(todayISO()))}
     <div style="margin:2px 0 12px">
       <div style="font-weight:700;font-size:15px;color:#1e1a15">Cases referred by ${esc(a.name)}${a.id?` <span style="font-size:11px;color:#9a7b3f">${esc(_regCode(a.id))}</span>`:""}</div>
       ${contact?`<div style="color:#6b655c;font-size:11.5px;margin-top:2px">${esc(contact)}</div>`:""}
-      <div style="color:#6b655c;font-size:11.5px;margin-top:2px">${list.length} matter${list.length!==1?"s":""} (${active} active) · as on ${esc(fmtDate(todayISO()))}</div>
+      <div style="color:#6b655c;font-size:11.5px;margin-top:2px">${list.length} matter${list.length!==1?"s":""}${caveats?" · incl. "+caveats+" caveat"+(caveats!==1?"s":""):""} · as on ${esc(fmtDate(todayISO()))}</div>
     </div>
     <table class="tpl-tbl">
-      <thead><tr><th style="width:30px">#</th><th>Code</th><th>Cause title</th><th>Case / Diary No.</th><th>Court / Forum</th><th>Next date</th><th>Status</th></tr></thead>
+      <thead><tr><th style="width:28px">#</th><th>Cause title</th><th>Case / Diary No.</th><th>Court</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>`;
@@ -3791,7 +3803,7 @@ function _raShareCases(encKey){
   const s=DB.settings||{};
   const active=a.matters.filter(m=>m.status!=="Concluded"&&m.status!=="Closed");
   const list=(active.length?active:a.matters).slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true}));
-  const lines=list.map((m,i)=>`${i+1}. ${m.parties||m.client||m.code||""}${(m.caseNo||m.diaryNo)?" ["+(m.caseNo||("Diary "+m.diaryNo))+"]":""}${m.nextDate?" \u2014 next "+fmtDate(m.nextDate):""}`);
+  const lines=list.map((m,i)=>`${i+1}. ${m.parties||m.client||m.code||""}${m.kind==="caveat"?" (CAVEAT)":""}${(m.caseNo||m.diaryNo)?" ["+(m.caseNo||("Diary "+m.diaryNo))+"]":""}${m.nextDate?" \u2014 next "+fmtDate(m.nextDate):""}`);
   const txt=`*${s.chamberName||s.advName||"Chamber"}* \u2014 matters referred by ${a.name}:\n\n`+lines.join("\n")+`\n\nTotal: ${list.length} matter${list.length!==1?"s":""}.`;
   const num=_waNumber(a.phone);
   openModal("Send case list \u2014 "+esc(a.name), `
@@ -9703,7 +9715,7 @@ function matterFormHTML(m, mode){
   const concluded = past || m.status==="Concluded" || m.historical;   // show outcome fields
   const isNew = !m.id;
   const kind = past ? "case" : (m.kind || "case");
-  const codeVal = m.code || (past?peekNextPastCode():(kind==="query"?peekNextQueryCode():peekNextMatterCode()));
+  const codeVal = m.code || (past?peekNextPastCode():(kind==="query"?peekNextQueryCode():(kind==="caveat"?peekNextCaveatCode():peekNextMatterCode())));
   const forumOpts = ['<option value="">— Select forum —</option>']
     .concat(FORUMS.map(f=>`<option ${m.court===f?"selected":""}>${esc(f)}</option>`)).join("");
   const typeList = typesForForum(m.court);
@@ -9716,8 +9728,9 @@ function matterFormHTML(m, mode){
       <div class="seg" id="mfKindSeg">
         <button type="button" class="seg-btn ${kind==="query"?"on":""}" data-k="query" onclick="setMatterKind('query')">Query (walk-in)</button>
         <button type="button" class="seg-btn ${kind==="case"?"on":""}" data-k="case" onclick="setMatterKind('case')">Case (numbered)</button>
+        <button type="button" class="seg-btn ${kind==="caveat"?"on":""}" data-k="caveat" onclick="setMatterKind('caveat')">Caveat</button>
       </div>
-      <div class="note" style="margin-top:6px">A <b>query</b> is a client bringing documents for advice with no case/diary number yet. It gets a Q-number and can be converted to a case later, carrying its documents and receipts across.</div>
+      <div class="note" style="margin-top:6px">A <b>query</b> is a walk-in for advice with no number yet (gets a Q-number, convertible to a case later). A <b>caveat</b> is a caveat you've filed in court (§148A CPC) — the same details as a matter, filed defensively so you're heard before any order.</div>
     </div>`:""}
     <div class="grid g2">
       <div><label class="fld">${past?"Register no.":"Chamber "+(kind==="query"?"query":"file")+" code"}</label>
@@ -9843,7 +9856,7 @@ function _onFilingOnlyChange(){
 function setMatterKind(k){
   document.querySelectorAll("#mfKindSeg .seg-btn").forEach(b=>b.classList.toggle("on", b.dataset.k===k));
   document.getElementById("mfKind").value=k;
-  document.getElementById("mfCode").value = k==="query"?peekNextQueryCode():peekNextMatterCode();
+  document.getElementById("mfCode").value = k==="query"?peekNextQueryCode():(k==="caveat"?peekNextCaveatCode():peekNextMatterCode());
   // for a query, diary/case numbers are usually blank — keep the fields but hint
   const row=document.getElementById("mfNumsRow");
   if(row) row.style.opacity = k==="query"?".55":"1";
@@ -10002,9 +10015,10 @@ function saveMatter(id){
   try{ data.clientId=_resolveClientId(data.client, {addr:data.address, phone:data.contact, email:data.email}); }catch(e){}
   // Same for the referring advocate (cleared if the name was removed on edit).
   try{ data.refAdvId = data.refName ? _resolveRefAdvId(data.refName, {phone:data.refContact, email:data.refEmail, addr:data.refAddress}) : null; }catch(e){}
+  const _kindWord = kind==="caveat"?"Caveat":(kind==="query"?"Query":"Matter");
   if(id){
     const m = matterById(id); Object.assign(m, data);
-    save(); renderAll(); closeModal(); toast(kind==="query"?"Query saved.":"Matter saved.");
+    save(); renderAll(); closeModal(); toast(_kindWord+" saved.");
   }else{
     // Finding 13 — conflict check: does the OPPOSING party in this new matter
     // match someone you already act (or have acted) for? If so, warn before
@@ -10017,15 +10031,15 @@ function saveMatter(id){
       }
     }
     window._conflictAck=false;
-    const code = kind==="query"? nextQueryCode() : nextMatterCode();
+    const code = kind==="query"? nextQueryCode() : (kind==="caveat"? nextCaveatCode() : nextMatterCode());
     const _newMatter=Object.assign({id:uid(), code, kind, opened:todayISO()}, data);
     DB.matters.push(_newMatter);
-    logActivity("matter", `New ${kind==="query"?"query":"matter"} ${code}${data.parties?" — "+data.parties:(data.client?" — "+data.client:"")}`, {refId:_newMatter.id});
-    save(); renderAll(); closeModal(); toast(kind==="query"?"Query saved.":"Matter saved.");
+    logActivity("matter", `New ${_kindWord.toLowerCase()} ${code}${data.parties?" — "+data.parties:(data.client?" — "+data.client:"")}`, {refId:_newMatter.id});
+    save(); renderAll(); closeModal(); toast(_kindWord+" saved.");
     // Offer to set up this case's OneDrive folder right away (cases only).
     // Use a robust chained open (guarded) — a bare setTimeout could be lost if
     // a re-render intervenes, which is why it sometimes didn't appear.
-    if(kind!=="query"){
+    if(kind==="case"){
       const _mid=_newMatter.id;
       const _openFolder=()=>{ try{ setupCaseFolder(_mid, {fromCreate:true}); }catch(e){ try{ toast("Open the case to set its folder.",true); }catch(_){}} };
       requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(_openFolder, 60)));
@@ -10557,6 +10571,7 @@ function renderMatterDetail(){
         <div style="display:flex;gap:6px;flex:none">${m.contact?`<button class="btn ghost sm" onclick="messageClient('${m.id}')" title="Message the client on WhatsApp">WhatsApp</button>`:""}<button class="btn ghost sm" onclick="editMatter('${m.id}')">Edit</button></div>
       </div>
       <div class="tpl-dl" style="margin-top:6px">
+        ${m.kind==="caveat"?`<div class="row"><span class="k" style="min-width:96px">Type</span><b><span class="tag" style="background:#6b1f1f;color:#fff">Caveat filed</span></b></div>`:""}
         ${m.caseNo?`<div class="row"><span class="k" style="min-width:96px">Case No.</span><b>${esc(m.caseNo)}</b></div>`:""}
         ${m.court?`<div class="row"><span class="k" style="min-width:96px">Court</span><b>${esc(m.court)}</b></div>`:""}
         ${m.matterType?`<div class="row"><span class="k" style="min-width:96px">Type</span><b>${esc(m.matterType)}</b></div>`:""}
@@ -17001,7 +17016,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.25-2330";
+  window.APP_VERSION = "2026.07.26-1000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
