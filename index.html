@@ -3773,6 +3773,8 @@ function _waSendText(num, text){
 // number. A matter's caseNo often holds only a type prefix ("SLP(C) No. ___/2026") with
 // no number filled in yet — in that case the diary number is what identifies the case.
 function _caseNoOrDiary(m){
+  // A caveat is identified by its caveat number.
+  if(m&&m.kind==="caveat"&&m.caveatNo) return /caveat/i.test(m.caveatNo)?String(m.caveatNo).trim():("Caveat No. "+String(m.caveatNo).trim());
   const c=String((m&&m.caseNo)||"").trim();
   const hasNum=/\d{1,6}\s*(?:[\/\-]|\s+of\s+)\s*\d{2,4}/i.test(c);   // e.g. 1234/2026 or 1234 of 2026
   if(hasNum) return c;
@@ -9832,7 +9834,9 @@ function matterFormHTML(m, mode){
     </div>`:""}
     <div id="mfCaveatWrap" style="display:${kind==="caveat"?"block":"none"};margin-bottom:13px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--paper2)">
       <div style="font-weight:600;font-size:13px;color:var(--seal);margin-bottom:8px">Caveat details</div>
-      <div class="grid g2">
+      <label class="fld">Caveat No. <span style="color:var(--muted);font-weight:400">(as allotted by the Registry, if any)</span></label>
+      <input class="in" id="mfCaveatNo" value="${esc(m.caveatNo||"")}" placeholder="e.g. Caveat 1234/2026" maxlength="60">
+      <div class="grid g2" style="margin-top:8px">
         <div><label class="fld">Caveat filed on</label><input class="in" type="date" id="mfCaveatFiled" value="${esc(m.caveatFiledOn||todayISO())}" onchange="_mfCaveatCalc()"></div>
         <div><label class="fld">Valid until (90 days)</label><input class="in" id="mfCaveatValid" readonly style="background:#f1ece0;color:var(--muted)" value="${m.caveatValidUntil?esc(fmtDate(m.caveatValidUntil)):""}"></div>
       </div>
@@ -10131,6 +10135,7 @@ function saveMatter(id){
   if(document.getElementById("pcNote")) data.concludedNote = document.getElementById("pcNote").value.trim();
   // Caveat: filed date + auto 90-day validity (§148A CPC).
   if(kind==="caveat"){
+    data.caveatNo=(document.getElementById("mfCaveatNo")||{}).value.trim();
     const f=(document.getElementById("mfCaveatFiled")||{}).value||todayISO();
     data.caveatFiledOn=f;
     const d=new Date(f+"T00:00:00"); d.setDate(d.getDate()+90);
@@ -10696,7 +10701,7 @@ function renderMatterDetail(){
         <div style="display:flex;gap:6px;flex:none">${m.contact?`<button class="btn ghost sm" onclick="messageClient('${m.id}')" title="Message the client on WhatsApp">WhatsApp</button>`:""}<button class="btn ghost sm" onclick="editMatter('${m.id}')">Edit</button></div>
       </div>
       <div class="tpl-dl" style="margin-top:6px">
-        ${m.kind==="caveat"?`<div class="row"><span class="k" style="min-width:96px">Caveat</span><b><span class="tag" style="background:#6b1f1f;color:#fff">Caveat filed</span>${m.caveatFiledOn?" on "+esc(fmtDate(m.caveatFiledOn)):""}</b></div>${m.caveatValidUntil?`<div class="row"><span class="k" style="min-width:96px">Valid until</span><b>${esc(fmtDate(m.caveatValidUntil))}${(function(){const dl=_daysUntil(m.caveatValidUntil);return dl<0?` <span class="tag" style="background:#8c2f39;color:#fff">Lapsed</span>`:(dl<=15?` <span class="tag" style="background:var(--brass);color:#fff">${dl}d left</span>`:"");})()}</b></div>`:""}`:""}
+        ${m.kind==="caveat"?`<div class="row"><span class="k" style="min-width:96px">Caveat</span><b><span class="tag" style="background:#6b1f1f;color:#fff">Caveat filed</span>${m.caveatFiledOn?" on "+esc(fmtDate(m.caveatFiledOn)):""}</b></div>${m.caveatNo?`<div class="row"><span class="k" style="min-width:96px">Caveat No.</span><b>${esc(m.caveatNo)}</b></div>`:""}${m.caveatValidUntil?`<div class="row"><span class="k" style="min-width:96px">Valid until</span><b>${esc(fmtDate(m.caveatValidUntil))}${(function(){const dl=_daysUntil(m.caveatValidUntil);return dl<0?` <span class="tag" style="background:#8c2f39;color:#fff">Lapsed</span>`:(dl<=15?` <span class="tag" style="background:var(--brass);color:#fff">${dl}d left</span>`:"");})()}</b></div>`:""}`:""}
         ${m.caseNo?`<div class="row"><span class="k" style="min-width:96px">Case No.</span><b>${esc(m.caseNo)}</b></div>`:""}
         ${m.court?`<div class="row"><span class="k" style="min-width:96px">Court</span><b>${esc(m.court)}</b></div>`:""}
         ${m.matterType?`<div class="row"><span class="k" style="min-width:96px">Type</span><b>${esc(m.matterType)}</b></div>`:""}
@@ -17150,7 +17155,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.26-1800";
+  window.APP_VERSION = "2026.07.26-2000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
