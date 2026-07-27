@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-27T12:50:09.440761Z",
+  "generated_at": "2026-07-27T13:31:47.398485Z",
   "window": [
     "2026-07-27",
     "2026-07-28",
@@ -61,7 +61,6 @@
     },
     "2026-07-28": {
       "lists_found": [
-        "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Registrar - Main",
@@ -75,20 +74,20 @@
       "matches": [
         {
           "for_date": "2026-07-28",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "9",
-          "item": "127",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
+          "court": "",
+          "item": "421",
+          "coram": "",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "127 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
+          "text": "421 SLP(Crl) No. 8841/2026 FAVAS RAHIMT Versus STATE OF KERALA"
         }
       ]
     },
@@ -97,6 +96,7 @@
         "Miscellaneous - Main",
         "Regular / Final - Main",
         "Registrar - Main",
+        "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
