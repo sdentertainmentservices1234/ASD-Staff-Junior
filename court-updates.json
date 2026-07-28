@@ -1,57 +1,22 @@
 {
-  "generated_at": "2026-07-28T17:01:49.063078Z",
+  "generated_at": "2026-07-28T20:54:34.989310Z",
   "window": [
-    "2026-07-28",
     "2026-07-29",
     "2026-07-30",
     "2026-07-31",
     "2026-08-03",
     "2026-08-04",
     "2026-08-05",
-    "2026-08-06"
+    "2026-08-06",
+    "2026-08-07"
   ],
   "by_date": {
-    "2026-07-28": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Regular / Final - Supplementary",
-        "Registrar - Main",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-07-28",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "9",
-          "item": "127",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "127 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
-        }
-      ]
-    },
     "2026-07-29": {
       "lists_found": [
         "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Regular / Final - Supplementary",
-        "Registrar - Main",
         "Registrar - Supplementary",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
@@ -231,8 +196,87 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-08-07": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 4,
+      "matches": [
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "291",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "291 SLP(Crl) No. 5500/2026 MINIKETAN SARTHI Versus STATE OF CHHATTISGARH"
+        },
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "896",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "896 SLP(C) No. RAJEEVAN M Versus JEESHA P. AND ORS."
+        },
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1394",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1394 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL Versus MADHAV AND ORS."
+        },
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1644",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1644 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. Versus MEERA VISHWANATHAN AND ORS."
+        }
+      ]
     }
   },
-  "match_count": 7,
+  "match_count": 10,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
