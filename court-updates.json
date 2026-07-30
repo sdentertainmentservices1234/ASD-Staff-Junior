@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T14:37:05.591113Z",
+  "generated_at": "2026-07-30T16:21:00.737650Z",
   "window": [
     "2026-07-30",
     "2026-07-31",
@@ -77,13 +77,14 @@
     },
     "2026-08-03": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 2,
+      "match_count": 1,
       "matches": [
         {
           "for_date": "2026-08-03",
@@ -101,23 +102,6 @@
           ],
           "confidence": "medium",
           "text": "22 SLP(C) No. 36206/2025 GOVERNMENT OF INDIA THROUGH SECRETARY MINISTRY OF WOMEN AND CHILD DEVELOPMENT Versus ADARSH GUJARAT ANGANWADI UNION AND ORS."
-        },
-        {
-          "for_date": "2026-08-03",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "660",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "660 SLP(Crl) No. 6256/2026 NARESH TUDU Versus STATE OF JHARKHAND"
         }
       ]
     },
@@ -259,6 +243,6 @@
       ]
     }
   },
-  "match_count": 9,
+  "match_count": 8,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
