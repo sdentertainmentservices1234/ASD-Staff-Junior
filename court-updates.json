@@ -1,65 +1,16 @@
 {
-  "generated_at": "2026-07-31T17:13:49.106288Z",
+  "generated_at": "2026-07-31T18:49:56.739849Z",
   "window": [
-    "2026-07-31",
     "2026-08-03",
     "2026-08-04",
     "2026-08-05",
     "2026-08-06",
     "2026-08-07",
     "2026-08-10",
-    "2026-08-11"
+    "2026-08-11",
+    "2026-08-12"
   ],
   "by_date": {
-    "2026-07-31": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Registrar - Main",
-        "Registrar - Supplementary",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 2,
-      "matches": [
-        {
-          "for_date": "2026-07-31",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "2",
-          "item": "18",
-          "coram": "HON'BLE MR. JUSTICE VIKRAM NATH; HON'BLE MR. JUSTICE SANDEEP MEHTA",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "18 Diary No. 38286-2026 SHANKAR SATLINGAPPA MHETRE Versus PRINCPAL SECRETARY (APPEAL AND SECURITY), AND ORS."
-        },
-        {
-          "for_date": "2026-07-31",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "14",
-          "item": "32",
-          "coram": "HON'BLE MR. JUSTICE K.V. VISWANATHAN; HON'BLE MR. JUSTICE ARUN PALLI",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "32 SLP(Crl) No. DILEEP Versus STATE OF KERALA"
-        }
-      ]
-    },
     "2026-08-03": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -259,8 +210,18 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-08-12": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
-  "match_count": 9,
+  "match_count": 7,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
