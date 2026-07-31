@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-31T05:39:29.107771Z",
+  "generated_at": "2026-07-31T08:25:42.163760Z",
   "window": [
     "2026-07-31",
     "2026-08-03",
@@ -120,6 +120,85 @@
       "match_count": 0,
       "matches": []
     },
+    "2026-08-07": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 4,
+      "matches": [
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "291",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "291 SLP(Crl) No. 5500/2026 MINIKETAN SARTHI Versus STATE OF CHHATTISGARH"
+        },
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "896",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "896 SLP(C) No. RAJEEVAN M Versus JEESHA P. AND ORS."
+        },
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1394",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1394 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL Versus MADHAV AND ORS."
+        },
+        {
+          "for_date": "2026-08-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1644",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1644 SLP(C) No. GOPAL KRISHNA MOHAN (D) THR. LRS. AND ORS. Versus MEERA VISHWANATHAN AND ORS."
+        }
+      ]
+    },
     "2026-08-10": {
       "lists_found": [
         "Miscellaneous - Advance"
@@ -159,6 +238,6 @@
       "matches": []
     }
   },
-  "match_count": 4,
+  "match_count": 8,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
