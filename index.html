@@ -4685,8 +4685,13 @@ function renderReceipt(){
         </div>
       </div>
       <div class="note">Enter the <b>gross</b> fee you charged. If the client deducted TDS (usually 10% u/s 194J on professional fees), choose "TDS deducted" and the net and TDS are computed. The TDS is tracked as tax credit already paid.</div>
+      <div style="margin-top:12px;background:var(--cream,#faf7f0);border:1px solid var(--line);border-radius:9px;padding:11px 13px">
+        <label class="fld" style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer">
+          <input type="checkbox" id="rcAlsoInvoice"> Also raise a matching invoice (client paid directly, with no prior bill)</label>
+        <div class="note" style="margin-top:6px">Creates an invoice for the same amount alongside the receipt — the invoice is marked <b>paid</b>, and both print together as a single PDF.</div>
+      </div>
       <div class="btn-row" style="margin-top:16px">
-        <button class="btn seal" onclick="issueReceipt()">Save &amp; generate receipt</button>
+        <button class="btn seal" onclick="issueReceipt()">Save &amp; generate</button>
         <button class="btn ghost" onclick="shellGo('books')">View ledger</button>
       </div>
     </div>`;
@@ -4914,11 +4919,41 @@ function issueReceipt(){
   DB.cash.push({id:uid(), date, particulars:`Receipt ${no} — ${label}${tds?" (net of TDS "+fmtINR(tds)+")":""}`,
     type:"in", amount: net, mode:rec.mode, ref:no});
   logActivity("receipt", `Receipt ${no} — ${fmtINR(rec.amount)} (${label})`, {ownerOnly:true, refId:rec.id});
+  // Optionally raise a matching (already-paid) invoice for a direct payment with no prior bill.
+  const alsoInvoice = !!(document.getElementById("rcAlsoInvoice")||{}).checked;
+  let inv=null;
+  if(alsoInvoice){
+    inv=_invoiceFromReceipt(rec, gross);
+    DB.invoices.push(inv);
+    rec.invoiceId=inv.id;   // cross-link
+    logActivity("invoice", `Invoice ${inv.no} — ${fmtINR(gross)} (${label}) · paid`, {ownerOnly:true, refId:inv.id});
+  }
   save();
-  printReceipt(rec);
+  if(inv){ _printBoth(inv, rec); } else { printReceipt(rec); }
   renderAll();
   shellGo("books");
-  toast(`Receipt ${no} saved.`);
+  toast(inv ? `Invoice ${inv.no} & Receipt ${no} saved.` : `Receipt ${no} saved.`);
+}
+// Build an already-paid invoice mirroring a receipt (for direct payments with no prior bill).
+function _invoiceFromReceipt(rec, gross){
+  const db=defaultBank(), du=defaultUpi();
+  const inv={ id:uid(), no:nextInvoiceNo(rec.date), date:rec.date, matterId:rec.matterId||"",
+    style:"consolidated", dueMode:"onreceipt", due:0,
+    bankId: db?db.id:"", upiId: du?du.id:"", showQr: !!du,
+    lines:[{desc: rec.towards||"Professional fees", amount: +gross||0}], expenses:[], notes:"",
+    status:"paid", paid:true, paidDate:rec.date, paidReceiptId:rec.id };
+  if(rec.noMatter){ inv.noMatter=true; inv.to=rec.payer||""; inv.toAddr=rec.payerLoc||""; inv.toPhone=rec.clientPhone||""; inv.toEmail=rec.clientEmail||""; }
+  return inv;
+}
+// Print an invoice and a receipt together as one document (invoice page(s) then receipt).
+function _printBoth(inv, rec){
+  const area=document.getElementById("receiptArea"); if(!area){ printReceipt(rec); return; }
+  printInvoice(inv, {noPrint:true});
+  const invHTML=area.innerHTML;
+  printReceipt(rec, {noPrint:true});
+  const recHTML=area.innerHTML;
+  area.innerHTML=invHTML+recHTML;
+  setTimeout(()=>_printAs("ASDC Invoice "+String(inv.no||"").replace(/[\/\\]/g,"-")+" and Receipt "+String(rec.no||"").replace(/[\/\\]/g,"-")), 160);
 }
 
 /* ---------- build printable receipt ---------- */
@@ -17523,7 +17558,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.29-1000";
+  window.APP_VERSION = "2026.08.01-1000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
