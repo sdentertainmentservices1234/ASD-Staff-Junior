@@ -4591,12 +4591,16 @@ function taxSnapshot(declared){
 // Matter options for billing (receipt/invoice): active matters first, then concluded &
 // past cases in their own group — so fees can be raised against a closed matter too.
 function _billMatterOptions(){
-  const optFor=m=>`<option value="${m.id}">${esc(m.code)} · ${esc(m.client||m.parties||"")}${m.caseNo?" · "+esc(m.caseNo):""}</option>`;
+  const numOf=m=>m.caseNo?(" · "+esc(m.caseNo)):(m.caveatNo?(" · Caveat "+esc(m.caveatNo)):(m.diaryNo?(" · Diary "+esc(m.diaryNo)):""));
+  const optFor=m=>`<option value="${m.id}">${esc(m.code)} · ${esc(m.client||m.parties||"")}${numOf(m)}</option>`;
   const bycode=(a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true});
-  const all=(DB.matters||[]).filter(m=>!isVoided(m) && m.kind!=="caveat");
-  const active=all.filter(m=>m.status!=="Closed"&&m.status!=="Concluded"&&!m.historical).sort(bycode);
-  const past=all.filter(m=>m.status==="Closed"||m.status==="Concluded"||m.historical).sort(bycode);
+  const all=(DB.matters||[]).filter(m=>!isVoided(m));
+  const caveats=all.filter(m=>m.kind==="caveat").sort(bycode);
+  const cases=all.filter(m=>m.kind!=="caveat");
+  const active=cases.filter(m=>m.status!=="Closed"&&m.status!=="Concluded"&&!m.historical).sort(bycode);
+  const past=cases.filter(m=>m.status==="Closed"||m.status==="Concluded"||m.historical).sort(bycode);
   return (active.length?`<optgroup label="Active matters">${active.map(optFor).join("")}</optgroup>`:"")
+       + (caveats.length?`<optgroup label="Caveats">${caveats.map(optFor).join("")}</optgroup>`:"")
        + (past.length?`<optgroup label="Concluded &amp; past cases">${past.map(optFor).join("")}</optgroup>`:"");
 }
 function renderReceipt(){
@@ -5562,9 +5566,12 @@ function _tplNoRow(label, no, date){
 function _tplCaseBlock(m){
   if(!m) return "";
   const rows=[];
-  if(m.parties) rows.push(`<div class="row caze"><span class="k">Case</span><b>${esc(m.parties)}</b></div>`);
+  const isCav=m.kind==="caveat";
+  if(m.parties) rows.push(`<div class="row caze"><span class="k">${isCav?"Caveat":"Case"}</span><b>${esc(m.parties)}</b></div>`);
   if(m.court) rows.push(`<div class="row"><span class="k">Court</span><b>${esc(m.court)}</b></div>`);
   if(m.caseNo) rows.push(`<div class="row"><span class="k">Case No.</span><b>${esc(m.caseNo)}</b></div>`);
+  else if(isCav && m.caveatNo) rows.push(`<div class="row"><span class="k">Caveat No.</span><b>${esc(m.caveatNo)}</b></div>`);
+  else if(m.diaryNo) rows.push(`<div class="row"><span class="k">Diary No.</span><b>${esc(m.diaryNo)}</b></div>`);
   if(m.code) rows.push(`<div class="row"><span class="k">Our Ref.</span><b>${esc(m.code)}</b></div>`);
   if(!rows.length) return "";
   return `<div class="tpl-col">
@@ -17588,7 +17595,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.01-2200";
+  window.APP_VERSION = "2026.08.01-2359";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
