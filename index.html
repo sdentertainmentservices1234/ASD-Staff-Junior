@@ -5282,13 +5282,12 @@ function _openPrintView(title){
       "#receiptArea{position:static !important;left:auto !important;top:auto !important}"+
       // On screen, scale the fixed A4 page down to fit the device width so it never
       // overflows horizontally. A wrapper keeps layout height correct after scaling.
-      ".__pgwrap{width:100%;display:flex;justify-content:center}"+
-      ".tpl{box-shadow:0 4px 24px rgba(0,0,0,.12);transform-origin:top center}"+
-      "@media screen and (max-width:820px){"+
-        ".__pgwrap{overflow:hidden}"+
-        ".tpl{transform:scale(var(--pgscale,1))}"+
-      "}"+
-      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}body{background:#fff;padding:0}.tpl{box-shadow:none;transform:none !important}.__pbar{display:none !important}.__pgwrap{display:block}}"+
+      ".__pgwrap{width:100%;display:block}"+
+      // Scale the whole document down to fit the device width via zoom on #receiptArea
+      // (collapses layout cleanly, unlike transform:scale) so EVERY page shows — not just
+      // the first. Multi-doc prints (e.g. invoice + receipt) stack and are all visible.
+      ".tpl,.tpl-list{box-shadow:0 4px 24px rgba(0,0,0,.12);margin:0 auto 18px !important}"+
+      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}body{background:#fff;padding:0}.tpl,.tpl-list{box-shadow:none;margin:0 auto !important}.__pbar{display:none !important}.__pgwrap{display:block}#receiptArea{zoom:1 !important}}"+
       ".__pbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;"+
       "padding:12px;background:#fff;border-top:1px solid #e7e0d4;z-index:9}"+
       ".__pbar button{border:none;border-radius:8px;padding:12px 20px;font-size:15px;font-weight:600;cursor:pointer}"+
@@ -5298,10 +5297,10 @@ function _openPrintView(title){
       "<button class='__pbtn-print' onclick='window.print()'>Print / Save as PDF</button>"+
       "<button class='__pbtn-close' onclick='window.close()'>Close</button>"+
       "</div>"+
-      "<script>(function(){function fit(){try{var t=document.querySelector('.tpl');if(!t)return;"+
-      "var avail=document.documentElement.clientWidth-16;var w=t.offsetWidth||794;"+
-      "var s=avail<w?(avail/w):1;document.documentElement.style.setProperty('--pgscale',s);"+
-      "var wrap=document.querySelector('.__pgwrap');if(wrap&&s<1){wrap.style.height=(t.offsetHeight*s)+'px';}"+
+      "<script>(function(){function fit(){try{var area=document.getElementById('receiptArea');if(!area)return;"+
+      "var first=area.querySelector('.tpl,.tpl-list');if(!first)return;"+
+      "area.style.zoom='';var w=first.offsetWidth||794;var avail=document.documentElement.clientWidth-16;"+
+      "var s=avail<w?(avail/w):1;area.style.zoom=s;"+
       "}catch(e){}}window.addEventListener('load',fit);window.addEventListener('resize',fit);setTimeout(fit,60);})();</"+"script>"+
       "</"+"body></"+"html>"
     );
@@ -17558,7 +17557,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.01-1000";
+  window.APP_VERSION = "2026.08.01-1400";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
