@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-01T14:01:57.418721Z",
+  "generated_at": "2026-08-01T15:07:03.301788Z",
   "window": [
     "2026-08-03",
     "2026-08-04",
@@ -16,10 +16,11 @@
         "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Registrar - Main",
-        "Registrar - Supplementary"
+        "Registrar - Supplementary",
+        "Miscellaneous - Advance"
       ],
       "has_supplementary": true,
-      "has_advance": false,
+      "has_advance": true,
       "has_main": true,
       "match_count": 1,
       "matches": [
