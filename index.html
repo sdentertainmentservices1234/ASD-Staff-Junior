@@ -4805,17 +4805,18 @@ function openRetainer(){
     <div class="row2">
       <label class="fld"><span>Gross fee (₹)</span>
         <input class="in" id="rtGross" type="number" inputmode="numeric" value="${c.amount||""}" oninput="_rtPreview()" placeholder="Monthly fee"></label>
-      <label class="fld"><span>Date received</span>
+      <label class="fld"><span>Date <span style="color:var(--muted);font-weight:400">(may be past)</span></span>
         <input class="in" id="rtDate" type="date" value="${today}"></label>
     </div>
     <label class="fld"><span>TDS rate (%) — 194J</span>
       <input class="in" id="rtRate" type="number" inputmode="decimal" value="${c.rate}" oninput="_rtPreview()" style="max-width:120px"></label>
     <div class="fp" id="rtPreview" style="margin:6px 0 12px"></div>
     <label class="chk" style="margin-bottom:12px"><input type="checkbox" id="rtRemember" checked> Remember this senior &amp; amount for next month</label>
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn ghost" onclick="_retainerInvoice()">Raise invoice</button>
-      <button class="btn seal" onclick="_retainerReceipt()">Record receipt</button>
+      <button class="btn ghost" onclick="_retainerInvoice()">Invoice only</button>
+      <button class="btn ghost" onclick="_retainerReceipt()">Receipt only</button>
+      <button class="btn seal" onclick="_retainerBoth()">Invoice + Receipt</button>
     </div>`);
   setTimeout(_rtPreview,30);
 }
@@ -4852,7 +4853,7 @@ function _retainerReceipt(){
   if(!v.name){ toast("Enter the senior advocate's name.", true); return; }
   if(!v.gross || v.gross<=0){ toast("Enter the monthly fee.", true); return; }
   if(!v.date){ toast("Pick the date received.", true); return; }
-  const no=nextReceiptNo();
+  const no=nextReceiptNo(v.date);
   const towards=`Professional services${v.month?" — "+v.month:""}`;
   const rec={ id:uid(), no, date:v.date, matterId:"",
     retainer:true, retainerSenior:v.name,
@@ -4874,7 +4875,8 @@ function _retainerInvoice(){
   const v=_rtVals();
   if(!v.name){ toast("Enter the senior advocate's name.", true); return; }
   if(!v.gross || v.gross<=0){ toast("Enter the monthly fee.", true); return; }
-  const inv={ id:uid(), no:nextInvoiceNo(), date:v.date, matterId:"",
+  if(!v.date){ toast("Pick the date.", true); return; }
+  const inv={ id:uid(), no:nextInvoiceNo(v.date), date:v.date, matterId:"",
     retainer:true, retainerSenior:v.name,
     to:v.name, toAddr:v.addr, toPhone:v.phone, toEmail:v.email,
     style:"consolidated", dueMode:"none", due:0,
@@ -4890,6 +4892,37 @@ function _retainerInvoice(){
   renderAll();
   toast(`Retainer invoice ${inv.no} saved.`);
 }
+// Generate a retainer invoice AND receipt together (invoice marked paid, cross-linked),
+// printed as one PDF. For a direct retainer payment with no separate bill.
+function _retainerBoth(){
+  const v=_rtVals();
+  if(!v.name){ toast("Enter the senior advocate's name.", true); return; }
+  if(!v.gross || v.gross<=0){ toast("Enter the monthly fee.", true); return; }
+  if(!v.date){ toast("Pick the date.", true); return; }
+  const towards=`Professional services${v.month?" — "+v.month:""}`;
+  const rno=nextReceiptNo(v.date);
+  const rec={ id:uid(), no:rno, date:v.date, matterId:"",
+    retainer:true, retainerSenior:v.name, payer:v.name, payerLoc:v.addr,
+    amount:v.gross, net:v.net, tds:v.tds, showTds:true, mode:"NEFT",
+    towards, remarks:`Professional services rendered in assisting ${v.name}` };
+  const ino=nextInvoiceNo(v.date);
+  const inv={ id:uid(), no:ino, date:v.date, matterId:"",
+    retainer:true, retainerSenior:v.name, to:v.name, toAddr:v.addr, toPhone:v.phone, toEmail:v.email,
+    style:"consolidated", dueMode:"none", due:0,
+    lines:[{desc:`Professional services rendered in assistance${v.month?" — "+v.month:""}`, amount:v.gross}],
+    expenses:[], notes:`Professional services. Section 194J — TDS @ ${v.rate}% (${fmtINR(v.tds)}) deducted; net paid ${fmtINR(v.net)}.`,
+    status:"paid", paid:true, paidDate:v.date, paidReceiptId:rec.id };
+  rec.invoiceId=inv.id;
+  DB.receipts.push(rec); DB.invoices.push(inv);
+  DB.cash.push({id:uid(), date:v.date, particulars:`Receipt ${rno} — professional services (${v.name})${v.tds?" (net of TDS "+fmtINR(v.tds)+")":""}`,
+    type:"in", amount:v.net, mode:"NEFT", ref:rno});
+  _rtRemember(v);
+  logActivity("receipt", `Retainer receipt ${rno} — ${fmtINR(v.gross)} (${v.name})`, {ownerOnly:true, refId:rec.id});
+  logActivity("invoice", `Retainer invoice ${ino} — ${fmtINR(v.gross)} (${v.name}) · paid`, {ownerOnly:true, refId:inv.id});
+  save(); closeModal(); _printBoth(inv, rec); renderAll();
+  toast(`Invoice ${ino} & Receipt ${rno} saved.`);
+}
+window._retainerBoth=_retainerBoth;
 
 function issueReceipt(){
   const matterId = document.getElementById("rcMatter").value;
@@ -17557,7 +17590,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.01-1400";
+  window.APP_VERSION = "2026.08.01-1800";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
