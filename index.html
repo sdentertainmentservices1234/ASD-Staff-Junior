@@ -4590,10 +4590,20 @@ function taxSnapshot(declared){
 /* ===========================================================
    RENDER: NEW RECEIPT
    =========================================================== */
+// Matter options for billing (receipt/invoice): active matters first, then concluded &
+// past cases in their own group — so fees can be raised against a closed matter too.
+function _billMatterOptions(){
+  const optFor=m=>`<option value="${m.id}">${esc(m.code)} · ${esc(m.client||m.parties||"")}${m.caseNo?" · "+esc(m.caseNo):""}</option>`;
+  const bycode=(a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true});
+  const all=(DB.matters||[]).filter(m=>!isVoided(m) && m.kind!=="caveat");
+  const active=all.filter(m=>m.status!=="Closed"&&m.status!=="Concluded"&&!m.historical).sort(bycode);
+  const past=all.filter(m=>m.status==="Closed"||m.status==="Concluded"||m.historical).sort(bycode);
+  return (active.length?`<optgroup label="Active matters">${active.map(optFor).join("")}</optgroup>`:"")
+       + (past.length?`<optgroup label="Concluded &amp; past cases">${past.map(optFor).join("")}</optgroup>`:"");
+}
 function renderReceipt(){
   _tdsMode="no";
-  const matters = DB.matters.filter(m=>(m.status!=="Closed"&&m.status!=="Concluded"));
-  const opts = matters.map(m=>`<option value="${m.id}">${esc(m.code)} · ${esc(m.client)}${m.caseNo?" · "+esc(m.caseNo):""}</option>`).join("");
+  const opts = _billMatterOptions();
   document.getElementById("panel-receipt").innerHTML = `
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -7382,8 +7392,7 @@ let _invLines = [];      // [{desc, amount}]
 let _invExpenses = [];   // [{desc, amount}]
 
 function renderInvoice(){
-  const matters = DB.matters.filter(m=>(m.status!=="Closed"&&m.status!=="Concluded"));
-  const opts = matters.map(m=>`<option value="${m.id}">${esc(m.code)} · ${esc(m.client)}${m.caseNo?" · "+esc(m.caseNo):""}</option>`).join("");
+  const opts = _billMatterOptions();
   const list=[...DB.invoices].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.no||"").localeCompare(a.no||""));
   const histRows=list.map(inv=>{
     const tot=(inv.lines||[]).reduce((s,l)=>s+(+l.amount||0),0)+(inv.expenses||[]).reduce((s,l)=>s+(+l.amount||0),0);
@@ -17514,7 +17523,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.07.28-2200";
+  window.APP_VERSION = "2026.07.29-1000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
