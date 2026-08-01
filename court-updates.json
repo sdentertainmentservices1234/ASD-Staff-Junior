@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-01T04:03:44.367460Z",
+  "generated_at": "2026-08-01T05:29:33.754382Z",
   "window": [
     "2026-08-03",
     "2026-08-04",
@@ -173,34 +173,6 @@
         }
       ]
     },
-    "2026-08-10": {
-      "lists_found": [
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": false,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-08-10",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "903",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "903 SLP(Crl) No. 19901/2025 TULESHWAR SINGH GOND AND ANR. Versus STATE OF CHHATTISGARH"
-        }
-      ]
-    },
     "2026-08-11": {
       "lists_found": [
         "Miscellaneous - Advance"
@@ -222,6 +194,6 @@
       "matches": []
     }
   },
-  "match_count": 7,
+  "match_count": 6,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
