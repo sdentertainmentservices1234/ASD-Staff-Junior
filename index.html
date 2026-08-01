@@ -3662,7 +3662,7 @@ function openClientDetail(encKey){
       <td><span class="tag ${m.status==="Concluded"?"":"active"}">${esc(m.status||"Active")}</span></td>
     </tr>`;
   }).join("");
-  const noticeRows=c.notices.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(n=>`<tr>
+  const noticeRows=c.notices.slice().sort(_byNoAsc).map(n=>`<tr>
       <td class="mono" style="font-weight:700;color:var(--seal)">${esc(n.no||"")}</td>
       <td>${esc(fmtDate(n.date))}</td>
       <td><b>${esc(n.noticee||"")}</b></td>
@@ -4588,6 +4588,9 @@ function taxSnapshot(declared){
 /* ===========================================================
    RENDER: NEW RECEIPT
    =========================================================== */
+// Sort numbered records (invoices/receipts/notices…) ascending by their number, so
+// registers read No. 1 at the top, No. 2 below, and so on (FY prefix keeps years in order).
+function _byNoAsc(a,b){ return String((a&&a.no)||"").localeCompare(String((b&&b.no)||""),undefined,{numeric:true}); }
 // Matter options for billing (receipt/invoice): active matters first, then concluded &
 // past cases in their own group — so fees can be raised against a closed matter too.
 function _billMatterOptions(){
@@ -6067,7 +6070,7 @@ function openNoticeRegister(){
 }
 function _renderNoticeRegister(){
   var el=document.getElementById("nrBody"); if(!el) return;
-  var list=[...(DB.notices||[])].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||String(b.no||"").localeCompare(String(a.no||"")));
+  var list=[...(DB.notices||[])].sort(_byNoAsc);
   if(!list.length){ el.innerHTML='<div style="padding:20px 4px;color:var(--muted);font-size:13.5px">No notices sent yet. Use “+ New notice” to draft the first one.</div>'; return; }
   var rows=list.map(function(n){
     var addr=(n.noticeeAddr||"").replace(/\n/g,", ");
@@ -7465,7 +7468,7 @@ let _invExpenses = [];   // [{desc, amount}]
 
 function renderInvoice(){
   const opts = _billMatterOptions();
-  const list=[...DB.invoices].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.no||"").localeCompare(a.no||""));
+  const list=[...DB.invoices].sort(_byNoAsc);
   const histRows=list.map(inv=>{
     const tot=(inv.lines||[]).reduce((s,l)=>s+(+l.amount||0),0)+(inv.expenses||[]).reduce((s,l)=>s+(+l.amount||0),0);
     const voided=isVoided(inv);
@@ -7563,7 +7566,7 @@ function renderInvoice(){
   drawInvLines(); drawInvExpenses(); onInvStyleChange(); onDueModeChange();
 }
 function renderInvoiceLedger(){
-  const list=[...DB.invoices].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.no||"").localeCompare(a.no||""));
+  const list=[...DB.invoices].sort(_byNoAsc);
   const raised = list.filter(i=>!isVoided(i)).reduce((s,inv)=>s+((inv.lines||[]).reduce((x,l)=>x+(+l.amount||0),0)+(inv.expenses||[]).reduce((x,l)=>x+(+l.amount||0),0)),0);
   const rows=list.map(inv=>{
     const tot=(inv.lines||[]).reduce((s,l)=>s+(+l.amount||0),0)+(inv.expenses||[]).reduce((s,l)=>s+(+l.amount||0),0);
@@ -13246,7 +13249,7 @@ function renderBooksOverview(){
     </div>`;
 }
 function renderReceiptLedger(){
-  const list = [...DB.receipts].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.no||"").localeCompare(a.no||""));
+  const list = [...DB.receipts].sort(_byNoAsc);
   const anyTds = list.some(r=>+r.tds>0);
   const rows = list.map(r=>{
     const net = r.net!=null ? r.net : (r.amount - (+r.tds||0));
@@ -17096,8 +17099,8 @@ function _staffInvoiceForm(mb){
 // STAFF REGISTER — ledger of the junior's own receipts & invoices, like the owner's.
 function _staffRegister(mb){
   const fy=(DB.settings&&DB.settings.fyStart)||"";
-  const recs=(mb.receipts||[]).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  const invs=(mb.invoices||[]).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const recs=(mb.receipts||[]).slice().sort(_byNoAsc);
+  const invs=(mb.invoices||[]).slice().sort(_byNoAsc);
   const recTotal=recs.reduce((s,r)=>s+(+r.amount||0),0);
   const invTotal=invs.reduce((s,v)=>s+(+v.amount||0),0);
   const chip=(u)=> u?` <a class="cl-chip" href="${esc(u)}" target="_blank" rel="noopener" title="Open saved PDF">☁︎</a>`:"";
@@ -17595,7 +17598,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.01-2359";
+  window.APP_VERSION = "2026.08.02-1000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
