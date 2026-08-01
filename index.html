@@ -379,12 +379,10 @@
     }
     #receiptArea .tpl:last-child{ page-break-after:auto; break-after:auto; }
     /* Table-based documents: repeat letterhead (thead) & footer (tfoot) on every page,
-       browser-natively. Override the fixed-position rules so they don't double up.
-       The height chain (scoped to table docs so it can't affect the cause-list/notice)
-       lets the middle cell fill the page so the footer seats at the bottom. */
-    html:has(#receiptArea table.tpl-paged), body:has(#receiptArea table.tpl-paged){ height:100%; }
-    #receiptArea:has(table.tpl-paged){ height:100%; }
-    #receiptArea table.tpl-paged{ display:table; width:100%; height:100%; overflow:visible; }
+       browser-natively. Each table is one page tall (100vh) so its footer seats at the
+       page bottom — WITHOUT capping #receiptArea, so multiple documents (e.g. invoice +
+       receipt) each get their own page(s) and all print. */
+    #receiptArea table.tpl-paged{ display:table; width:100%; height:100vh; overflow:visible; }
     #receiptArea table.tpl-paged>thead{ display:table-header-group; }
     #receiptArea table.tpl-paged>tfoot{ display:table-footer-group; }
     #receiptArea table.tpl-paged .tpl-foot{ position:static !important; height:auto !important; bottom:auto !important; }
@@ -17590,7 +17588,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.01-1800";
+  window.APP_VERSION = "2026.08.01-2200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
