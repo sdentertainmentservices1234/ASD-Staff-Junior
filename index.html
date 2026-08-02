@@ -5498,6 +5498,7 @@ function _docActions(kind, id){
   if(kind==="invoice"){
     o=(DB.invoices||[]).find(x=>x.id===id); if(!o){ toast("Not found.",true); return; }
     rows=[{t:"View",f:`_previewGenDoc('invoice','${id}')`,seal:1},{t:"Print / Save",f:`reprintInvoice('${id}')`},{t:"Share",f:`shareDoc('invoice','${id}')`}]
+      .concat(isVoided(o)?[]:[{t:"Edit",f:`editInvoice('${id}')`}])
       .concat(isVoided(o)?[]:[ _invoicePaid(o) ? {t:"Mark unpaid / unlink receipt",f:`_unlinkInvoice('${id}')`} : {t:"Mark paid / link receipt",f:`_linkReceiptToInvoice('${id}')`} ])
       .concat(o.cloudUrl?[{t:"Open cloud copy",href:o.cloudUrl}]:[])
       .concat(isVoided(o)?[]:[{t:"Void",f:`voidInvoice('${id}')`}])
@@ -7752,10 +7753,12 @@ function peekNextInvoiceNo(){
 }
 let _invLines = [];      // [{desc, amount}]
 let _invExpenses = [];   // [{desc, amount}]
+let _editingInvoiceId = null;   // set while editing an existing invoice (vs raising a new one)
 
 function renderInvoice(){
   const opts = _billMatterOptions();
   const list=[...DB.invoices].sort(_byNoAsc);
+  const editInv = _editingInvoiceId ? (DB.invoices||[]).find(v=>v.id===_editingInvoiceId) : null;
   const histRows=list.map(inv=>{
     const tot=(inv.lines||[]).reduce((s,l)=>s+(+l.amount||0),0)+(inv.expenses||[]).reduce((s,l)=>s+(+l.amount||0),0);
     const voided=isVoided(inv);
@@ -7769,8 +7772,8 @@ function renderInvoice(){
   }).join("");
   document.getElementById("panel-invoice").innerHTML = `
     <div class="card">
-      <h2>Raise a fee invoice (memo of fees)</h2>
-      <div class="hint">A bill sent to the client requesting payment — distinct from a receipt. Choose itemised (each item listed) or consolidated (a single professional-fee line).</div>
+      <h2>${editInv?("Edit invoice "+esc(editInv.no)):"Raise a fee invoice (memo of fees)"}</h2>
+      <div class="hint">${editInv?"Change any details below and update — the invoice number stays the same.":"A bill sent to the client requesting payment — distinct from a receipt. Choose itemised (each item listed) or consolidated (a single professional-fee line)."}</div>
       <div class="seg" id="ivKindSeg" style="margin-top:12px">
         <button type="button" class="seg-btn on" data-kind="case" onclick="_ivSetKind('case')">Against a case</button>
         <button type="button" class="seg-btn" data-kind="general" onclick="_ivSetKind('general')">General (no case)</button>
@@ -7778,7 +7781,7 @@ function renderInvoice(){
       <div class="grid g2" style="margin-top:12px">
         <div id="ivMatterWrap"><label class="fld">Matter</label><select class="in" id="ivMatter" onchange="_ivMatterChange()"><option value="">— Select matter —</option>${opts}</select>
           <div style="margin-top:6px"><button class="btn ghost sm" onclick="quickMatter()">+ Quick new matter</button></div></div>
-        <div><label class="fld">Date <span class="req">*</span></label><input class="in" type="date" id="ivDate" value="${todayISO()}"></div>
+        <div><label class="fld">Date <span class="req">*</span></label><input class="in" type="date" id="ivDate" value="${editInv?esc(editInv.date):todayISO()}"></div>
       </div>
       <div id="ivBillToRow" style="margin-top:11px;display:none">
         <label class="fld">Bill to <span class="req">*</span></label>
@@ -7790,7 +7793,7 @@ function renderInvoice(){
         </div>
         <div class="hint" style="margin-top:6px">Used when the invoice isn't tied to a case.</div>
       </div>
-      <div style="margin-top:11px"><label class="fld">Invoice no.</label><input class="in mono" id="ivNo" value="${esc(peekNextInvoiceNo())}" readonly style="background:#f1ece0;color:var(--muted);max-width:220px"></div>
+      <div style="margin-top:11px"><label class="fld">Invoice no.</label><input class="in mono" id="ivNo" value="${editInv?esc(editInv.no):esc(peekNextInvoiceNo())}" readonly style="background:#f1ece0;color:var(--muted);max-width:220px"></div>
       ${(banksList().length||upisList().length)?`<div class="grid g3" style="margin-top:11px">
         ${banksList().length?`<div><label class="fld">Show bank account</label><select class="in" id="ivBank">
           ${banksList().map(b=>`<option value="${b.id}" ${b.isDefault?"selected":""}>${esc(b.label)}${b.acc?" · ···"+esc(String(b.acc).slice(-4)):""}</option>`).join("")}
@@ -7806,8 +7809,8 @@ function renderInvoice(){
       </div>`:""}
       <div class="grid g2" style="margin-top:11px">
         <div><label class="fld">Style</label><select class="in" id="ivStyle" onchange="onInvStyleChange()">
-          <option value="consolidated">Consolidated (single fee line)</option>
-          <option value="itemised">Itemised (list each item)</option>
+          <option value="consolidated" ${(!editInv||editInv.style!=="itemised")?"selected":""}>Consolidated (single fee line)</option>
+          <option value="itemised" ${editInv&&editInv.style==="itemised"?"selected":""}>Itemised (list each item)</option>
         </select></div>
         <div><label class="fld">Payment terms</label>
           <div style="display:flex;gap:8px">
@@ -7843,12 +7846,26 @@ function renderInvoice(){
 
       <div class="note" id="ivTotalNote" style="font-size:14px">Total: ₹0</div>
       <div class="btn-row" style="margin-top:14px">
-        <button class="btn seal" onclick="saveAndPrintInvoice()">Save &amp; print invoice</button>
+        ${editInv?`<button class="btn ghost" onclick="_cancelInvoiceEdit()">Cancel</button>`:""}
+        <button class="btn seal" onclick="saveAndPrintInvoice()">${editInv?"Update invoice":"Save &amp; print invoice"}</button>
       </div>
     </div>`;
   // init lines
   if(_invLines.length===0) _invLines=[{desc:"Professional fees",amount:""}];
   drawInvLines(); drawInvExpenses(); onInvStyleChange(); onDueModeChange();
+  // Edit mode: prefill the fields not carried by template defaults, then sync dependent UI.
+  if(editInv){
+    const set=(id,val)=>{const el=document.getElementById(id); if(el&&val!=null&&val!=="") el.value=val;};
+    set("ivDueMode", editInv.dueMode||"days");
+    if(editInv.due) set("ivDueDays", editInv.due);
+    set("ivNotes", editInv.notes||"");
+    if(editInv.matterId){ _ivSetKind("case"); set("ivMatter", editInv.matterId); }
+    else { _ivSetKind("general"); set("ivTo", editInv.to||""); set("ivToAddr", editInv.toAddr||""); set("ivToPhone", editInv.toPhone||""); set("ivToEmail", editInv.toEmail||""); }
+    const bankEl=document.getElementById("ivBank"); if(bankEl && editInv.bankId!=null) bankEl.value=editInv.bankId;
+    const upiEl=document.getElementById("ivUpi"); if(upiEl && editInv.upiId!=null) upiEl.value=editInv.upiId;
+    const qr=document.getElementById("ivQr"); if(qr) qr.checked=!!editInv.showQr;
+    _ivMatterChange(); onDueModeChange();
+  }
 }
 function renderInvoiceLedger(){
   const list=[...DB.invoices].sort(_byNoAsc);
@@ -7965,6 +7982,22 @@ function recalcInvTotal(){
   const note=document.getElementById("ivTotalNote");
   if(note) note.innerHTML=`Fees ${fmtINR(fees)}${exp?` + Expenses ${fmtINR(exp)}`:""} &nbsp;=&nbsp; <b>Total ${fmtINR(fees+exp)}</b>`;
 }
+// Load an existing invoice into the billing form for editing. Keeps its number,
+// paid status and any linked receipt; only the content changes on save.
+function editInvoice(id){
+  const inv=(DB.invoices||[]).find(v=>v.id===id);
+  if(!inv){ toast("Invoice not found.",true); return; }
+  if(isVoided(inv)){ toast("A voided invoice can't be edited.",true); return; }
+  _editingInvoiceId=id;
+  _invLines=(inv.lines&&inv.lines.length)?inv.lines.map(l=>({desc:l.desc||"",amount:l.amount||""})):[{desc:"Professional fees",amount:""}];
+  _invExpenses=(inv.expenses||[]).map(l=>({desc:l.desc||"",amount:l.amount||""}));
+  openBilling("invoice", true);   // prefill happens at the end of renderInvoice()
+}
+function _cancelInvoiceEdit(){
+  _editingInvoiceId=null; _invLines=[{desc:"Professional fees",amount:""}]; _invExpenses=[];
+  try{ openSub("invoiceledger"); }catch(e){ openBilling("invoice"); }
+}
+window.editInvoice=editInvoice; window._cancelInvoiceEdit=_cancelInvoiceEdit;
 function saveAndPrintInvoice(){
   const matterId=document.getElementById("ivMatter").value;
   const date=document.getElementById("ivDate").value;
@@ -7982,18 +8015,37 @@ function saveAndPrintInvoice(){
   const bankSel=document.getElementById("ivBank");
   const upiSel=document.getElementById("ivUpi");
   const qrChk=document.getElementById("ivQr");
-  const inv={ id:uid(), no:nextInvoiceNo(date), date, matterId,
-    style:document.getElementById("ivStyle").value, dueMode, due:dueDays,
-    bankId: bankSel? bankSel.value : (defaultBank()?defaultBank().id:""),
-    upiId: upiSel? upiSel.value : (defaultUpi()?defaultUpi().id:""),
-    showQr: qrChk? qrChk.checked : false,
-    lines, expenses, notes:document.getElementById("ivNotes").value.trim(), status:"raised" };
-  if(!matterId){
-    inv.noMatter=true; inv.to=billTo;
-    inv.toAddr=(document.getElementById("ivToAddr")||{}).value||"";
-    inv.toPhone=(document.getElementById("ivToPhone")||{}).value||"";
-    inv.toEmail=(document.getElementById("ivToEmail")||{}).value||"";
+  const style=document.getElementById("ivStyle").value;
+  const notes=document.getElementById("ivNotes").value.trim();
+  const bankId = bankSel? bankSel.value : (defaultBank()?defaultBank().id:"");
+  const upiId = upiSel? upiSel.value : (defaultUpi()?defaultUpi().id:"");
+  const showQr = qrChk? qrChk.checked : false;
+  const billFields=(o)=>{
+    if(!matterId){ o.noMatter=true; o.to=billTo;
+      o.toAddr=(document.getElementById("ivToAddr")||{}).value||"";
+      o.toPhone=(document.getElementById("ivToPhone")||{}).value||"";
+      o.toEmail=(document.getElementById("ivToEmail")||{}).value||"";
+    } else { delete o.noMatter; delete o.to; delete o.toAddr; delete o.toPhone; delete o.toEmail; }
+  };
+  // ---- EDIT an existing invoice: keep id / number / paid status / linked receipt ----
+  if(_editingInvoiceId){
+    const inv=(DB.invoices||[]).find(v=>v.id===_editingInvoiceId);
+    if(!inv){ _editingInvoiceId=null; toast("Invoice not found.",true); return; }
+    inv.date=date; inv.matterId=matterId; inv.style=style; inv.dueMode=dueMode; inv.due=dueDays;
+    inv.bankId=bankId; inv.upiId=upiId; inv.showQr=showQr; inv.lines=lines; inv.expenses=expenses; inv.notes=notes;
+    billFields(inv);
+    inv.editedOn=todayISO();
+    logActivity("invoice", `Invoice ${inv.no} edited`, {ownerOnly:true, refId:inv.id});
+    _editingInvoiceId=null; _invLines=[{desc:"Professional fees",amount:""}]; _invExpenses=[];
+    save();
+    try{ openSub("invoiceledger"); }catch(e){ renderInvoice(); markPanel("invoice"); }
+    toast(`Invoice ${inv.no} updated.`);
+    return;
   }
+  const inv={ id:uid(), no:nextInvoiceNo(date), date, matterId,
+    style, dueMode, due:dueDays, bankId, upiId, showQr,
+    lines, expenses, notes, status:"raised" };
+  billFields(inv);
   DB.invoices.push(inv);
   logActivity("invoice", `Invoice ${inv.no||""} — ${fmtINR(inv.total||inv.amount||0)}`, {ownerOnly:true, refId:inv.id});
   save();
@@ -15796,7 +15848,10 @@ function shellGo(t){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 /* Billing: one screen, toggle between Receipt and Invoice at the top */
-function openBilling(which){
+function openBilling(which, keepEdit){
+  // Any entry into billing that isn't an explicit invoice edit abandons a half-finished
+  // edit and clears the form, so a stale edit can't turn a "New invoice" into an overwrite.
+  if(!keepEdit && _editingInvoiceId){ _editingInvoiceId=null; _invLines=[{desc:"Professional fees",amount:""}]; _invExpenses=[]; }
   _billingTab = which||"receipt";
   _shellTab="billing"; renderBotNav();
   if(_billingTab==="invoice"){ renderInvoice(); markPanel("invoice"); }
@@ -18107,7 +18162,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2500";
+  window.APP_VERSION = "2026.08.02-2600";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
