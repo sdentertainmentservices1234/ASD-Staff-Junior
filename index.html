@@ -5516,6 +5516,26 @@ function _docActions(kind, id){
     <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
 window._docActions=_docActions;
+// Actions menu for a case expense row — same "⋯" pattern as _docActions, so matter-detail
+// rows show just the amount + ⋯ instead of up to five competing inline buttons.
+function _caseExpenseActions(id){
+  const e=(DB.expenses||[]).find(x=>x.id===id); if(!e){ toast("Not found.",true); return; }
+  const rej=isRejected(e);
+  const rows=[];
+  if(e.billLink) rows.push({t:"Open bill",href:e.billLink});
+  if(needsVoucher(e.amount)) rows.push({t:"Voucher",f:`printVoucher('${id}')`,seal:1});
+  if(!rej && _canEditEntry(e)) rows.push({t:"Edit",f:`editCaseExpense('${id}')`});
+  if(!rej && !isStaffView()) rows.push({t:"Reject",f:`rejectExpense('${id}')`});
+  if(_canDeleteOwn(e)) rows.push({t:"Delete",f:`delCaseExpense('${id}')`,danger:1});
+  if(!rows.length){ toast("No actions available for this entry.",true); return; }
+  const btns=rows.map(a=> a.href
+    ? `<a class="btn ghost" href="${esc(a.href)}" target="_blank" rel="noopener" style="text-align:center">${a.t}</a>`
+    : `<button class="btn ${a.seal?'seal':'ghost'}" ${a.danger?'style="color:#8c2f39;border-color:#e2b8b8"':''} onclick="closeModal();${a.f}">${a.t}</button>`).join("");
+  openModal(esc(e.head||"Expense")+" · "+fmtINR(e.amount), `
+    <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">${btns}</div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+window._caseExpenseActions=_caseExpenseActions;
 function _docPrintChooser(kind, obj){
   const render=(bw)=>{
     if(kind==="receipt") printReceipt(obj, {bw:bw});
@@ -11281,7 +11301,7 @@ function renderMatterDetail(){
     <div class="card">
       <div class="card-head"><div><h2>Expenses on this case</h2><div class="hint">Total: <b>${fmtINR(expTot)}</b></div></div>
         <button class="btn ghost sm" onclick="addCaseExpense('${m.id}')">+ Add</button></div>
-      ${expenses.length?`<div class="lrows">${expenses.map(e=>{const rej=isRejected(e);return `<div class="lrow"${rej?' style="opacity:.55"':''}><div class="l"><div class="t">${esc(e.head||"Expense")}${e.payee?" · "+esc(e.payee):""}${rej?` <span class="tag">Rejected${e.rejectReason?" ("+esc(e.rejectReason)+")":""}</span>`:""}</div><div class="s">${fmtDate(e.date)}${e.createdBy?" · "+esc(e.createdBy):""}</div></div><div class="amt">${fmtINR(e.amount)} ${e.billLink?`<a class="row-act" href="${esc(e.billLink)}" target="_blank" rel="noopener">Bill</a>`:""}${needsVoucher(e.amount)?`<button class="row-act" onclick="printVoucher('${e.id}')">Voucher</button>`:""}${(!rej&&_canEditEntry(e))?`<button class="row-act" onclick="editCaseExpense('${e.id}')">Edit</button>`:""}${(!rej&&!isStaffView())?`<button class="row-act" onclick="rejectExpense('${e.id}')">Reject</button>`:""}${_canDeleteOwn(e)?`<button class="row-act" onclick="delCaseExpense('${e.id}')">Delete</button>`:""}</div></div>`;}).join("")}</div>`:`<div class="empty" style="padding:12px">No expenses recorded.</div>`}
+      ${expenses.length?`<div class="lrows">${expenses.map(e=>{const rej=isRejected(e);const hasActions=e.billLink||needsVoucher(e.amount)||(!rej&&_canEditEntry(e))||(!rej&&!isStaffView())||_canDeleteOwn(e);return `<div class="lrow"${rej?' style="opacity:.55"':''}><div class="l"><div class="t">${esc(e.head||"Expense")}${e.payee?" · "+esc(e.payee):""}${rej?` <span class="tag">Rejected${e.rejectReason?" ("+esc(e.rejectReason)+")":""}</span>`:""}</div><div class="s">${fmtDate(e.date)}${e.createdBy?" · "+esc(e.createdBy):""}</div></div><div class="amt">${fmtINR(e.amount)} ${hasActions?`<button class="row-act" onclick="_caseExpenseActions('${e.id}')" aria-label="More actions" title="More actions">⋯</button>`:""}</div></div>`;}).join("")}</div>`:`<div class="empty" style="padding:12px">No expenses recorded.</div>`}
     </div>
 
     ${financeSection}`;
@@ -13265,6 +13285,18 @@ function renderBooksOverview(){
   }).join("");
   const trendSVG=`<svg viewBox="0 0 ${chartW} ${chartH}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${bars}</svg>`;
 
+  // Top clients by fees received (moved here from the former separate Insights screen).
+  const byClient={};
+  fyReceipts().forEach(r=>{ const mm=r.matterId?matterById(r.matterId):null; const nm=(mm&&mm.client)||r.payer||r.from||"—"; byClient[nm]=(byClient[nm]||0)+(+r.amount||0); });
+  const topClients=Object.keys(byClient).map(k=>({name:k,amt:byClient[k]})).sort((a,b)=>b.amt-a.amt).slice(0,5);
+  const topRows=topClients.length?topClients.map(c=>`<div class="ins-row"><span class="ins-nm">${esc(c.name)}</span><span class="ins-amt">${fmtINR(c.amt)}</span></div>`).join(""):`<div class="hint">No receipts yet.</div>`;
+  // Awaiting payment — unpaid invoices, longest-outstanding first.
+  const unpaid=(DB.invoices||[]).filter(v=>!isVoided(v)&&!(v.status==="paid"||v.paid)).map(v=>{
+    const mm=v.matterId?matterById(v.matterId):null;
+    return {no:v.no,to:(mm&&mm.client)||v.to||"—",amt:invoiceTotal(v),days:_daysUntil(v.date)!=null?-_daysUntil(v.date):0};
+  }).filter(x=>x.amt>0).sort((a,b)=>b.days-a.days).slice(0,6);
+  const unpaidRows=unpaid.length?unpaid.map(u=>`<div class="ins-row"><span class="ins-nm">${esc(u.to)} <span class="hint">· ${esc(u.no||"")}</span></span><span class="ins-amt">${fmtINR(u.amt)}${u.days>0?` <span class="hint">${u.days}d</span>`:""}</span></div>`).join(""):`<div class="hint">No unpaid invoices. 🎉</div>`;
+
   const panel=document.getElementById("panel-booksoverview");
   panel.innerHTML=`
     <div class="ov-hero">
@@ -13306,6 +13338,14 @@ function renderBooksOverview(){
     <button class="card" style="width:100%;text-align:left;cursor:pointer;border:1px solid var(--line)" onclick="subGo('books','income')">
       <div class="card-head"><div><h2>Income by case &amp; retainer</h2><div class="hint">See fees from each case, from the senior retainer, and the case-vs-retainer split.</div></div><span class="ov-go">Open ›</span></div>
     </button>
+
+    <div class="card"><div class="card-head"><div><h2>Top clients</h2><div class="hint">By fees received this FY</div></div></div>
+      <div class="ins-list">${topRows}</div></div>
+
+    <div class="card"><div class="card-head"><div><h2>Awaiting payment</h2><div class="hint">Unpaid invoices, longest first</div></div>
+      <button class="btn ghost sm" onclick="subGo('books','invoiceledger')">Invoices ›</button></div>
+      <div class="ins-list">${unpaidRows}</div>
+      <div class="hint" style="margin-top:10px">Mark an invoice paid from the Invoices register to clear it here.</div></div>
 
     <div class="card ov-tax">
       <div class="card-head"><div><h2>Tax position — compare methods</h2><div class="hint">Estimated income tax this FY under both approaches (new regime, incl. 4% cess). Indicative only — confirm with your CA.</div></div></div>
@@ -16578,8 +16618,7 @@ function renderMoreMenu(){
   const group=(title,items)=>`<div class="mgrp"><div class="mgrp-h">${title}</div><div class="mlist">${items.join("")}</div></div>`;
 
   const money=[
-    item("shellGo('books')",HOME_ICONS.receipt,"Books &amp; financials","Receipts ledger, cash, expenses"),
-    item("openInsights()",HOME_ICONS.registers,"Insights","Billing trend · top clients · who pays slow"),
+    item("shellGo('books')",HOME_ICONS.receipt,"Books &amp; financials","Overview, receipts, invoices, top clients, cash, expenses"),
     item("openSub('exadv')",HOME_ICONS.exadv,"Expenses &amp; advances","Combined register"),
     item("openPeople()",HOME_ICONS.matters,"People","Staff, juniors, interns · approvals · access"),
   ];
@@ -16610,10 +16649,10 @@ function renderMoreMenu(){
     <div class="hello">More</div>
     ${acctCard}
     <div class="mmore-2col">
-      ${group("Money", money)}
-      ${group("Work", work)}
-      ${group("Registers", registers)}
-      ${group("Admin", admin)}
+      ${group("Money &amp; billing", money)}
+      ${group("Diary &amp; tasks", work)}
+      ${group("Registers &amp; records", registers)}
+      ${group("Setup &amp; tools", admin)}
     </div>`;
 }
 async function cloudLogout(){
@@ -17898,7 +17937,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2300";
+  window.APP_VERSION = "2026.08.02-2400";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
