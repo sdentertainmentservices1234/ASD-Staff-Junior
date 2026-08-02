@@ -5353,6 +5353,9 @@ function _isMobilePrint(){
 // they can print or save via the browser's own controls (Share ▸ Print).
 function _openPrintView(title){
   try{
+    // Ensure the @page margin (7mm for tableised docs) is current before we snapshot the
+    // styles, so the standalone view paginates with the SAME page box the body was sized to.
+    try{ _tplReserveForPrint(); }catch(e){}
     const docHTML=(document.getElementById("receiptArea")||{}).innerHTML||"";
     let styles="";
     document.querySelectorAll("style").forEach(s=>{ styles+=s.innerHTML+"\n"; });
@@ -5459,6 +5462,39 @@ function _tplTableizeForPrint(){
       b.appendChild(body); r2.appendChild(b); tbody.appendChild(r2);
       table.appendChild(thead); table.appendChild(tfoot); table.appendChild(tbody);
       tpl.parentNode.replaceChild(table, tpl);
+    });
+    _tplSizePagedForPrint();
+  }catch(e){}
+}
+// Size each paged table to a WHOLE number of A4 pages so the repeating <tfoot> seats at
+// the bottom of every page — including a short final page. Without this, height:100vh makes
+// the table one page tall and a document that spills onto page 2 leaves its footer floating
+// right after the text instead of at the paper's foot. We measure the letterhead (thead) and
+// footer (tfoot) once, work out how many pages the body needs, and set the body cell to an
+// exact multiple of the per-page body area (page box − header − footer).
+function _tplSizePagedForPrint(){
+  try{
+    var area=document.getElementById("receiptArea"); if(!area) return;
+    var MPX=7/25.4*96;                 // 7mm @page margin in px (matches _tplReserveForPrint)
+    var pageBoxH=1123-2*MPX;           // A4 height @96dpi minus top+bottom margins
+    var pageBoxW=794-2*MPX;            // A4 width  @96dpi minus left+right margins
+    area.querySelectorAll("table.tpl-paged").forEach(function(t){
+      var thead=t.querySelector(":scope>thead"),
+          tfoot=t.querySelector(":scope>tfoot"),
+          bcell=t.querySelector(":scope>tbody>tr>td.tpl-b");
+      if(!bcell) return;
+      // Measure at the true print content width so text wraps exactly as it will on paper.
+      t.style.height="auto"; bcell.style.height="auto"; t.style.width=pageBoxW+"px";
+      var Hh=thead?thead.getBoundingClientRect().height:0,
+          Hf=tfoot?tfoot.getBoundingClientRect().height:0,
+          Hb=bcell.getBoundingClientRect().height;
+      var avail=pageBoxH-Hh-Hf;
+      if(avail<80){ t.style.height=""; t.style.width=""; bcell.style.height=""; return; }  // header+footer implausibly large — leave default
+      var pages=Math.max(1, Math.min(30, Math.ceil((Hb-2)/avail)));   // 2px slack; hard cap guards runaways
+      bcell.style.height=(pages*avail-2)+"px";  // exact N pages (−2px so sub-pixel drift never spills to N+1); footer at each page's foot
+      t.style.height="auto";                   // let the table be its natural N-page height (inline beats the 100vh rule)
+      t.style.width="";                         // restore: print CSS width:100% = the page box
+      t.setAttribute("data-print-pages", pages);
     });
   }catch(e){}
 }
@@ -18162,7 +18198,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2600";
+  window.APP_VERSION = "2026.08.02-2700";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
