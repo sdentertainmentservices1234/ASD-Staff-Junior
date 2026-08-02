@@ -1987,7 +1987,7 @@
           FB.COLLECTIONS.some(n=>Array.isArray(cloud[n]) && cloud[n].length>0);
         if(hasCloudData){
           _syncing=true;
-          if(cloud.settings) DB.settings = Object.assign({}, DB.settings, cloud.settings);
+          if(cloud.settings) DB.settings = _mergeCloudSettings(cloud.settings);
           if(cloud.counters) DB.counters = Object.assign({}, DB.counters, cloud.counters);
           FB.COLLECTIONS.forEach(n=>{ if(Array.isArray(cloud[n])) DB[n]=cloud[n]; });
           stripMeta();
@@ -2069,7 +2069,7 @@
         if(_syncing) return;
         _syncing=true;
         delete settings._updated;
-        DB.settings=Object.assign({},DB.settings,settings);
+        DB.settings=_mergeCloudSettings(settings);
         saveLocalOnly();
         if(window.applyBranding) try{ applyBranding(); }catch(e){}
         if(window.renderAll) try{ renderAll(); }catch(e){}
@@ -2891,6 +2891,21 @@ function save(){
   }
   try{ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
   catch(e){ toast("Could not save the index. Export a backup now.", true); }
+}
+
+// Merge cloud settings over local WITHOUT letting a stale/empty cloud copy wipe
+// locally-saved bank / UPI details. (Settings were previously overwritten wholesale,
+// which made saved bank accounts vanish after a reload/sync.)
+function _mergeCloudSettings(cloud){
+  if(!cloud) return DB.settings;
+  const merged = Object.assign({}, DB.settings, cloud);
+  const keepIfCloudEmpty = (key)=>{
+    const c = cloud[key], l = DB.settings[key];
+    if((!Array.isArray(c) || !c.length) && Array.isArray(l) && l.length) merged[key] = l;
+  };
+  keepIfCloudEmpty("banks");
+  keepIfCloudEmpty("upis");
+  return merged;
 }
 
 /* ===========================================================
@@ -14156,6 +14171,10 @@ function saveSettings(){
   // RCM
   if(has("stRcm")) s.rcmNote=gv("stRcm");
   save(); applyBranding();
+  // Push the full settings doc (including banks + UPI) to the cloud so the saved
+  // values survive a reload/sync. Without this, the live cloud listener overwrites
+  // freshly-saved settings with the older cloud copy — which made bank details vanish.
+  try{ if(window.FB && FB.pushSettings && FB.uid && FB.uid() && DB.deviceRole!=="staff") FB.pushSettings(DB.settings); }catch(e){}
   pushBrandingToAllStaff();
   toast("Settings saved.");
   // stay in settings; return to the section menu
@@ -17668,7 +17687,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-1800";
+  window.APP_VERSION = "2026.08.02-1900";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
