@@ -14705,10 +14705,14 @@ function chamberLogoSVG(letters, color, accent){
   // ASD overlapped-S monogram (option 03): serif A and D with an enlarged
   // accent S seated between/over them. `width="84" height="84"` kept verbatim
   // so header code that swaps the size still works.
+  // NOTE: no opacity/filter on the letters. Semi-transparent SVG elements inside a
+  // repeated print <thead> silently drop out on pages 2+ (leaving only the opaque S),
+  // so the A/D are drawn at full opacity with a solid slightly-lighter oxblood instead.
+  const soft = color==="#6b1f1f" ? "#7a3030" : color;   // ≈ the old 90%-opacity oxblood, but solid
   return `<svg viewBox="0 0 170 110" width="84" height="84" xmlns="http://www.w3.org/2000/svg">
     <g font-family="'Iowan Old Style',Palatino,Georgia,serif" font-weight="700" text-anchor="middle">
-      <text x="46" y="82" font-size="86" fill="${color}" opacity=".9">A</text>
-      <text x="118" y="82" font-size="86" fill="${color}" opacity=".9">D</text>
+      <text x="46" y="82" font-size="86" fill="${soft}">A</text>
+      <text x="118" y="82" font-size="86" fill="${soft}">D</text>
       <text x="83" y="86" font-size="104" fill="${accent}">S</text>
     </g>
   </svg>`;
@@ -18198,7 +18202,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2700";
+  window.APP_VERSION = "2026.08.02-2800";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
