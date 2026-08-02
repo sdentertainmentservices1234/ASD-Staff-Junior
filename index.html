@@ -7863,15 +7863,15 @@ function printInvoice(inv, opts){
   if(inv.dueMode==="days" || (inv.dueMode===undefined && inv.due)) payableText = `Payable within ${esc(inv.due)} day(s) of receipt.`;
   else if(inv.dueMode==="onreceipt") payableText = "Payable on receipt.";
 
-  // bank account (independent of UPI)
-  let bk = null;
-  if(inv.bankId!==undefined){ bk = inv.bankId ? bankById(inv.bankId) : null; }
-  else { bk = defaultBank(); }
+  // bank account (independent of UPI). If the invoice pinned a specific account,
+  // use it; but if that id is empty (no bank existed when the invoice was made) or
+  // no longer resolves, fall back to the current default so bank details still show.
+  let bk = (inv.bankId && bankById(inv.bankId)) || defaultBank();
   const hasBank = bk && (bk.name||bk.acc||bk.ifsc||bk.branch);
-  // UPI (independent of bank)
-  let up = null;
-  if(inv.upiId!==undefined){ up = inv.upiId ? upiById(inv.upiId) : null; }
-  else { up = defaultUpi(); }
+  // UPI (independent of bank). Same fallback as the bank block: an empty or stale
+  // pinned id shouldn't hide UPI — fall back to the current default. The QR/UPI
+  // opt-out is inv.showQr (handled below), not an empty upiId.
+  let up = (inv.upiId && upiById(inv.upiId)) || defaultUpi();
   const hasUpi = up && up.vpa;
   const pan = s.pan||"";
   let qrSvg="";
@@ -17841,7 +17841,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2000";
+  window.APP_VERSION = "2026.08.02-2100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
