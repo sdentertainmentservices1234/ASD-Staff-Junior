@@ -5618,6 +5618,12 @@ function _tplSign(s){
     </div>
   </div>`;
 }
+// Signature image tag — shared by the inline signature blocks (voucher, salary slip)
+// so the owner's stored signature appears there too, honouring the per-doc __sigOn toggle.
+function _sigImgTag(s){
+  const on = s && s.signatureImg && (s.__sigOn!==false);
+  return on ? `<img class="sigimg" src="${s.signatureImg}" alt="Signature">` : "";
+}
 // No./Date row used on both receipt and invoice
 function _tplNoRow(label, no, date){
   return `<div class="tpl-nrow">
@@ -6270,6 +6276,8 @@ function printVoucher(expenseId, opts){
     try{ save(); }catch(err){}
   }
   const gen = { name: e.genBy || _tplGenerator(e, DB.settings).name, role: e.genRole || _tplGenerator(e, DB.settings).role };
+  // Owner's signature only when the owner is the signatory (staff-generated vouchers stay unsigned by the owner).
+  const vSig = (gen.name && gen.name===(s.advName||s.chamberName)) ? _sigImgTag(s) : "";
   const billRef = e.billRef || e.proofRef || "";
   const detailRows=[
     e.head?`<div class="row"><span class="k">Head</span><b>${esc(e.head)}</b></div>`:"",
@@ -6293,7 +6301,8 @@ function printVoucher(expenseId, opts){
        </div>
        ${e.remarks?`<div class="tpl-vrem"><div class="lbl">Remarks</div>${esc(e.remarks)}</div>`:""}
        <div class="tpl-sign">
-         <div class="b nofor">
+         <div class="b ${vSig?"hassig":"nofor"}">
+           ${vSig}
            <div class="who">${esc(gen.name)}</div>
            <div class="rol">${esc(gen.role)}</div>
            ${e.genAt?`<div class="stamp">${esc(_tplStamp(e.genAt))}</div>`:""}
@@ -6369,7 +6378,8 @@ function printSalarySlip(slipId, opts){
        <div class="tpl-words">(Rupees ${esc(numToWords(net))} only)</div>
        ${slip.payMode?`<div class="tpl-payable">Paid via ${esc(slip.payMode)}${slip.payDate?" on "+_tplDate(slip.payDate):""}</div>`:""}
        <div class="tpl-sign">
-         <div class="b nofor">
+         <div class="b ${_sigImgTag(s)?"hassig":"nofor"}">
+           ${_sigImgTag(s)}
            <div class="who">${esc(s.advName||s.chamberName||"")}</div>
            <div class="rol">${esc(s.designation||"Advocate")}</div>
            ${stamp?`<div class="stamp">${esc(stamp)}</div>`:""}
@@ -17841,7 +17851,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2100";
+  window.APP_VERSION = "2026.08.02-2200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
