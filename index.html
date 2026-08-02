@@ -3598,6 +3598,7 @@ function _buildClients(){
   return Object.values(map).sort((a,b)=>String(_regCode(a.id)||"~"+a.name).localeCompare(String(_regCode(b.id)||"~"+b.name),undefined,{numeric:true}));
 }
 function openClients(){
+  _navEnter(()=>openClients());
   if(isStaffView()){ _shellTab="clients"; }
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
   let panel=document.getElementById("panel-clients");
@@ -3611,7 +3612,7 @@ function openClients(){
 }
 function renderClients(){
   const staff=isStaffView();
-  const back = staff ? "staffGo('home')" : "shellGo('home')";
+  const back = staff ? "staffGo('home')" : "_navBack()";
   const clients=_buildClients();
   const rows=clients.map(c=>{
     const active=c.matters.filter(m=>m.status!=="Concluded"&&m.status!=="Closed").length;
@@ -3640,13 +3641,14 @@ function renderClients(){
     </div>`;
 }
 function openClientDetail(encKey){
+  _navEnter(()=>openClientDetail(encKey));
   const key=decodeURIComponent(encKey);
   const staff=isStaffView();
   const c=_buildClients().find(x=>x.key===key);
   const panel=document.getElementById("panel-clients");
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
   panel.classList.add("active");
-  if(!c){ panel.innerHTML=`<div class="subnav"><button class="subnav-back" onclick="openClients()">‹</button></div><div class="empty">Client not found.</div>`; return; }
+  if(!c){ panel.innerHTML=`<div class="subnav"><button class="subnav-back" onclick="_navBack()">‹</button></div><div class="empty">Client not found.</div>`; return; }
   const out=Math.max(0,c.billed-c.received);
   const feeStrip = (!staff && (c.billed||c.received)) ? `<div class="fee-strip">
       <div class="fs-cell"><span class="fs-k">Billed</span><span class="fs-v">${fmtINR(c.billed)}</span></div>
@@ -3669,7 +3671,7 @@ function openClientDetail(encKey){
       <td style="white-space:nowrap"><button class="row-act" onclick="_reprintNotice('${n.id}')">Print</button></td>
     </tr>`).join("");
   panel.innerHTML=`
-    <div class="subnav"><button class="subnav-back" onclick="openClients()">‹</button><span style="align-self:center;font-weight:600;color:var(--seal)">${esc(c.name)}</span></div>
+    <div class="subnav"><button class="subnav-back" onclick="_navBack()">‹</button><span style="align-self:center;font-weight:600;color:var(--seal)">${esc(c.name)}</span></div>
     <div class="card">
       <div class="card-head"><div><h2>${esc(c.name)}${c.id?` <span class="mono" style="font-size:11px;color:var(--brass);font-weight:700;vertical-align:middle">${esc(_regCode(c.id))}</span>`:""}</h2><div class="hint">${c.matters.length} matter${c.matters.length!==1?"s":""}${c.notices.length?` · ${c.notices.length} notice${c.notices.length!==1?"s":""}`:""}</div></div></div>
       ${(function(){ const e=c.id&&(DB.clientRegistry||{})[c.id]; if(!e||!(e.phone||e.email||e.addr)) return "";
@@ -3710,6 +3712,7 @@ function _buildRefAdvs(){
   return Object.values(map).sort((a,b)=> b.matters.length-a.matters.length || a.name.localeCompare(b.name));
 }
 function openRefAdvocates(){
+  _navEnter(()=>openRefAdvocates());
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
   let panel=document.getElementById("panel-refadv");
   if(!panel){
@@ -3721,7 +3724,7 @@ function openRefAdvocates(){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function renderRefAdvocates(){
-  const back = isStaffView() ? "staffGo('home')" : "shellGo('home')";
+  const back = isStaffView() ? "staffGo('home')" : "_navBack()";
   const advs=_buildRefAdvs();
   const rows=advs.map(a=>{
     const active=a.matters.filter(m=>m.status!=="Concluded"&&m.status!=="Closed").length;
@@ -3744,6 +3747,7 @@ function renderRefAdvocates(){
     </div>`;
 }
 function openRefAdvDetail(encKey){
+  _navEnter(()=>openRefAdvDetail(encKey));
   const key=decodeURIComponent(encKey);
   const a=_buildRefAdvs().find(x=>x.key===key);
   let panel=document.getElementById("panel-refadv");
@@ -3753,7 +3757,7 @@ function openRefAdvDetail(encKey){
   }
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
   panel.classList.add("active");
-  if(!a){ panel.innerHTML=`<div class="subnav"><button class="subnav-back" onclick="openRefAdvocates()">&lsaquo;</button></div><div class="empty">Advocate not found.</div>`; return; }
+  if(!a){ panel.innerHTML=`<div class="subnav"><button class="subnav-back" onclick="_navBack()">&lsaquo;</button></div><div class="empty">Advocate not found.</div>`; return; }
   const rows=a.matters.slice().sort((x,y)=>String(x.code||"").localeCompare(String(y.code||""),undefined,{numeric:true})).map(m=>`<tr>
       <td class="mono"><a href="#" onclick="openMatterDetail('${m.id}');return false" style="color:var(--seal);font-weight:600;text-decoration:none">${esc(m.code||"")}</a></td>
       <td><b>${esc(m.parties||m.client||"")}</b>${m.kind==="caveat"?` <span class="tag" style="background:#6b1f1f;color:#fff">Caveat</span>`:""}${(m.caseNo||m.diaryNo)?`<div class="hint">${esc(m.caseNo||("Diary "+m.diaryNo))}</div>`:""}</td>
@@ -3761,7 +3765,7 @@ function openRefAdvDetail(encKey){
       <td><span class="tag ${m.status==="Concluded"?"":"active"}">${esc(m.status||"Active")}</span>${m.historical&&m.concludedYear?`<div class="hint">${esc(m.concludedYear)}</div>`:""}</td>
     </tr>`).join("");
   panel.innerHTML=`
-    <div class="subnav"><button class="subnav-back" onclick="openRefAdvocates()">&lsaquo;</button><span style="align-self:center;font-weight:600;color:var(--seal)">${esc(a.name)}</span></div>
+    <div class="subnav"><button class="subnav-back" onclick="_navBack()">&lsaquo;</button><span style="align-self:center;font-weight:600;color:var(--seal)">${esc(a.name)}</span></div>
     <div class="card">
       <div class="card-head"><div><h2>${esc(a.name)}${a.id?` <span class="mono" style="font-size:11px;color:var(--brass);font-weight:700;vertical-align:middle">${esc(_regCode(a.id))}</span>`:""}</h2><div class="hint">${a.matters.length} matter${a.matters.length!==1?"s":""} referred to the chamber.</div></div></div>
       ${(a.phone||a.email||a.addr)?`<div class="tpl-dl" style="margin-top:4px">
@@ -4330,6 +4334,7 @@ function _successStats(){
   return s;
 }
 function openSuccessStats(){
+  _navEnter(()=>openSuccessStats());
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
   let panel=document.getElementById("panel-success");
   if(!panel){ panel=document.createElement("div"); panel.id="panel-success"; panel.className="panel"; document.getElementById("appRoot").appendChild(panel); }
@@ -4338,7 +4343,7 @@ function openSuccessStats(){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function renderSuccessStats(){
-  const back = isStaffView() ? "staffGo('home')" : "shellGo('more')";
+  const back = isStaffView() ? "staffGo('home')" : "_navBack()";
   const s=_successStats();
   const caseRow=(m, sr)=>{
     const tag=_matterSuccess(m);
@@ -5440,6 +5445,31 @@ function _previewGenDoc(kind, id){
   _openPrintView(lbl+" "+String(obj.no||obj.voucherNo||"").replace(/[\/\\]/g,"-"));
 }
 window._previewGenDoc=_previewGenDoc;
+// Compact row actions: the register row shows View + ⋯; ⋯ opens this menu with the
+// full set (Print, Share, Edit, Void, Delete, cloud) so rows stay uncluttered.
+function _docActions(kind, id){
+  let o, rows;
+  if(kind==="invoice"){
+    o=(DB.invoices||[]).find(x=>x.id===id); if(!o){ toast("Not found.",true); return; }
+    rows=[{t:"View",f:`_previewGenDoc('invoice','${id}')`,seal:1},{t:"Print / Save",f:`reprintInvoice('${id}')`},{t:"Share",f:`shareDoc('invoice','${id}')`}]
+      .concat(o.cloudUrl?[{t:"Open cloud copy",href:o.cloudUrl}]:[])
+      .concat(isVoided(o)?[]:[{t:"Void",f:`voidInvoice('${id}')`}])
+      .concat([{t:"Delete",f:`delInvoice('${id}')`,danger:1}]);
+  } else {
+    o=(DB.receipts||[]).find(x=>x.id===id); if(!o){ toast("Not found.",true); return; }
+    rows=[{t:"View",f:`_previewGenDoc('receipt','${id}')`,seal:1},{t:"Print / Save",f:`reprint('${id}')`},{t:"Share",f:`shareDoc('receipt','${id}')`},{t:"Edit",f:`editReceipt('${id}')`}]
+      .concat(o.cloudUrl?[{t:"Open cloud copy",href:o.cloudUrl}]:[])
+      .concat(isVoided(o)?[]:[{t:"Void",f:`voidReceiptPrompt('${id}')`}])
+      .concat([{t:"Delete",f:`delReceipt('${id}')`,danger:1}]);
+  }
+  const btns=rows.map(a=> a.href
+    ? `<a class="btn ghost" href="${esc(a.href)}" target="_blank" rel="noopener" style="text-align:center">${a.t}</a>`
+    : `<button class="btn ${a.seal?'seal':'ghost'}" ${a.danger?'style="color:#8c2f39;border-color:#e2b8b8"':''} onclick="closeModal();${a.f}">${a.t}</button>`).join("");
+  openModal((kind==="invoice"?"Invoice ":"Receipt ")+esc(o.no||""), `
+    <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">${btns}</div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+window._docActions=_docActions;
 function _docPrintChooser(kind, obj){
   const render=(bw)=>{
     if(kind==="receipt") printReceipt(obj, {bw:bw});
@@ -7491,9 +7521,7 @@ function renderInvoice(){
     return `<tr><td class="mono">${noCell}</td><td>${fmtDate(inv.date)}</td>
       <td>${esc(matterLabel(inv.matterId))}</td><td>${inv.style==="itemised"?"Itemised":"Consolidated"}</td>
       <td class="num">${fmtINR(tot)}</td>
-      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('invoice','${inv.id}')">View</button><button class="row-act" onclick="reprintInvoice('${inv.id}')">Print</button><button class="row-act" onclick="shareDoc('invoice','${inv.id}')">Share</button>
-        ${voided?"":`<button class="row-act" onclick="voidInvoice('${inv.id}')">Void</button>`}
-        <button class="row-act" onclick="delInvoice('${inv.id}')">Delete</button></td></tr>`;
+      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('invoice','${inv.id}')">View</button><button class="row-act" onclick="_docActions('invoice','${inv.id}')" aria-label="More actions" title="More actions">⋯</button></td></tr>`;
   }).join("");
   document.getElementById("panel-invoice").innerHTML = `
     <div class="card">
@@ -7590,9 +7618,7 @@ function renderInvoiceLedger(){
     return `<tr${voided?' style="opacity:.6"':''}><td class="mono">${noCell}</td><td>${fmtDate(inv.date)}</td>
       <td>${esc(matterLabel(inv.matterId))}</td><td>${inv.style==="itemised"?"Itemised":"Consolidated"}</td>
       <td class="num">${fmtINR(tot)}</td>
-      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('invoice','${inv.id}')">View</button><button class="row-act" onclick="reprintInvoice('${inv.id}')">Print</button><button class="row-act" onclick="shareDoc('invoice','${inv.id}')">Share</button>
-        ${voided?"":`<button class="row-act" onclick="voidInvoice('${inv.id}')">Void</button>`}
-        <button class="row-act" onclick="delInvoice('${inv.id}')">Delete</button></td></tr>`;
+      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('invoice','${inv.id}')">View</button><button class="row-act" onclick="_docActions('invoice','${inv.id}')" aria-label="More actions" title="More actions">⋯</button></td></tr>`;
   }).join("");
   const billed=billedFY(), received=grossReceiptsFY(), outstanding=outstandingFY();
   document.getElementById("panel-invoiceledger").innerHTML = `
@@ -10730,6 +10756,7 @@ function _auditStamp(rec, isNew){
    invoices for the OWNER only (never rendered for staff).
    =========================================================== */
 function openMatterDetail(id){
+  _navEnter(()=>openMatterDetail(id));
   _currentMatterId = id;
   if(isStaffView()){ _shellTab="matterdetail"; renderStaffBotNav(); }
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
@@ -11123,7 +11150,7 @@ function openOutstanding(){
 }
 function renderMatterDetail(){
   const m = DB.matters.find(x=>x.id===_currentMatterId);
-  const back = isStaffView() ? "staffGo('matters')" : "shellGo('matters')";
+  const back = isStaffView() ? "staffGo('matters')" : "_navBack()";
   if(!m){ document.getElementById("panel-matterdetail").innerHTML=`<div class="subnav"><button class="subnav-back" onclick="${back}">‹</button></div><div class="empty">Matter not found.</div>`; return; }
   const staff = isStaffView();
   const docsIn = DB.docsIn.filter(d=>d.matterId===m.id);
@@ -13279,11 +13306,7 @@ function renderReceiptLedger(){
       <td class="num">${fmtINR(r.amount)}</td>
       ${anyTds?`<td class="num">${(+r.tds>0)?fmtINR(r.tds):"\u2014"}</td><td class="num">${fmtINR(net)}</td>`:""}
       <td style="white-space:nowrap">
-        ${r.cloudUrl?`<a class="row-act" href="${esc(r.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('receipt','${r.id}')">View</button><button class="row-act" onclick="reprint('${r.id}')">Print</button>
-        <button class="row-act" onclick="shareDoc('receipt','${r.id}')">Share</button>
-        ${voided?"":`<button class="row-act" onclick="editReceipt('${r.id}')">Edit</button>`}
-        ${voided?"":`<button class="row-act" onclick="voidReceiptPrompt('${r.id}')">Void</button>`}
-        <button class="row-act" onclick="delReceipt('${r.id}')">Delete</button>
+        <button class="row-act" onclick="_previewGenDoc('receipt','${r.id}')">View</button><button class="row-act" onclick="_docActions('receipt','${r.id}')" aria-label="More actions" title="More actions">⋯</button>
       </td></tr>`;}).join("");
   const fy = fyLabel(DB.settings.fyStart);
   const gross=grossReceiptsFY(), tds=tdsFY(), month=thisMonthReceipts();
@@ -15293,7 +15316,28 @@ function renderBotNav(){
   ).join("");
 }
 let _billingTab="receipt";
+// ---- Navigation history: Back returns to the actual previous screen ----
+// Each screen-opener records how to re-display itself as __navCur; entering a new
+// screen pushes the previous one. _navBack() pops and restores. Switching a bottom-nav
+// tab (isRoot) starts a fresh stack. During a back, we don't re-push.
+window.__navStack = window.__navStack || [];
+window.__navCur = window.__navCur || (()=>shellGo("home"));
+window.__navBacking = false;
+function _navEnter(restorer, isRoot){
+  if(window.__navBacking){ window.__navCur=restorer; return; }
+  if(isRoot){ window.__navStack=[]; }
+  else if(window.__navCur){ window.__navStack.push(window.__navCur); }
+  window.__navCur=restorer;
+}
+function _navBack(){
+  const prev=window.__navStack.pop();
+  if(!prev){ shellGo("home"); return; }
+  window.__navBacking=true;
+  try{ prev(); } finally { window.__navBacking=false; }
+}
+window._navBack=_navBack; window._navEnter=_navEnter;
 function shellGo(t){
+  _navEnter(()=>shellGo(t), true);
   _shellTab=t; renderBotNav();
   const home=document.getElementById("panel-home");
   document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active"));
@@ -15344,6 +15388,7 @@ function openBilling(which){
 function markPanel(id){ document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active")); const el=document.getElementById("panel-"+id); if(el) el.classList.add("active"); }
 /* open a full-screen sub-page from More, with a back button */
 function openSub(which){
+  _navEnter(()=>openSub(which));
   document.getElementById("groupNav").style.display="none";
   const map={
     invoice:{fn:renderInvoice,id:"invoice",label:"Fee invoice"},
@@ -15375,9 +15420,8 @@ function openSub(which){
   const panel=document.getElementById("panel-"+m.id);
   if(panel){
     const old=panel.querySelector(":scope > .subback"); if(old) old.remove();
-    const backTo=(_subBackTo==="more")?"more":"home";
     const bar=document.createElement("div"); bar.className="subback";
-    bar.innerHTML=`<button onclick="shellGo('${backTo}')" aria-label="Back">‹ ${backTo==="more"?"More":"Home"}</button><span>${esc(m.label)}</span>`;
+    bar.innerHTML=`<button onclick="_navBack()" aria-label="Back">‹ Back</button><span>${esc(m.label)}</span>`;
     panel.insertBefore(bar, panel.firstChild);
   }
   window.scrollTo({top:0,behavior:"smooth"});
@@ -17624,7 +17668,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-1400";
+  window.APP_VERSION = "2026.08.02-1800";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
