@@ -5448,8 +5448,17 @@ function _tplTableizeForPrint(){
       if(tpl.classList.contains("tpl-notice")) return;  // notice keeps its own layout
       var body=tpl.querySelector(":scope > .tpl-body"); if(!body) return;
       var foot=tpl.querySelector(":scope > .tpl-foot");
-      var headNodes=[], n=tpl.firstElementChild;
-      while(n && n!==body){ var nx=n.nextElementSibling; if(n!==foot) headNodes.push(n); n=nx; }
+      // Only the letterhead (.tpl-run-head) belongs in the repeating <thead>. Anything else
+      // before the body — chiefly the document title band (.tpl-dband, e.g. "Memorandum of
+      // Fees" / "Payment Receipt") — is content that must appear ONCE, so it goes into the
+      // body rather than repeating on every page.
+      var headNodes=[], preBody=[], n=tpl.firstElementChild;
+      while(n && n!==body){
+        var nx=n.nextElementSibling;
+        if(n!==foot){ if(n.classList && n.classList.contains("tpl-run-head")) headNodes.push(n); else preBody.push(n); }
+        n=nx;
+      }
+      if(!headNodes.length){ headNodes=preBody; preBody=[]; }   // fallback: no explicit letterhead → old behaviour
       var table=document.createElement("table");
       table.className=tpl.className+" tpl-paged";
       var thead=document.createElement("thead"), r1=document.createElement("tr"), h=document.createElement("td"); h.className="tpl-h";
@@ -5459,6 +5468,7 @@ function _tplTableizeForPrint(){
       if(foot) f.appendChild(foot);
       r3.appendChild(f); tfoot.appendChild(r3);
       var tbody=document.createElement("tbody"), r2=document.createElement("tr"), b=document.createElement("td"); b.className="tpl-b";
+      preBody.forEach(function(x){ b.appendChild(x); });   // title band etc. — once, at the top of the content
       b.appendChild(body); r2.appendChild(b); tbody.appendChild(r2);
       table.appendChild(thead); table.appendChild(tfoot); table.appendChild(tbody);
       tpl.parentNode.replaceChild(table, tpl);
@@ -18202,7 +18212,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2800";
+  window.APP_VERSION = "2026.08.02-2900";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
