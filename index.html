@@ -253,7 +253,7 @@
     justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--paper2)}
   .modal-h h3{font-size:17px}
   .modal-b{padding:20px}
-  .x{background:none;border:none;font-size:22px;color:var(--muted);line-height:1}
+  .x{background:none;border:none;font-size:22px;color:var(--muted);line-height:1;padding:8px;margin:-8px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
   .x:hover{color:var(--ink)}
 
   .note{font-size:12.5px;color:var(--muted);background:#fbf6ea;border:1px solid var(--line2);
@@ -1555,6 +1555,13 @@
   .ov-stat{background:var(--paper2);border:1px solid var(--line);border-radius:13px;padding:13px}
   .ov-stat-lbl{font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .ov-stat-val{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:18px;font-weight:700;color:var(--ink);margin-top:3px}
+  /* Long ₹ amounts must never be clipped by body{overflow-x:hidden}; wrap instead. */
+  .ov-stat-val,.ov-bill-val{overflow-wrap:anywhere}
+  /* 3-col money grids get cramped on a phone — step down to 2, then 1. */
+  @media(max-width:520px){ .ov-stats,.ov-bill-row{grid-template-columns:1fr 1fr} }
+  @media(max-width:360px){ .ov-stats{grid-template-columns:1fr} }
+  /* Ad-hoc screen tables (class="tbl") shouldn't inherit the 560px print min-width on phones. */
+  @media(max-width:640px){ table.tbl{min-width:0;font-size:12px} table.tbl th,table.tbl td{padding:8px 7px} }
   .ov-actions{display:flex;flex-wrap:wrap;gap:8px}
   .ov-trend{margin-bottom:12px}
   .ov-trend-chart{margin-top:8px}
@@ -1779,6 +1786,7 @@
   let _pushQueue = {};           // name -> Set(id) of records to push (debounced)
   let _pushTimer = null;
   let _lastPushedIds = {};   // name -> Set of ids last known in cloud
+  let _lastPushedSig = {};   // name -> JSON signature last pushed (skip unchanged collections)
 
   // wait for the firebase module to signal ready
   function whenFB(cb){
@@ -2020,7 +2028,7 @@
       }
 
       _cloudReady=true;
-      FB.COLLECTIONS.forEach(n=>{ _lastPushedIds[n]=new Set((DB[n]||[]).map(r=>r.id)); });
+      FB.COLLECTIONS.forEach(n=>{ _lastPushedIds[n]=new Set((DB[n]||[]).map(r=>r.id)); _lastPushedSig[n]=JSON.stringify(DB[n]||[]); });
       // These must ALWAYS run so the owner is never stranded on the loading
       // screen. Each is guarded so one failure can't block the others.
       try{ startRemoteListeners(); }catch(e){ console.warn("owner listeners", e); }
@@ -2112,7 +2120,7 @@
       saveLocalOnly();
       _syncing=false;
       // seed ids for deletion reconciliation
-      FB.SHARED.forEach(n=>{ _lastPushedIds[n]=new Set((DB[n]||[]).map(r=>r.id)); });
+      FB.SHARED.forEach(n=>{ _lastPushedIds[n]=new Set((DB[n]||[]).map(r=>r.id)); _lastPushedSig[n]=JSON.stringify(DB[n]||[]); });
     }catch(e){ console.warn("staff pullAll failed", e); }
 
     // Enter shell now (never hang).
@@ -2214,7 +2222,15 @@
         await FB.pushCounters(DB.counters);
         for(const name of FB.COLLECTIONS){
           const arr = DB[name]||[];
-          await FB.pushCollection(name, arr);
+          // Skip re-uploading a collection whose contents are unchanged since the last push.
+          // A single small edit used to re-push EVERY collection; this cuts the redundant
+          // Firestore writes. When the signature differs (or on additive import/restore) we
+          // still push — correctness is preserved, we only ever err toward pushing.
+          const sig = JSON.stringify(arr);
+          if(additive || _lastPushedSig[name]!==sig){
+            await FB.pushCollection(name, arr);
+            _lastPushedSig[name] = sig;
+          }
           const currentIds = new Set(arr.map(r=>r.id));
           const prev = _lastPushedIds[name];
           // reconcile deletions: any id previously present but now gone -> delete in cloud.
@@ -2885,6 +2901,7 @@ function migrate(data){
 }
 function save(){
   window.__regCodeCache=null;   // registry codes derive from matters; recompute after a change
+  _mbiMap=null;                 // matter lookup cache — matters may have changed
   if(encEnabled() && _sessionKey){
     // write encrypted blob; remove any plaintext index
     encryptDB().then(blob=>{ if(blob){ localStorage.setItem(ENC_KEY, blob); localStorage.removeItem(LS_KEY); } })
@@ -3571,7 +3588,19 @@ function addAdvance(staffUid, staffName, amount, date, note, mode){
 function addReturn(staffUid, staffName, amount, date, note, mode){
   return addAdvanceEntry("return", staffUid, staffName, amount, date, note, {byOwner:true, mode});
 }
-function matterById(id){ return DB.matters.find(m=>m.id===id); }
+// Map-cached lookup: avoids an O(n) scan on every call (these run inside row .map()s
+// across the ledgers/registers). Rebuilt when save() invalidates it, or when DB.matters
+// is replaced wholesale (e.g. a cloud pull swaps the array reference).
+let _mbiArr=null, _mbiMap=null;
+function matterById(id){
+  if(!id) return undefined;
+  if(_mbiMap===null || _mbiArr!==DB.matters){
+    _mbiArr=DB.matters; _mbiMap=new Map();
+    for(const m of (DB.matters||[])) _mbiMap.set(m.id, m);
+  }
+  return _mbiMap.get(id);
+}
+function _invalidateMatterCache(){ _mbiMap=null; }
 /* ===========================================================
    Finding 7 — CLIENT VIEW. Clients are stored as free text on matters,
    notices, etc. This aggregates by a normalized client key so you can see
@@ -13313,6 +13342,8 @@ function renderBooksOverview(){
         <button class="btn seal sm" onclick="go('receipt')">+ Receipt</button>
         <button class="btn ghost sm" onclick="openBilling('invoice')">+ Invoice</button>
         <button class="btn ghost sm" onclick="addExpense()">+ Expense</button>
+      </div>
+      <div class="ov-actions" style="margin-top:11px;padding-top:11px;border-top:1px solid var(--line)">
         <button class="btn ghost sm" onclick="openRetainer()">Senior retainer ›</button>
         <button class="btn ghost sm" onclick="subGo('books','cash')">Cash book ›</button>
         <button class="btn ghost sm" onclick="shellGo('archive')">Yearly archive ›</button>
@@ -14618,8 +14649,22 @@ function exportArchiveCSV(){
 
 function renderAll(){
   applyBranding();
-  renderDash(); renderReceipt(); renderInvoice(); renderMatters(); renderReceiptLedger();
-  renderCash(); renderExpense(); renderDocIn(); renderDocFiled(); renderArchive(); renderData(); renderSettings();
+  // Only (re)render the panel currently on screen. Navigation (shellGo / openSub /
+  // showGroup / go) renders each target on demand, so eagerly rebuilding ~12 off-screen
+  // panels on every save was wasted DOM work. The active panel behaves exactly as before.
+  const on=(id)=>{ const el=document.getElementById(id); return el && el.classList.contains("active"); };
+  if(on("panel-dash")) renderDash();
+  if(on("panel-receipt")) renderReceipt();
+  if(on("panel-invoice")) renderInvoice();
+  if(on("panel-matters")) renderMatters();
+  if(on("panel-ledger")) renderReceiptLedger();
+  if(on("panel-cash")) renderCash();
+  if(on("panel-expense")) renderExpense();
+  if(on("panel-docin")) renderDocIn();
+  if(on("panel-docfiled")) renderDocFiled();
+  if(on("panel-archive")) renderArchive();
+  if(on("panel-data")) renderData();
+  if(on("panel-settings")) renderSettings();
 }
 
 /* ===========================================================
@@ -15109,6 +15154,8 @@ function go(tab){
   if(tab==="documents"){ showGroup("documents", _docsSub, ["docin","docfiled"]); return; }
   setActiveTab(tab);
   document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active", p.id==="panel-"+tab));
+  // Panels are no longer eagerly pre-rendered by renderAll(), so render the target on show.
+  try{ if(tab==="receipt") renderReceipt(); else if(tab==="invoice") renderInvoice(); else if(tab==="matters") renderMatters(); }catch(e){}
   document.getElementById("groupNav").style.display="none";
   const mm=document.getElementById("moreMenu"); if(mm) mm.style.display="none";
   window.scrollTo({top:0,behavior:"smooth"});
@@ -15138,7 +15185,7 @@ function showGroup(group, sub, children){
   const labels = group==="books"
     ? {overview:"Overview",ledger:"Receipts",invoiceledger:"Invoices",income:"By case",cash:"Cash Book",expense:"Expenses"}
     : {docin:"Inward Documents",docfiled:"Filed Case Records"};
-  gn.innerHTML = `<div class="subnav"><button class="subnav-back" onclick="shellGo('more')" title="Back to More">‹</button>`+children.map(c=>`<button class="${c===sub?'on':''}" onclick="subGo('${group}','${c}')">${labels[c]}</button>`).join("")+`</div>`;
+  gn.innerHTML = `<div class="subnav"><button class="subnav-back" onclick="shellGo('more')" title="Back to More" aria-label="Back to More">‹ More</button>`+children.map(c=>`<button class="${c===sub?'on':''}" onclick="subGo('${group}','${c}')">${labels[c]}</button>`).join("")+`</div>`;
   gn.style.display="block";
   const mm=document.getElementById("moreMenu"); if(mm) mm.style.display="none";
   window.scrollTo({top:0,behavior:"smooth"});
@@ -17851,7 +17898,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2200";
+  window.APP_VERSION = "2026.08.02-2300";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
