@@ -359,8 +359,12 @@
   .doc-compact .doc-note{margin-top:20px;padding-top:9px}
 
   @media print{
-    body *{visibility:hidden}
-    #receiptArea,#receiptArea *{visibility:visible}
+    /* Print ONLY the document in #receiptArea. Hiding the app chrome with display:none
+       (not visibility:hidden) removes its on-screen height from the print layout — otherwise
+       a tall active screen behind the document keeps its layout height and prints as trailing
+       BLANK pages after the document. #receiptArea is a direct <body> child, so this is safe;
+       the mobile print-view window has none of these IDs and is unaffected. */
+    #lockScreen,#gate,#appRoot,#toast,#modalBg,#cloudGate{ display:none !important; }
     #receiptArea{position:absolute;left:0;top:0;width:100%}
     .doc{width:100%}
     .doc-pad{padding:4mm 3mm}
@@ -18212,7 +18216,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2900";
+  window.APP_VERSION = "2026.08.02-3000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
