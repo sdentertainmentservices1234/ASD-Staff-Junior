@@ -5498,6 +5498,7 @@ function _docActions(kind, id){
   if(kind==="invoice"){
     o=(DB.invoices||[]).find(x=>x.id===id); if(!o){ toast("Not found.",true); return; }
     rows=[{t:"View",f:`_previewGenDoc('invoice','${id}')`,seal:1},{t:"Print / Save",f:`reprintInvoice('${id}')`},{t:"Share",f:`shareDoc('invoice','${id}')`}]
+      .concat(isVoided(o)?[]:[ _invoicePaid(o) ? {t:"Mark unpaid / unlink receipt",f:`_unlinkInvoice('${id}')`} : {t:"Mark paid / link receipt",f:`_linkReceiptToInvoice('${id}')`} ])
       .concat(o.cloudUrl?[{t:"Open cloud copy",href:o.cloudUrl}]:[])
       .concat(isVoided(o)?[]:[{t:"Void",f:`voidInvoice('${id}')`}])
       .concat([{t:"Delete",f:`delInvoice('${id}')`,danger:1}]);
@@ -5536,6 +5537,173 @@ function _caseExpenseActions(id){
     <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
 window._caseExpenseActions=_caseExpenseActions;
+
+/* ===========================================================
+   RECEIPT ↔ INVOICE LINKING & PAYMENT RECONCILIATION
+   An invoice counts as paid when status==="paid" || paid===true.
+   Linking a receipt marks the invoice paid and cross-links both
+   (inv.paidReceiptId ↔ rec.invoiceId), so a paid invoice stops
+   showing as pending in Awaiting-payment and the party accounts.
+   =========================================================== */
+function _invoicePaid(inv){ return !!(inv && (inv.status==="paid" || inv.paid)); }
+// Party name used to match a receipt/invoice when there's no matter/advocate id.
+function _partyNameOf(o){
+  if(!o) return "";
+  const m = o.matterId ? matterById(o.matterId) : null;
+  return (m && m.client) || o.to || o.payer || o.from || "";
+}
+function _dateGapDays(aISO,bISO){
+  if(!aISO||!bISO) return null;
+  const a=new Date(aISO+"T00:00:00"), b=new Date(bISO+"T00:00:00");
+  if(isNaN(a)||isNaN(b)) return null;
+  return Math.round((b-a)/86400000);   // positive when the receipt is dated after the invoice
+}
+// Re-render whichever financial view is on screen after a paid-status change.
+function _refreshFinanceViews(){
+  const on=id=>{const e=document.getElementById(id);return e&&e.classList.contains("active");};
+  try{ if(on("panel-invoiceledger")) renderInvoiceLedger(); }catch(e){}
+  try{ if(on("panel-booksoverview")) renderBooksOverview(); }catch(e){}
+  try{ if(on("panel-ledger")) renderReceiptLedger(); }catch(e){}
+  try{ renderAll(); }catch(e){}
+}
+
+// ---- Feature A: link an existing receipt to an invoice (or just mark it paid) ----
+function _linkReceiptToInvoice(invId){
+  const inv=(DB.invoices||[]).find(v=>v.id===invId); if(!inv){ toast("Invoice not found.",true); return; }
+  const tot=invoiceTotal(inv);
+  const cands=(DB.receipts||[]).filter(r=>!isVoided(r) && (!r.invoiceId || r.invoiceId===inv.id));
+  const score=r=>{
+    let s=0;
+    if(inv.matterId && r.matterId===inv.matterId) s+=100;
+    if(inv.refAdvId && r.refAdvId===inv.refAdvId) s+=100;
+    if(Math.abs((+r.amount||0)-tot)<1) s+=50;
+    const inm=_refKey(_partyNameOf(inv)); if(inm && inm===_refKey(_partyNameOf(r))) s+=30;
+    const g=_dateGapDays(inv.date,r.date); if(g!=null) s+=Math.max(0,20-Math.min(20,Math.abs(g)/15));
+    return s;
+  };
+  const sorted=cands.slice().sort((a,b)=>score(b)-score(a));
+  const pre = (sorted.length && score(sorted[0])>=150) ? sorted[0].id : "";
+  const preRec = sorted.find(r=>r.id===pre);
+  const preDate = (preRec && preRec.date) || inv.date || todayISO();
+  const opts=`<option value="">— No receipt (just mark paid) —</option>`+sorted.map(r=>{
+    const cl = r.matterId&&matterById(r.matterId) ? (" · "+esc(matterById(r.matterId).client||"")) : (r.payer?(" · "+esc(r.payer)):"");
+    return `<option value="${r.id}" ${r.id===pre?"selected":""}>${esc(r.no)} · ${fmtDate(r.date)} · ${fmtINR(r.amount)}${cl}</option>`;
+  }).join("");
+  openModal("Mark invoice paid — "+esc(inv.no), `
+    <div class="hint">Invoice total <b>${fmtINR(tot)}</b>${inv.matterId&&matterById(inv.matterId)?` · ${esc(matterLabel(inv.matterId))}`:""}. Link the payment receipt, or just mark it paid.</div>
+    <label class="fld" style="margin-top:12px">Payment receipt</label>
+    <select class="in" id="lrInv" onchange="(function(v){var r=(DB.receipts||[]).find(function(x){return x.id===v;});var d=document.getElementById('lrDate');if(r&&r.date&&d)d.value=r.date;})(this.value)">${opts}</select>
+    <label class="fld" style="margin-top:10px">Paid on</label>
+    <input class="in" type="date" id="lrDate" value="${esc(preDate)}">
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_doLinkReceipt('${inv.id}')">Mark paid</button>
+    </div>`);
+}
+function _doLinkReceipt(invId){
+  const inv=(DB.invoices||[]).find(v=>v.id===invId); if(!inv) return;
+  const recId=(document.getElementById("lrInv")||{}).value||"";
+  const date=(document.getElementById("lrDate")||{}).value||inv.date||todayISO();
+  const rec=recId?(DB.receipts||[]).find(r=>r.id===recId):null;
+  // Detach any receipt previously linked to this invoice (unless it's the same one).
+  (DB.receipts||[]).forEach(r=>{ if(r.invoiceId===inv.id && (!rec||r.id!==rec.id)) r.invoiceId=""; });
+  inv.paid=true; inv.status="paid"; inv.paidDate=date; inv.paidReceiptId=rec?rec.id:"";
+  if(rec) rec.invoiceId=inv.id;
+  logActivity("invoice", `Invoice ${inv.no} marked paid${rec?(" — linked to receipt "+rec.no):""}`, {ownerOnly:true, refId:inv.id});
+  save(); closeModal(); _refreshFinanceViews();
+  toast("Invoice "+inv.no+" marked paid.");
+}
+function _unlinkInvoice(invId){
+  const inv=(DB.invoices||[]).find(v=>v.id===invId); if(!inv) return;
+  const rid=inv.paidReceiptId;
+  inv.paid=false; inv.status="unpaid"; inv.paidReceiptId=""; inv.paidDate="";
+  (DB.receipts||[]).forEach(r=>{ if(r.invoiceId===inv.id) r.invoiceId=""; });
+  logActivity("invoice", `Invoice ${inv.no} marked unpaid`, {ownerOnly:true, refId:inv.id});
+  save(); closeModal(); _refreshFinanceViews();
+  toast("Invoice "+inv.no+" marked unpaid.");
+}
+
+// ---- Feature B: reconcile — match existing receipts to unpaid invoices ----
+function _proposeMatches(){
+  const openInvoices=(DB.invoices||[]).filter(v=>!isVoided(v)&&!_invoicePaid(v));
+  const freeReceipts=(DB.receipts||[]).filter(r=>!isVoided(r)&&!r.invoiceId);
+  const taken=new Set(); const matches=[];
+  openInvoices.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(inv=>{
+    const tot=invoiceTotal(inv);
+    let best=null,bestScore=-1;
+    freeReceipts.forEach(r=>{
+      if(taken.has(r.id)) return;
+      const amt=+r.amount||0;
+      const exact=Math.abs(amt-tot)<1;
+      const close=Math.abs(amt-tot)<=Math.max(1,tot*0.02);
+      if(!exact&&!close) return;
+      let rel=0; const basis=[];
+      if(inv.matterId && r.matterId===inv.matterId){ rel=3; basis.push("case"); }
+      else if(inv.refAdvId && r.refAdvId===inv.refAdvId){ rel=3; basis.push("advocate"); }
+      else { const inm=_refKey(_partyNameOf(inv)); if(inm && inm===_refKey(_partyNameOf(r))){ rel=2; basis.push("client"); } }
+      if(!rel) return;
+      basis.push(exact?"amount":"amount≈");
+      const g=_dateGapDays(inv.date,r.date);
+      let dscore=0; if(g!=null){ dscore = g>=0 ? Math.max(0,10-Math.min(10,g/15)) : Math.max(0,6-Math.min(6,(-g)/15)); }
+      const s=rel*100 + (exact?40:0) + dscore;
+      if(s>bestScore){ bestScore=s; best={rec:r,basis,exact,rel,g}; }
+    });
+    if(best){
+      taken.add(best.rec.id);
+      const conf = (best.rel>=3 && best.exact) ? "high" : (best.rel>=2 && best.exact ? "medium" : "low");
+      matches.push({invId:inv.id, recId:best.rec.id, inv, rec:best.rec, basis:best.basis, conf, g:best.g});
+    }
+  });
+  return matches;
+}
+function _reconcilePayments(){
+  const matches=_proposeMatches();
+  if(!matches.length){
+    openModal("Match payments", `<div class="hint">No unpaid invoice could be auto-matched to a receipt by case / advocate / client and amount. You can still link a payment manually from any invoice's ⋯ menu.</div><div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+    return;
+  }
+  window.__reconMatches=matches;
+  const rows=matches.map((m,i)=>{
+    const pre = (m.conf==="high"||m.conf==="medium");
+    const tot=invoiceTotal(m.inv);
+    const confTag = m.conf==="high"?`<span class="tag active">strong match</span>`:(m.conf==="medium"?`<span class="tag">likely</span>`:`<span class="tag" style="color:var(--seal);border-color:#e2b8b8">please check</span>`);
+    const who = matterLabel(m.inv.matterId)!=="—" ? matterLabel(m.inv.matterId) : (_partyNameOf(m.inv)||"—");
+    return `<label class="lrow" style="align-items:flex-start;gap:10px;cursor:pointer">
+      <input type="checkbox" class="reconChk" data-i="${i}" ${pre?"checked":""} style="margin-top:3px;width:18px;height:18px;flex:0 0 auto">
+      <div class="l" style="flex:1">
+        <div class="t">${esc(m.inv.no)} ↔ ${esc(m.rec.no)} ${confTag}</div>
+        <div class="s">${fmtINR(tot)} · ${esc(who)} · matched on ${m.basis.join(", ")}${m.g!=null?` · paid ${m.g>=0?m.g+"d after":(-m.g)+"d before"} billing`:""}</div>
+      </div>
+    </label>`;
+  }).join("");
+  openModal("Match payments to invoices", `
+    <div class="hint">These unpaid invoices appear to have a matching receipt. Untick any that look wrong, then apply. This only sets each invoice's paid status — it never creates, edits or deletes a receipt.</div>
+    <div class="lrows" style="margin-top:12px;max-height:50vh;overflow:auto">${rows}</div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_applyReconcile()">Apply selected</button>
+    </div>`);
+}
+function _applyReconcile(){
+  const matches=window.__reconMatches||[];
+  const chosen=[...document.querySelectorAll(".reconChk")].filter(c=>c.checked).map(c=>matches[+c.getAttribute("data-i")]).filter(Boolean);
+  if(!chosen.length){ toast("Nothing selected.",true); closeModal(); return; }
+  let n=0;
+  chosen.forEach(m=>{
+    const inv=(DB.invoices||[]).find(v=>v.id===m.invId);
+    const rec=(DB.receipts||[]).find(r=>r.id===m.recId);
+    if(!inv||!rec) return;
+    if(_invoicePaid(inv) || rec.invoiceId) return;   // skip anything that changed since the proposal
+    inv.paid=true; inv.status="paid"; inv.paidDate=rec.date||inv.date; inv.paidReceiptId=rec.id;
+    rec.invoiceId=inv.id; n++;
+  });
+  logActivity("invoice", `Reconciled ${n} invoice(s) to receipts`, {ownerOnly:true});
+  save(); closeModal(); _refreshFinanceViews();
+  toast(n+" invoice(s) marked paid.");
+}
+window._invoicePaid=_invoicePaid; window._linkReceiptToInvoice=_linkReceiptToInvoice; window._doLinkReceipt=_doLinkReceipt;
+window._unlinkInvoice=_unlinkInvoice; window._reconcilePayments=_reconcilePayments; window._applyReconcile=_applyReconcile;
+
 function _docPrintChooser(kind, obj){
   const render=(bw)=>{
     if(kind==="receipt") printReceipt(obj, {bw:bw});
@@ -7694,9 +7862,11 @@ function renderInvoiceLedger(){
     return `<tr${voided?' style="opacity:.6"':''}><td class="mono">${noCell}</td><td>${fmtDate(inv.date)}</td>
       <td>${esc(matterLabel(inv.matterId))}</td><td>${inv.style==="itemised"?"Itemised":"Consolidated"}</td>
       <td class="num">${fmtINR(tot)}</td>
+      <td>${voided?"":(_invoicePaid(inv)?`<span class="tag" style="background:var(--green,#2e7d32);color:#fff;border:none">Paid</span>`:`<span class="tag" style="color:var(--seal);border-color:#e2b8b8">Pending</span>`)}</td>
       <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('invoice','${inv.id}')">View</button><button class="row-act" onclick="_docActions('invoice','${inv.id}')" aria-label="More actions" title="More actions">⋯</button></td></tr>`;
   }).join("");
   const billed=billedFY(), received=grossReceiptsFY(), outstanding=outstandingFY();
+  const nPending = list.filter(i=>!isVoided(i)&&!_invoicePaid(i)).length;
   document.getElementById("panel-invoiceledger").innerHTML = `
     <div class="ov-stats" style="margin-bottom:16px">
       <div class="ov-stat"><div class="ov-stat-lbl">Billed (FY)</div><div class="ov-stat-val">${fmtINR(billed)}</div></div>
@@ -7706,9 +7876,9 @@ function renderInvoiceLedger(){
     <div class="card">
       <div class="card-head">
         <div><h2>Invoices</h2><div class="hint">All fee invoices raised. Total billed (excluding voided): <b>${fmtINR(raised)}</b></div></div>
-        <div style="display:flex;gap:6px">${(DB.invoices||[]).length?`<button class="btn ghost sm" onclick="exportInvoicesCSV()">⬇ Excel</button>`:""}<button class="btn ghost sm" onclick="openBilling('invoice')">+ New invoice</button></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${nPending?`<button class="btn ghost sm" onclick="_reconcilePayments()" title="Match existing receipts to unpaid invoices">↔ Match payments</button>`:""}${(DB.invoices||[]).length?`<button class="btn ghost sm" onclick="exportInvoicesCSV()">⬇ Excel</button>`:""}<button class="btn ghost sm" onclick="openBilling('invoice')">+ New invoice</button></div>
       </div>
-      ${list.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>No.</th><th>Date</th><th>Matter</th><th>Style</th><th class="num">Total</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No invoices raised yet.</div>`}
+      ${list.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>No.</th><th>Date</th><th>Matter</th><th>Style</th><th class="num">Total</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No invoices raised yet.</div>`}
     </div>`;
 }
 function onInvStyleChange(){
@@ -13343,9 +13513,9 @@ function renderBooksOverview(){
       <div class="ins-list">${topRows}</div></div>
 
     <div class="card"><div class="card-head"><div><h2>Awaiting payment</h2><div class="hint">Unpaid invoices, longest first</div></div>
-      <button class="btn ghost sm" onclick="subGo('books','invoiceledger')">Invoices ›</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${unpaid.length?`<button class="btn ghost sm" onclick="_reconcilePayments()" title="Match existing receipts to unpaid invoices">↔ Match payments</button>`:""}<button class="btn ghost sm" onclick="subGo('books','invoiceledger')">Invoices ›</button></div></div>
       <div class="ins-list">${unpaidRows}</div>
-      <div class="hint" style="margin-top:10px">Mark an invoice paid from the Invoices register to clear it here.</div></div>
+      <div class="hint" style="margin-top:10px">A paid invoice clears from here once you link its receipt or mark it paid (from the invoice's ⋯ menu), or via <b>Match payments</b>.</div></div>
 
     <div class="card ov-tax">
       <div class="card-head"><div><h2>Tax position — compare methods</h2><div class="hint">Estimated income tax this FY under both approaches (new regime, incl. 4% cess). Indicative only — confirm with your CA.</div></div></div>
@@ -17937,7 +18107,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-2400";
+  window.APP_VERSION = "2026.08.02-2500";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
