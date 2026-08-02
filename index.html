@@ -5427,6 +5427,19 @@ function _printAs(title){
 }
 /* Colour vs B&W print chooser for receipts & invoices.
    kind = "receipt" | "invoice"; obj = the record. */
+// View a generated document (invoice / receipt / voucher) — renders it and opens the
+// standalone viewer so you can look at it, then print/save/close from there.
+function _previewGenDoc(kind, id){
+  let obj=null;
+  if(kind==="invoice"){ obj=(DB.invoices||[]).find(x=>x.id===id); if(obj) printInvoice(obj,{noPrint:true}); }
+  else if(kind==="receipt"){ obj=(DB.receipts||[]).find(x=>x.id===id); if(obj) printReceipt(obj,{noPrint:true}); }
+  else if(kind==="voucher"){ obj=(DB.expenses||[]).find(x=>x.id===id); if(obj) printVoucher(id,{noPrint:true}); }
+  if(!obj){ toast("Document not found.",true); return; }
+  try{ _tplTableizeForPrint(); }catch(e){}
+  const lbl={invoice:"Invoice",receipt:"Receipt",voucher:"Voucher"}[kind]||"Document";
+  _openPrintView(lbl+" "+String(obj.no||obj.voucherNo||"").replace(/[\/\\]/g,"-"));
+}
+window._previewGenDoc=_previewGenDoc;
 function _docPrintChooser(kind, obj){
   const render=(bw)=>{
     if(kind==="receipt") printReceipt(obj, {bw:bw});
@@ -7478,7 +7491,7 @@ function renderInvoice(){
     return `<tr><td class="mono">${noCell}</td><td>${fmtDate(inv.date)}</td>
       <td>${esc(matterLabel(inv.matterId))}</td><td>${inv.style==="itemised"?"Itemised":"Consolidated"}</td>
       <td class="num">${fmtINR(tot)}</td>
-      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="reprintInvoice('${inv.id}')">Print</button><button class="row-act" onclick="shareDoc('invoice','${inv.id}')">Share</button>
+      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('invoice','${inv.id}')">View</button><button class="row-act" onclick="reprintInvoice('${inv.id}')">Print</button><button class="row-act" onclick="shareDoc('invoice','${inv.id}')">Share</button>
         ${voided?"":`<button class="row-act" onclick="voidInvoice('${inv.id}')">Void</button>`}
         <button class="row-act" onclick="delInvoice('${inv.id}')">Delete</button></td></tr>`;
   }).join("");
@@ -7577,7 +7590,7 @@ function renderInvoiceLedger(){
     return `<tr${voided?' style="opacity:.6"':''}><td class="mono">${noCell}</td><td>${fmtDate(inv.date)}</td>
       <td>${esc(matterLabel(inv.matterId))}</td><td>${inv.style==="itemised"?"Itemised":"Consolidated"}</td>
       <td class="num">${fmtINR(tot)}</td>
-      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="reprintInvoice('${inv.id}')">Print</button><button class="row-act" onclick="shareDoc('invoice','${inv.id}')">Share</button>
+      <td style="white-space:nowrap">${inv.cloudUrl?`<a class="row-act" href="${esc(inv.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('invoice','${inv.id}')">View</button><button class="row-act" onclick="reprintInvoice('${inv.id}')">Print</button><button class="row-act" onclick="shareDoc('invoice','${inv.id}')">Share</button>
         ${voided?"":`<button class="row-act" onclick="voidInvoice('${inv.id}')">Void</button>`}
         <button class="row-act" onclick="delInvoice('${inv.id}')">Delete</button></td></tr>`;
   }).join("");
@@ -13266,7 +13279,7 @@ function renderReceiptLedger(){
       <td class="num">${fmtINR(r.amount)}</td>
       ${anyTds?`<td class="num">${(+r.tds>0)?fmtINR(r.tds):"\u2014"}</td><td class="num">${fmtINR(net)}</td>`:""}
       <td style="white-space:nowrap">
-        ${r.cloudUrl?`<a class="row-act" href="${esc(r.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="reprint('${r.id}')">Print</button>
+        ${r.cloudUrl?`<a class="row-act" href="${esc(r.cloudUrl)}" target="_blank" rel="noopener" title="Open cloud copy">☁︎</a>`:""}<button class="row-act" onclick="_previewGenDoc('receipt','${r.id}')">View</button><button class="row-act" onclick="reprint('${r.id}')">Print</button>
         <button class="row-act" onclick="shareDoc('receipt','${r.id}')">Share</button>
         ${voided?"":`<button class="row-act" onclick="editReceipt('${r.id}')">Edit</button>`}
         ${voided?"":`<button class="row-act" onclick="voidReceiptPrompt('${r.id}')">Void</button>`}
@@ -15314,6 +15327,18 @@ function openBilling(which){
       <button class="${_billingTab==='invoice'?'on':''}" onclick="openBilling('invoice')">Invoice</button>`;
     panel.insertBefore(bar, panel.firstChild);
   }
+  // Quick access to the registers from within the billing tab.
+  if(panel && !panel.querySelector(".billing-registers")){
+    const reg=document.createElement("div");
+    reg.className="billing-registers";
+    reg.style.cssText="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px";
+    reg.innerHTML=`<span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Registers</span>
+      <button class="btn ghost sm" onclick="openSub('invoiceledger')">🧾 Invoices</button>
+      <button class="btn ghost sm" onclick="openSub('ledger')">🧾 Receipts</button>
+      <button class="btn ghost sm" onclick="openSub('exadv')">💸 Expenses</button>`;
+    const tog=panel.querySelector(".billing-toggle");
+    if(tog && tog.nextSibling) panel.insertBefore(reg, tog.nextSibling); else panel.insertBefore(reg, panel.firstChild);
+  }
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function markPanel(id){ document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active")); const el=document.getElementById("panel-"+id); if(el) el.classList.add("active"); }
@@ -15326,7 +15351,8 @@ function openSub(which){
     archive:{fn:renderArchive,id:"archive",label:"Archive"},
     pastcases:{fn:renderPastCases,id:"pastcases",label:"Past cases register"},
     unassigned:{fn:renderUnassigned,id:"unassigned",label:"Unassigned"},
-    ledger:{fn:renderReceiptLedger,id:"ledger",label:"Receipts ledger"},
+    ledger:{fn:renderReceiptLedger,id:"ledger",label:"Receipts register"},
+    invoiceledger:{fn:renderInvoiceLedger,id:"invoiceledger",label:"Invoices register"},
     exadv:{fn:renderLedger,id:"exadv",label:"Expenses & advances"},
     todos:{fn:renderTodos,id:"todos",label:"Tasks & reminders"},
     reminders:{fn:renderTodos,id:"todos",label:"Tasks & reminders"},
@@ -17598,7 +17624,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-1000";
+  window.APP_VERSION = "2026.08.02-1400";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
