@@ -5549,7 +5549,8 @@ function _docActions(kind, id){
     o=(DB.invoices||[]).find(x=>x.id===id); if(!o){ toast("Not found.",true); return; }
     rows=[{t:"View",f:`_previewGenDoc('invoice','${id}')`,seal:1},{t:"Print / Save",f:`reprintInvoice('${id}')`},{t:"Share",f:`shareDoc('invoice','${id}')`}]
       .concat(isVoided(o)?[]:[{t:"Edit",f:`editInvoice('${id}')`}])
-      .concat(isVoided(o)?[]:[ _invoicePaid(o) ? {t:"Mark unpaid / unlink receipt",f:`_unlinkInvoice('${id}')`} : {t:"Mark paid / link receipt",f:`_linkReceiptToInvoice('${id}')`} ])
+      .concat((isVoided(o)||_invoicePaid(o))?[]:[{t:"Record payment (receipt)",f:`_recordInvoicePayment('${id}')`,seal:1}])
+      .concat(isVoided(o)?[]:[ _invoicePaid(o) ? {t:"Mark unpaid / unlink receipt",f:`_unlinkInvoice('${id}')`} : {t:"Link existing receipt / mark paid",f:`_linkReceiptToInvoice('${id}')`} ])
       .concat(o.cloudUrl?[{t:"Open cloud copy",href:o.cloudUrl}]:[])
       .concat(isVoided(o)?[]:[{t:"Void",f:`voidInvoice('${id}')`}])
       .concat([{t:"Delete",f:`delInvoice('${id}')`,danger:1}]);
@@ -5673,6 +5674,69 @@ function _unlinkInvoice(invId){
   save(); closeModal(); _refreshFinanceViews();
   toast("Invoice "+inv.no+" marked unpaid.");
 }
+
+// ---- Raise a NEW receipt recording payment under an invoice ----
+// The receipt carries the invoice's details (case/party, fee description, amount) and is
+// cross-linked to the invoice, which is marked paid. Opened from the invoice's ⋯ menu.
+function _invoiceDesc(inv){
+  if(!inv) return "Professional fees";
+  return (inv.notes && inv.notes.trim())
+      || ((inv.lines||[]).map(l=>l.desc).filter(Boolean).join(", "))
+      || "Professional fees";
+}
+function _recordInvoicePayment(invId){
+  const inv=(DB.invoices||[]).find(v=>v.id===invId); if(!inv){ toast("Invoice not found.",true); return; }
+  if(isVoided(inv)){ toast("A voided invoice can't be receipted.",true); return; }
+  const tot=invoiceTotal(inv);
+  const who = inv.matterId&&matterById(inv.matterId) ? matterLabel(inv.matterId) : (_partyNameOf(inv)||"—");
+  const modes=["NEFT/RTGS","UPI","Cheque","Cash","IMPS","Bank transfer"];
+  openModal("Record payment — Invoice "+esc(inv.no), `
+    <div class="hint">Records a fee receipt for <b>${esc(who)}</b> against Invoice ${esc(inv.no)} (${fmtINR(tot)}). The receipt carries this invoice's details and marks it paid.</div>
+    <div class="grid g2" style="margin-top:12px">
+      <div><label class="fld">Date</label><input class="in" type="date" id="ripDate" value="${todayISO()}"></div>
+      <div><label class="fld">Amount received (₹)</label><input class="in" id="ripAmt" inputmode="numeric" value="${tot||""}" placeholder="0"></div>
+    </div>
+    <div class="grid g2" style="margin-top:10px">
+      <div><label class="fld">TDS deducted (₹) <span style="color:var(--muted);font-weight:400">— optional</span></label><input class="in" id="ripTds" inputmode="numeric" value="" placeholder="0"></div>
+      <div><label class="fld">Payment mode</label><select class="in" id="ripMode">${modes.map(x=>`<option>${x}</option>`).join("")}</select></div>
+    </div>
+    <div style="margin-top:10px"><label class="fld">Receipt no.</label><input class="in mono" value="${esc(peekNextReceiptNo())}" readonly style="background:#f1ece0;color:var(--muted);max-width:220px"></div>
+    <label class="fld" style="margin-top:10px">Remarks <span style="color:var(--muted);font-weight:400">— optional</span></label>
+    <input class="in" id="ripRemarks" placeholder="e.g. received with thanks">
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_doRecordInvoicePayment('${inv.id}')">Save &amp; print receipt</button>
+    </div>`);
+}
+function _doRecordInvoicePayment(invId){
+  const inv=(DB.invoices||[]).find(v=>v.id===invId); if(!inv) return;
+  const date=(document.getElementById("ripDate")||{}).value||todayISO();
+  const gross=_raNum((document.getElementById("ripAmt")||{}).value);
+  const tds=_raNum((document.getElementById("ripTds")||{}).value);
+  if(gross<=0){ toast("Enter the amount received.",true); return; }
+  const net=Math.max(0, gross-tds);
+  const mode=(document.getElementById("ripMode")||{}).value||"NEFT/RTGS";
+  const remarks=((document.getElementById("ripRemarks")||{}).value||"").trim();
+  const no=nextReceiptNo(date);
+  const rec={ id:uid(), no, date, matterId:inv.matterId||"",
+    amount:gross, net, tds, showTds:tds>0, mode,
+    towards:_invoiceDesc(inv)+" — Invoice "+inv.no,
+    remarks: remarks || ("Against Invoice "+inv.no),
+    invoiceId: inv.id };
+  if(!inv.matterId){ rec.noMatter=true; rec.payer=inv.to||""; rec.payerLoc=inv.toAddr||""; rec.clientPhone=inv.toPhone||""; rec.clientEmail=inv.toEmail||""; }
+  DB.receipts.push(rec);
+  if(!Array.isArray(DB.cash)) DB.cash=[];
+  const label = inv.matterId?matterLabel(inv.matterId):(inv.to||"General");
+  DB.cash.push({id:uid(), date, particulars:`Receipt ${no} — ${label} (Invoice ${inv.no})${tds?" (net of TDS "+fmtINR(tds)+")":""}`, type:"in", amount:net, mode, ref:no});
+  // Mark the invoice paid and cross-link the two.
+  inv.paid=true; inv.status="paid"; inv.paidDate=date; inv.paidReceiptId=rec.id;
+  logActivity("receipt", `Receipt ${no} — ${fmtINR(gross)} against Invoice ${inv.no}`, {ownerOnly:true, refId:rec.id});
+  save(); closeModal();
+  printReceipt(rec);
+  _refreshFinanceViews();
+  toast(`Receipt ${no} recorded against Invoice ${inv.no}.`);
+}
+window._recordInvoicePayment=_recordInvoicePayment; window._doRecordInvoicePayment=_doRecordInvoicePayment;
 
 // ---- Feature B: reconcile — match existing receipts to unpaid invoices ----
 function _proposeMatches(){
@@ -18216,7 +18280,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-3000";
+  window.APP_VERSION = "2026.08.02-3100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
