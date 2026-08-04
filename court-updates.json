@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-04T12:35:44.007299Z",
+  "generated_at": "2026-08-04T15:11:39.953571Z",
   "window": [
     "2026-08-04",
     "2026-08-05",
@@ -48,16 +48,37 @@
     "2026-08-05": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
         "Regular / Final - Main",
+        "Regular / Final - Supplementary",
         "Registrar - Main",
+        "Registrar - Supplementary",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
-      "match_count": 0,
-      "matches": []
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-08-05",
+          "list": "Miscellaneous - Supplementary",
+          "kind": "supp",
+          "family": "MJ",
+          "is_supplementary": true,
+          "court": "2",
+          "item": "31",
+          "coram": "HON'BLE MR. JUSTICE VIKRAM NATH; HON'BLE MR. JUSTICE SANDEEP MEHTA",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "31 Diary No. 44571-2026 AHAMMED BINSHAD MAHMOOD P. Versus STATE OF KERALA"
+        }
+      ]
     },
     "2026-08-06": {
       "lists_found": [
@@ -211,6 +232,6 @@
       "matches": []
     }
   },
-  "match_count": 6,
+  "match_count": 7,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
