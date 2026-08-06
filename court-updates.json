@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-06T08:02:27.620331Z",
+  "generated_at": "2026-08-06T10:46:04.700439Z",
   "window": [
     "2026-08-06",
     "2026-08-07",
@@ -76,7 +76,7 @@
       "match_count": 0,
       "matches": []
     },
-    "2026-08-13": {
+    "2026-08-12": {
       "lists_found": [
         "Miscellaneous - Advance"
       ],
@@ -86,33 +86,15 @@
       "match_count": 0,
       "matches": []
     },
-    "2026-08-14": {
+    "2026-08-13": {
       "lists_found": [
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": false,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-08-14",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "940",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "940 SLP(C) No. 38281/2025 WEST KHANDESH DALIT SHIKSHAN PRASARAK MANDAL, DHULE Versus THE STATE OF MAHARASHTRA AND ORS."
-        }
-      ]
+      "match_count": 0,
+      "matches": []
     },
     "2026-08-17": {
       "lists_found": [
@@ -143,6 +125,6 @@
       ]
     }
   },
-  "match_count": 3,
+  "match_count": 2,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
