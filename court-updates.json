@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-07T16:57:42.766510Z",
+  "generated_at": "2026-08-07T17:53:43.206807Z",
   "window": [
     "2026-08-07",
     "2026-08-10",
@@ -116,34 +116,6 @@
         }
       ]
     },
-    "2026-08-17": {
-      "lists_found": [
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": false,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-08-17",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "631",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "631 Diary No. 67086-2025 SADASHIV Versus THE STATE OF KARNATAKA"
-        }
-      ]
-    },
     "2026-08-18": {
       "lists_found": [
         "Miscellaneous - Advance"
@@ -155,6 +127,6 @@
       "matches": []
     }
   },
-  "match_count": 3,
+  "match_count": 2,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
