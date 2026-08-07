@@ -1,31 +1,16 @@
 {
-  "generated_at": "2026-08-06T15:02:16.400487Z",
+  "generated_at": "2026-08-07T00:28:22.282379Z",
   "window": [
-    "2026-08-06",
     "2026-08-07",
     "2026-08-10",
     "2026-08-11",
     "2026-08-12",
     "2026-08-13",
     "2026-08-14",
-    "2026-08-17"
+    "2026-08-17",
+    "2026-08-18"
   ],
   "by_date": {
-    "2026-08-06": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Registrar - Main",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 0,
-      "matches": []
-    },
     "2026-08-07": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -42,31 +27,14 @@
     },
     "2026-08-10": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-08-10",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "",
-          "item": "903",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "903 SLP(Crl) No. 19901/2025 TULESHWAR SINGH GOND AND ANR. Versus STATE OF CHHATTISGARH"
-        }
-      ]
+      "has_main": true,
+      "match_count": 0,
+      "matches": []
     },
     "2026-08-11": {
       "lists_found": [
@@ -153,8 +121,18 @@
           "text": "631 Diary No. 67086-2025 SADASHIV Versus THE STATE OF KARNATAKA"
         }
       ]
+    },
+    "2026-08-18": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
-  "match_count": 3,
+  "match_count": 2,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
