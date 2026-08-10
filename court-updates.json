@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T07:01:39.741536Z",
+  "generated_at": "2026-08-10T08:31:13.868459Z",
   "window": [
     "2026-08-10",
     "2026-08-11",
@@ -163,8 +163,36 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-08-19": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-08-19",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "311",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "311 SLP(C) No. 311/2026 DHARMESWAR SAIKIA Versus RAJA BEG AND ORS."
+        }
+      ]
     }
   },
-  "match_count": 4,
+  "match_count": 5,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
