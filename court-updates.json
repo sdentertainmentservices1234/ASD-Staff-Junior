@@ -1,30 +1,16 @@
 {
-  "generated_at": "2026-08-10T17:44:01.416249Z",
+  "generated_at": "2026-08-10T18:39:51.167525Z",
   "window": [
-    "2026-08-10",
     "2026-08-11",
     "2026-08-12",
     "2026-08-13",
     "2026-08-14",
     "2026-08-17",
     "2026-08-18",
-    "2026-08-19"
+    "2026-08-19",
+    "2026-08-20"
   ],
   "by_date": {
-    "2026-08-10": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Registrar - Main",
-        "Registrar - Supplementary",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 0,
-      "matches": []
-    },
     "2026-08-11": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -196,6 +182,16 @@
           "text": "311 SLP(C) No. 311/2026 DHARMESWAR SAIKIA Versus RAJA BEG AND ORS."
         }
       ]
+    },
+    "2026-08-20": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
   "match_count": 5,
