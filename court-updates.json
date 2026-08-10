@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T10:11:33.714497Z",
+  "generated_at": "2026-08-10T11:14:30.692812Z",
   "window": [
     "2026-08-10",
     "2026-08-11",
@@ -11,16 +11,51 @@
     "2026-08-19"
   ],
   "by_date": {
+    "2026-08-10": {
+      "lists_found": [
+        "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
+        "Registrar - Main",
+        "Registrar - Supplementary",
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": true,
+      "has_advance": true,
+      "has_main": true,
+      "match_count": 0,
+      "matches": []
+    },
     "2026-08-11": {
       "lists_found": [
+        "Miscellaneous - Main",
+        "Regular / Final - Main",
+        "Registrar - Main",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 0,
-      "matches": []
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-08-11",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "8",
+          "item": "114",
+          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "114 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
+        }
+      ]
     },
     "2026-08-12": {
       "lists_found": [
@@ -158,6 +193,6 @@
       ]
     }
   },
-  "match_count": 4,
+  "match_count": 5,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
