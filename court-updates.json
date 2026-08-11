@@ -1,50 +1,16 @@
 {
-  "generated_at": "2026-08-11T17:47:58.534847Z",
+  "generated_at": "2026-08-11T18:41:50.937611Z",
   "window": [
-    "2026-08-11",
     "2026-08-12",
     "2026-08-13",
     "2026-08-14",
     "2026-08-17",
     "2026-08-18",
     "2026-08-19",
-    "2026-08-20"
+    "2026-08-20",
+    "2026-08-21"
   ],
   "by_date": {
-    "2026-08-11": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Regular / Final - Supplementary",
-        "Registrar - Main",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-08-11",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "8",
-          "item": "114",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "114 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
-        }
-      ]
-    },
     "2026-08-12": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -231,6 +197,34 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-08-21": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-08-21",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "901",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "901 SLP(Crl) No. 19901/2025 TULESHWAR SINGH GOND AND ANR. Versus STATE OF CHHATTISGARH"
+        }
+      ]
     }
   },
   "match_count": 7,
