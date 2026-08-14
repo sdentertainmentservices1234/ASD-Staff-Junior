@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-14T11:35:01.569400Z",
+  "generated_at": "2026-08-14T12:16:44.253339Z",
   "window": [
     "2026-08-14",
     "2026-08-17",
@@ -79,6 +79,7 @@
     },
     "2026-08-17": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Registrar - Main",
         "Miscellaneous - Advance"
       ],
@@ -89,20 +90,20 @@
       "matches": [
         {
           "for_date": "2026-08-17",
-          "list": "Miscellaneous - Advance",
-          "kind": "advance",
+          "list": "Miscellaneous - Main",
+          "kind": "main",
           "family": "MJ",
           "is_supplementary": false,
-          "court": "",
-          "item": "631",
-          "coram": "",
+          "court": "16",
+          "item": "32",
+          "coram": "HON'BLE MR. JUSTICE SATISH CHANDRA SHARMA; HON'BLE MR. JUSTICE NONGMEIKAPAM KOTISWAR SINGH",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
             "advocate"
           ],
           "confidence": "medium",
-          "text": "631 Diary No. 67086-2025 SADASHIV Versus THE STATE OF KARNATAKA"
+          "text": "32 Diary No. 5092-2026 MANOJ Versus STATE OF KERALA"
         }
       ]
     },
@@ -175,6 +176,34 @@
       "match_count": 0,
       "matches": []
     },
+    "2026-08-21": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-08-21",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "901",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "901 SLP(Crl) No. 19901/2025 TULESHWAR SINGH GOND AND ANR. Versus STATE OF CHHATTISGARH"
+        }
+      ]
+    },
     "2026-08-24": {
       "lists_found": [
         "Miscellaneous - Advance"
@@ -231,6 +260,6 @@
       "matches": []
     }
   },
-  "match_count": 8,
+  "match_count": 9,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
