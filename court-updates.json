@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-17T16:05:11.319859Z",
+  "generated_at": "2026-08-17T16:45:08.524545Z",
   "window": [
     "2026-08-17",
     "2026-08-18",
@@ -45,7 +45,6 @@
     },
     "2026-08-18": {
       "lists_found": [
-        "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Regular / Final - Main",
         "Regular / Final - Supplementary",
@@ -56,39 +55,20 @@
       "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-08-18",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "9",
-          "item": "104",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "104 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
-        }
-      ]
+      "match_count": 0,
+      "matches": []
     },
     "2026-08-19": {
       "lists_found": [
         "Miscellaneous - Main",
         "Regular / Final - Main",
-        "Registrar - Main",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 2,
+      "match_count": 1,
       "matches": [
         {
           "for_date": "2026-08-19",
@@ -106,33 +86,17 @@
           ],
           "confidence": "medium",
           "text": "33 SLP(C) No. 311/2026 DHARMESWAR SAIKIA Versus RAJA BEG AND ORS."
-        },
-        {
-          "for_date": "2026-08-19",
-          "list": "Registrar - Main",
-          "kind": "main",
-          "family": "MR",
-          "is_supplementary": false,
-          "court": "2",
-          "item": "18",
-          "coram": "",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "18 Crl.A. No. JITENDRA PURVIYA Versus THE STATE OF MADHYA PRADESH"
         }
       ]
     },
     "2026-08-20": {
       "lists_found": [
+        "Miscellaneous - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
+      "has_main": true,
       "match_count": 0,
       "matches": []
     },
@@ -220,6 +184,6 @@
       "matches": []
     }
   },
-  "match_count": 7,
+  "match_count": 5,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
