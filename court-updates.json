@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-18T10:31:19.071830Z",
+  "generated_at": "2026-08-18T11:01:40.981661Z",
   "window": [
     "2026-08-18",
     "2026-08-19",
@@ -97,21 +97,58 @@
     "2026-08-20": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": true,
-      "match_count": 0,
-      "matches": []
+      "match_count": 2,
+      "matches": [
+        {
+          "for_date": "2026-08-20",
+          "list": "Registrar - Main",
+          "kind": "main",
+          "family": "MR",
+          "is_supplementary": false,
+          "court": "1",
+          "item": "26",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "26 SLP(C) No. GIRIJABAI YASHWANT PATIL Versus DAILY CAUSE LIST FOR DATED : 20-08-2026 Registrar Court No. 1 ALANKAR PADAJI MHATRE AND ORS."
+        },
+        {
+          "for_date": "2026-08-20",
+          "list": "Registrar - Main",
+          "kind": "main",
+          "family": "MR",
+          "is_supplementary": false,
+          "court": "1",
+          "item": "26.1",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "RAMABAI NAMDEO NAIK AND ORS. SLP(C) No. 21242-21244/2026 Versus ALANKAR PADAJI MHATRE AND ORS."
+        }
+      ]
     },
     "2026-08-21": {
       "lists_found": [
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
+      "has_main": true,
       "match_count": 1,
       "matches": [
         {
@@ -199,6 +236,6 @@
       "matches": []
     }
   },
-  "match_count": 6,
+  "match_count": 8,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
