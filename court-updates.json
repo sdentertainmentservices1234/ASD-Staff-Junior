@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-18T07:20:03.438012Z",
+  "generated_at": "2026-08-18T08:00:52.007749Z",
   "window": [
     "2026-08-18",
     "2026-08-19",
@@ -50,6 +50,7 @@
         "Miscellaneous - Main",
         "Regular / Final - Main",
         "Registrar - Main",
+        "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
