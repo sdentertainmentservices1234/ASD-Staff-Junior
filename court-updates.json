@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-19T05:06:59.314280Z",
+  "generated_at": "2026-08-19T05:51:17.166981Z",
   "window": [
     "2026-08-19",
     "2026-08-20",
@@ -18,11 +18,10 @@
         "Regular / Final - Main",
         "Regular / Final - Supplementary",
         "Registrar - Main",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
+        "Curative & Review (circulation)"
       ],
       "has_supplementary": true,
-      "has_advance": true,
+      "has_advance": false,
       "has_main": true,
       "match_count": 2,
       "matches": [
