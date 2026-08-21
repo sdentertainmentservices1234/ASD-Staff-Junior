@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-21T12:06:03.862593Z",
+  "generated_at": "2026-08-21T13:15:40.287796Z",
   "window": [
     "2026-08-21",
     "2026-08-24",
@@ -16,7 +16,6 @@
         "Miscellaneous - Main",
         "Miscellaneous - Supplementary",
         "Registrar - Main",
-        "Registrar - Supplementary",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": true,
