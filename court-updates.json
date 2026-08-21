@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-21T03:04:32.091193Z",
+  "generated_at": "2026-08-21T04:01:11.818747Z",
   "window": [
     "2026-08-21",
     "2026-08-24",
@@ -27,11 +27,10 @@
     },
     "2026-08-24": {
       "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Advance"
+        "Miscellaneous - Main"
       ],
       "has_supplementary": false,
-      "has_advance": true,
+      "has_advance": false,
       "has_main": true,
       "match_count": 0,
       "matches": []
