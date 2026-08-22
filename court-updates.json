@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-22T16:27:49.047128Z",
+  "generated_at": "2026-08-22T16:54:22.309467Z",
   "window": [
     "2026-08-24",
     "2026-08-25",
@@ -36,15 +36,50 @@
       "match_count": 0,
       "matches": []
     },
-    "2026-08-27": {
+    "2026-08-31": {
       "lists_found": [
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": false,
-      "match_count": 0,
-      "matches": []
+      "match_count": 2,
+      "matches": [
+        {
+          "for_date": "2026-08-31",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "797",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "797 Diary No. 67086-2025 SADASHIV Versus THE STATE OF KARNATAKA"
+        },
+        {
+          "for_date": "2026-08-31",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1272",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1272 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL Versus MADHAV AND ORS."
+        }
+      ]
     },
     "2026-09-01": {
       "lists_found": [
@@ -67,6 +102,6 @@
       "matches": []
     }
   },
-  "match_count": 0,
+  "match_count": 2,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
