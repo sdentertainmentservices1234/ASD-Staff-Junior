@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-23T13:05:55.975194Z",
+  "generated_at": "2026-08-23T13:53:59.927124Z",
   "window": [
     "2026-08-24",
     "2026-08-25",
@@ -91,6 +91,16 @@
           "text": "1272 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL Versus MADHAV AND ORS."
         }
       ]
+    },
+    "2026-09-01": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     },
     "2026-09-02": {
       "lists_found": [
