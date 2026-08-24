@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-24T17:43:26.065270Z",
+  "generated_at": "2026-08-24T18:41:16.202955Z",
   "window": [
     "2026-08-24",
     "2026-08-25",
@@ -13,17 +13,48 @@
   "by_date": {
     "2026-08-24": {
       "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Registrar - Main",
-        "Registrar - Supplementary",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": true,
+      "has_supplementary": false,
       "has_advance": true,
-      "has_main": true,
-      "match_count": 0,
-      "matches": []
+      "has_main": false,
+      "match_count": 2,
+      "matches": [
+        {
+          "for_date": "2026-08-24",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "604",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "604 SLP(Crl) No. 6256/2026 NARESH TUDU Versus STATE OF JHARKHAND"
+        },
+        {
+          "for_date": "2026-08-24",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "683",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "683 SLP(C) No. RAJEEVAN M Versus JEESHA P. AND ORS."
+        }
+      ]
     },
     "2026-08-25": {
       "lists_found": [
@@ -100,6 +131,6 @@
       "matches": []
     }
   },
-  "match_count": 1,
+  "match_count": 3,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
