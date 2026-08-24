@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-24T09:42:41.738536Z",
+  "generated_at": "2026-08-24T10:13:51.047207Z",
   "window": [
     "2026-08-24",
     "2026-08-25",
@@ -10,7 +10,131 @@
     "2026-09-01",
     "2026-09-02"
   ],
-  "by_date": {},
-  "match_count": 0,
+  "by_date": {
+    "2026-08-24": {
+      "lists_found": [
+        "Miscellaneous - Supplementary",
+        "Registrar - Supplementary",
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": true,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 2,
+      "matches": [
+        {
+          "for_date": "2026-08-24",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "604",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "604 SLP(Crl) No. 6256/2026 NARESH TUDU Versus STATE OF JHARKHAND"
+        },
+        {
+          "for_date": "2026-08-24",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "683",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "683 SLP(C) No. RAJEEVAN M Versus JEESHA P. AND ORS."
+        }
+      ]
+    },
+    "2026-08-25": {
+      "lists_found": [
+        "Registrar - Main",
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": true,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-08-27": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-08-31": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 2,
+      "matches": [
+        {
+          "for_date": "2026-08-31",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "797",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "797 Diary No. 67086-2025 SADASHIV Versus THE STATE OF KARNATAKA"
+        },
+        {
+          "for_date": "2026-08-31",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1272",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1272 SLP(C) No. 5265/2026 MANOHAR VISHWANATH AGRAWAL Versus MADHAV AND ORS."
+        }
+      ]
+    },
+    "2026-09-01": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
+    }
+  },
+  "match_count": 4,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
