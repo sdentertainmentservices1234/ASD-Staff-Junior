@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T07:08:13.302476Z",
+  "generated_at": "2026-08-25T08:36:44.981258Z",
   "window": [
     "2026-08-25",
     "2026-08-26",
@@ -10,7 +10,18 @@
     "2026-09-02",
     "2026-09-03"
   ],
-  "by_date": {},
+  "by_date": {
+    "2026-08-25": {
+      "lists_found": [
+        "Miscellaneous - Supplementary"
+      ],
+      "has_supplementary": true,
+      "has_advance": false,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
+    }
+  },
   "match_count": 0,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
