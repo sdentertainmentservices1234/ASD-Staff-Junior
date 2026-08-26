@@ -1,34 +1,22 @@
 {
-  "generated_at": "2026-08-26T17:08:02.035866Z",
+  "generated_at": "2026-08-26T19:35:13.175155Z",
   "window": [
-    "2026-08-26",
     "2026-08-27",
     "2026-08-28",
     "2026-08-31",
     "2026-09-01",
     "2026-09-02",
     "2026-09-03",
-    "2026-09-04"
+    "2026-09-04",
+    "2026-09-07"
   ],
   "by_date": {
-    "2026-08-27": {
-      "lists_found": [
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": false,
-      "match_count": 0,
-      "matches": []
-    },
     "2026-08-31": {
       "lists_found": [
-        "Miscellaneous - Main",
-        "Registrar - Main",
-        "Miscellaneous - Advance"
+        "Miscellaneous - Main"
       ],
       "has_supplementary": false,
-      "has_advance": true,
+      "has_advance": false,
       "has_main": true,
       "match_count": 1,
       "matches": [
@@ -51,38 +39,6 @@
         }
       ]
     },
-    "2026-09-01": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Regular / Final - Main",
-        "Registrar - Main",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": false,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-09-01",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "8",
-          "item": "105",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "105 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
-        }
-      ]
-    },
     "2026-09-02": {
       "lists_found": [
         "Miscellaneous - Advance"
@@ -93,15 +49,33 @@
       "match_count": 0,
       "matches": []
     },
-    "2026-09-03": {
+    "2026-09-07": {
       "lists_found": [
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
       "has_main": false,
-      "match_count": 0,
-      "matches": []
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-09-07",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "685",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "685 SLP(C) No. RAJEEVAN M Versus JEESHA P. AND ORS."
+        }
+      ]
     }
   },
   "match_count": 2,
