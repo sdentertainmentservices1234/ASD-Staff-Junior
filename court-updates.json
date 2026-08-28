@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-08-28T13:50:32.787104Z",
+  "generated_at": "2026-08-28T23:27:54.197723Z",
   "window": [
-    "2026-08-28",
     "2026-08-31",
     "2026-09-01",
     "2026-09-02",
     "2026-09-03",
     "2026-09-04",
     "2026-09-07",
-    "2026-09-08"
+    "2026-09-08",
+    "2026-09-09"
   ],
   "by_date": {
     "2026-08-31": {
@@ -122,6 +122,16 @@
       ]
     },
     "2026-09-08": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-09-09": {
       "lists_found": [
         "Miscellaneous - Advance"
       ],
