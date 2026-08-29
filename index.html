@@ -647,6 +647,19 @@
   .tpl-vrem .lbl{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tpx-gold);margin-bottom:4px}
   .tpl.bw .tpl-vrem .lbl{font-weight:800}
   .tpl-disc{font-size:10px;color:#a49d92;text-align:center;font-style:italic;margin-top:22px;line-height:1.6}
+  /* rate card (Memorandum of Professional Fees) */
+  .tpl-rc-sec{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tpx-ox);
+    margin:20px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--tpx-gold);break-after:avoid;page-break-after:avoid}
+  .tpl-rc-sec.first{margin-top:4px}
+  .tpl.bw .tpl-rc-sec{font-weight:800}
+  .tpl-rc-intro{font-size:11px;color:var(--tpx-muted);line-height:1.65;margin:0 0 10px;text-align:justify}
+  .tpl-rc-split{text-align:center;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--tpx-gold);margin:26px 0 10px}
+  .tpl.bw .tpl-rc-split{color:var(--tpx-ink);font-weight:800}
+  .tpl-rc-notes{margin:2px 0 0;padding-left:16px}
+  .tpl-rc-notes li{font-size:10.5px;color:var(--tpx-muted);line-height:1.65;margin-bottom:4px}
+  /* keep a section heading with its table, and never split a fee row across pages */
+  table.tpl-tbl tbody tr{break-inside:avoid;page-break-inside:avoid}
   /* footer band */
   .tpl-foot{margin-top:auto;background:var(--tpx-ox);color:#f0e9df;padding:0}
   .tpl-foot .fbar{height:3px;background:var(--tpx-gold)}
@@ -6592,6 +6605,195 @@ function _saveCloudLink(kind, id){
     if(document.getElementById("panel-persondetail")&&document.getElementById("panel-persondetail").classList.contains("active")) renderPersonDetail();
   }catch(e){}
 }
+/* ===========================================================
+   RATE CARD — Memorandum of Professional Fees
+   A standing schedule of the chamber's fees, printed on the same
+   letterhead/footer as every other document (so headers & footers
+   repeat on every page via the shared _tplTableizeForPrint path).
+   The rates live in DB.settings.rateCard so they stay editable and
+   sync across devices; RATE_CARD_DEFAULT seeds a first-time user.
+   =========================================================== */
+const RATE_CARD_DEFAULT = {
+  intro: "A single, all-inclusive professional fee for the complete conduct of a matter — covering drafting, filing and appearances as stated. Court fee, printing / paper-book costs and out-of-pocket expenses are payable at actuals. Recommended for clients who prefer cost certainty over stage-wise billing.",
+  itemIntro: "For clients engaging the Chamber for individual services, or where a package is not opted for.",
+  sections: [
+    { key:"A", title:"A. Consolidated Fee Packages", rows:[
+      {name:"Special Leave Petition / Writ Petition — Filing to Admission", desc:"Drafting, filing & up to two hearings at admission stage", fee:"₹ 1,00,000"},
+      {name:"Special Leave Petition / Writ Petition — Filing to Final Disposal", desc:"Complete conduct of the case; Senior Counsel fee, if engaged, separate", fee:"₹ 2,50,000"},
+      {name:"Respondent-Side Representation — Notice to Disposal", desc:"Counter affidavit, rejoinder & all appearances to disposal", fee:"₹ 1,50,000"},
+      {name:"Transfer Petition — Complete", desc:"Drafting, filing & hearing", fee:"₹ 1,00,000"},
+      {name:"Review Petition — Complete", desc:"Drafting, filing & hearing", fee:"₹ 75,000"},
+      {name:"Curative Petition — Complete", desc:"Drafting, filing & hearing", fee:"₹ 1,25,000"}
+    ]},
+    { key:"B", title:"B. Registration & Filing", itemwise:true, rows:[
+      {name:"Filing of SLP / Writ Petition / Transfer Petition / Appeal", desc:"Inclusive of AoR filing appearance; drafting billed separately", fee:"₹ 25,000"},
+      {name:"Vakalatnama, Memo of Appearance & E-filing; Curing of Registry Defects", desc:"Each; defect curing per round of objections", fee:"₹ 7,500"},
+      {name:"Filing of Caveat", desc:"", fee:"₹ 5,000"}
+    ]},
+    { key:"C", title:"C. Drafting", rows:[
+      {name:"Special Leave Petition / Writ Petition / Appeal", desc:"Includes synopsis, list of dates & grounds", fee:"₹ 50,000"},
+      {name:"Curative Petition", desc:"", fee:"₹ 75,000"},
+      {name:"Review Petition", desc:"", fee:"₹ 40,000"},
+      {name:"Counter Affidavit / Reply", desc:"", fee:"₹ 35,000"},
+      {name:"Written Submissions / Note on Submissions", desc:"", fee:"₹ 30,000"},
+      {name:"Rejoinder Affidavit", desc:"", fee:"₹ 20,000"},
+      {name:"Interlocutory Application (Stay / Impleadment / Exemption, etc.)", desc:"Per application", fee:"₹ 15,000"}
+    ]},
+    { key:"D", title:"D. Appearance & Advocacy", rows:[
+      {name:"Appearance — Final Hearing", desc:"Per day", fee:"₹ 50,000"},
+      {name:"Appearance — Admission / Preliminary Hearing", desc:"Per hearing", fee:"₹ 35,000"},
+      {name:"Assisting Senior Counsel (Brief-holding)", desc:"Per hearing; Senior Counsel's fee separate", fee:"₹ 25,000"},
+      {name:"Appearance — Miscellaneous / IA Hearing", desc:"Per hearing", fee:"₹ 20,000"},
+      {name:"Mentioning for Urgent Listing / Appearance before Registrar", desc:"Per appearance", fee:"₹ 10,000"}
+    ]},
+    { key:"E", title:"E. Advisory & Opinion", rows:[
+      {name:"Legal Opinion — Maintainability / Merits", desc:"", fee:"₹ 35,000"},
+      {name:"Draft Settlement / Compromise Advisory", desc:"", fee:"₹ 20,000"},
+      {name:"Case Vetting & Document Review", desc:"", fee:"₹ 15,000"},
+      {name:"Pre-litigation Consultation", desc:"Per session", fee:"₹ 7,500"}
+    ]},
+    { key:"F", title:"F. Retainer & Miscellaneous", rows:[
+      {name:"Annual Retainer", desc:"Scope defined separately", fee:"₹ 10,00,000"},
+      {name:"Monthly Retainer", desc:"Scope defined separately", fee:"₹ 1,00,000"},
+      {name:"Out-of-Station Appearance", desc:"Plus travel, boarding & lodging at actuals", fee:"₹ 35,000"},
+      {name:"Certified Copy — Application & Procurement", desc:"Plus actual Registry charges", fee:"₹ 5,000"},
+      {name:"Court Fee, Process Fee & Miscellaneous Expenses", desc:"", fee:"At actuals"}
+    ]}
+  ],
+  notes: [
+    "A matter is billed either under a Consolidated Package (Section A) or item-wise (Sections B–F), as agreed at the time of engagement — not both.",
+    "Fees stated above are exclusive of applicable GST, unless otherwise agreed in writing.",
+    "Complex or urgent matters, extensive documentation, multiple parties, or matters requiring Senior Counsel briefing may attract a revised quotation.",
+    "Fees for appearance are per hearing/day and do not carry forward if a matter is adjourned.",
+    "A brief and case papers must be furnished in advance for the applicable fee to be confirmed."
+  ]
+};
+function rateCard(){
+  const rc = DB.settings && DB.settings.rateCard;
+  return (rc && Array.isArray(rc.sections) && rc.sections.length) ? rc : RATE_CARD_DEFAULT;
+}
+// Render the rate card into #receiptArea using the shared document shell.
+function printRateCard(opts){
+  opts = opts || {};
+  const s = _chamberDocSettings({__bw: !!opts.bw});
+  const rc = rateCard();
+  const area = document.getElementById("receiptArea");
+  const tbl = sec => `
+    <table class="tpl-tbl">
+      <thead><tr><th>Service</th><th class="r" style="width:150px">Professional Fee</th></tr></thead>
+      <tbody>${(sec.rows||[]).map(r=>`<tr>
+        <td>${esc(r.name)}${r.desc?`<div style="font-size:11px;color:var(--tpx-muted);margin-top:2px">${esc(r.desc)}</div>`:""}</td>
+        <td class="r">${esc(r.fee)}</td></tr>`).join("")}</tbody>
+    </table>`;
+  let body = "";
+  (rc.sections||[]).forEach((sec,i)=>{
+    // The item-wise half of the schedule gets its own lead-in, once.
+    if(sec.itemwise) body += `<div class="tpl-rc-split">— Item-wise Schedule —</div>
+      ${rc.itemIntro?`<div class="tpl-rc-intro">${esc(rc.itemIntro)}</div>`:""}`;
+    body += `<div class="tpl-rc-sec${i===0?" first":""}">${esc(sec.title)}</div>`;
+    if(i===0 && rc.intro) body += `<div class="tpl-rc-intro">${esc(rc.intro)}</div>`;
+    body += tbl(sec);
+  });
+  const notes = (rc.notes||[]).filter(Boolean);
+  if(notes.length) body += `<div class="tpl-rc-sec">Notes</div>
+    <ul class="tpl-rc-notes">${notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`;
+  area.innerHTML=`
+   <div class="tpl${opts.bw?" bw":""}">
+     <div class="tpl-run-head">${_tplMast(s)}</div>
+     <div class="tpl-dband"><div class="tpl-dtitle">Memorandum of Professional Fees</div>
+       <div class="tpl-dsub">Schedule of Fees — Supreme Court of India Practice</div></div>
+     <div class="tpl-body">
+       ${body}
+       ${_tplSign(s)}
+       <div class="tpl-disc">This schedule is indicative and valid until revised. It is not an offer or a concluded engagement; fees for a specific matter are confirmed in writing on receipt of the brief.</div>
+     </div>
+     ${_tplFoot(s)}
+   </div>`;
+  if(opts.noPrint) return;
+  _printAs("Rate Card — "+((s.chamberName||s.advName||"Chamber").replace(/[\/\\]/g,"-")));
+}
+// View the rate card in the standalone viewer (same path as other documents).
+function _previewRateCard(){
+  printRateCard({noPrint:true});
+  try{ _tplTableizeForPrint(); }catch(e){}
+  _openPrintView("Rate Card");
+}
+// Share the rate card as a message (the PDF itself is saved/printed from the viewer).
+async function shareRateCard(){
+  const s=DB.settings||{};
+  const who=(s.chamberName&&s.chamberName.trim())||s.advName||"Chamber";
+  const rc=rateCard();
+  const lines=[`${who} — Memorandum of Professional Fees`,"Schedule of Fees — Supreme Court of India Practice",""];
+  (rc.sections||[]).forEach(sec=>{
+    lines.push(sec.title.toUpperCase());
+    (sec.rows||[]).forEach(r=>lines.push(`• ${r.name}${r.desc?" ("+r.desc+")":""} — ${r.fee}`));
+    lines.push("");
+  });
+  lines.push("Fees are exclusive of GST unless agreed otherwise. Court fee, printing and out-of-pocket expenses at actuals.");
+  if(s.mobile||s.contact||s.email) lines.push("", [s.mobile||s.contact,s.email].filter(Boolean).join(" · "));
+  const text=lines.join("\n");
+  if(_webShareSupported){
+    try{ await navigator.share({ title:"Rate Card — "+who, text }); return; }
+    catch(e){ if(e && e.name==="AbortError") return; }
+  }
+  try{ await navigator.clipboard.writeText(text); toast("Rate card copied — paste it into WhatsApp or email."); }
+  catch(e){ openModal("Share rate card", `<div class="hint" style="margin-bottom:8px">Copy this and send it:</div>
+    <textarea class="in" rows="10" readonly onclick="this.select()" style="font-size:12.5px">${esc(text)}</textarea>
+    <div class="btn-row" style="margin-top:12px"><button class="btn seal" onclick="closeModal()">Done</button></div>`); }
+}
+// The entry point: view / print / share the rate card.
+function openRateCard(){
+  openModal("Rate card — Memorandum of Fees", `
+    <div class="hint" style="margin-bottom:12px">Your standing schedule of professional fees, on the chamber letterhead. Send it to a client or referring advocate who asks for your rates.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn seal" onclick="closeModal();_previewRateCard()">View</button>
+      <button class="btn" onclick="closeModal();setTimeout(()=>printRateCard(),60)">Save / Print — Colour</button>
+      <button class="btn" onclick="closeModal();setTimeout(()=>printRateCard({bw:true}),60)">Save / Print — B&amp;W friendly</button>
+      <button class="btn ghost" onclick="closeModal();shareRateCard()">Share to WhatsApp / email…</button>
+      <button class="btn ghost" onclick="closeModal();openRateCardEdit()">Edit rates…</button>
+    </div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+// Edit the fee amounts (names/descriptions stay fixed; the figures are what change).
+function openRateCardEdit(){
+  const rc=rateCard();
+  const body=(rc.sections||[]).map((sec,si)=>`
+    <div style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--seal);margin:14px 0 6px">${esc(sec.title)}</div>
+    ${(sec.rows||[]).map((r,ri)=>`<div style="display:flex;gap:9px;align-items:center;margin-bottom:7px">
+      <div style="flex:1;min-width:0;font-size:12.5px;line-height:1.3">${esc(r.name)}</div>
+      <input class="in rc-fee" data-si="${si}" data-ri="${ri}" value="${esc(r.fee)}" style="flex:0 0 120px;text-align:right;font-size:13px">
+    </div>`).join("")}`).join("");
+  openModal("Edit rate card", `
+    <div class="hint">Change any figure. These are used every time you send the rate card.</div>
+    <div style="max-height:52vh;overflow:auto;margin-top:6px">${body}</div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal();openRateCard()">Cancel</button>
+      <button class="btn ghost" onclick="_rcReset()">Reset to default</button>
+      <button class="btn seal" onclick="_rcSave()">Save rates</button>
+    </div>`);
+}
+function _rcSave(){
+  // Deep-copy the current card, then write back every edited figure.
+  const rc=JSON.parse(JSON.stringify(rateCard()));
+  document.querySelectorAll(".rc-fee").forEach(inp=>{
+    const si=+inp.getAttribute("data-si"), ri=+inp.getAttribute("data-ri");
+    if(rc.sections[si] && rc.sections[si].rows[ri]) rc.sections[si].rows[ri].fee=inp.value.trim()||"—";
+  });
+  DB.settings.rateCard=rc;
+  save();
+  try{ if(window.FB && FB.pushSettings && FB.uid && FB.uid() && DB.deviceRole!=="staff") FB.pushSettings(DB.settings); }catch(e){}
+  closeModal(); toast("Rate card saved."); openRateCard();
+}
+function _rcReset(){
+  DB.settings.rateCard=JSON.parse(JSON.stringify(RATE_CARD_DEFAULT));
+  save();
+  try{ if(window.FB && FB.pushSettings && FB.uid && FB.uid() && DB.deviceRole!=="staff") FB.pushSettings(DB.settings); }catch(e){}
+  closeModal(); toast("Rates reset to the standard card."); openRateCardEdit();
+}
+window.openRateCard=openRateCard; window.printRateCard=printRateCard; window._previewRateCard=_previewRateCard;
+window.shareRateCard=shareRateCard; window.openRateCardEdit=openRateCardEdit; window._rcSave=_rcSave; window._rcReset=_rcReset;
+window.rateCard=rateCard;
+
 function printVoucher(expenseId, opts){
   opts = opts || {};
   const e=(DB.expenses||[]).find(x=>x.id===expenseId); if(!e){ toast("Expense not found.",true); return; }
@@ -15992,7 +16194,8 @@ function openBilling(which, keepEdit){
     reg.innerHTML=`<span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Registers</span>
       <button class="btn ghost sm" onclick="openSub('invoiceledger')">🧾 Invoices</button>
       <button class="btn ghost sm" onclick="openSub('ledger')">🧾 Receipts</button>
-      <button class="btn ghost sm" onclick="openSub('exadv')">💸 Expenses</button>`;
+      <button class="btn ghost sm" onclick="openSub('exadv')">💸 Expenses</button>
+      <button class="btn ghost sm" onclick="openRateCard()" title="Your schedule of professional fees, on the chamber letterhead">📋 Rate card</button>`;
     const tog=panel.querySelector(".billing-toggle");
     if(tog && tog.nextSibling) panel.insertBefore(reg, tog.nextSibling); else panel.insertBefore(reg, panel.firstChild);
   }
@@ -16963,6 +17166,7 @@ function renderMoreMenu(){
   const money=[
     item("shellGo('books')",HOME_ICONS.receipt,"Books &amp; financials","Overview, receipts, invoices, top clients, cash, expenses"),
     item("openSub('exadv')",HOME_ICONS.exadv,"Expenses &amp; advances","Combined register"),
+    item("openRateCard()",HOME_ICONS.documents,"Rate card","Your schedule of fees — send it on the letterhead"),
     item("openPeople()",HOME_ICONS.matters,"People","Staff, juniors, interns · approvals · access"),
   ];
   const work=[
@@ -18280,7 +18484,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.02-3100";
+  window.APP_VERSION = "2026.08.29-0100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
