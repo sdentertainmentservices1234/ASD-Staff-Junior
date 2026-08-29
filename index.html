@@ -2016,7 +2016,18 @@
           _syncing=true;
           if(cloud.settings) DB.settings = _mergeCloudSettings(cloud.settings);
           if(cloud.counters) DB.counters = Object.assign({}, DB.counters, cloud.counters);
-          FB.COLLECTIONS.forEach(n=>{ if(Array.isArray(cloud[n])) DB[n]=cloud[n]; });
+          // Same bias-toward-preserving-data guard the live listener uses: never let an EMPTY
+          // cloud array blank a populated local collection. Critical for collections only just
+          // brought into sync (refStatements / notices / reminders) — the cloud has nothing for
+          // them yet, so an unguarded overwrite would destroy the very records we're rescuing.
+          FB.COLLECTIONS.forEach(n=>{
+            if(!Array.isArray(cloud[n])) return;
+            if(cloud[n].length===0 && Array.isArray(DB[n]) && DB[n].length>0){
+              console.warn("sync: kept", DB[n].length, "local", n, "— cloud copy was empty");
+              return;
+            }
+            DB[n]=cloud[n];
+          });
           stripMeta();
           DB.settings.ownerUid = myUid;
           saveLocalOnly();
@@ -3375,6 +3386,93 @@ async function listSnapshots(){
   }
   return out.sort((a,b)=>(b.at||"").localeCompare(a.at||""));
 }
+/* ===========================================================
+   RESCUE LOCAL-ONLY RECORDS FROM SNAPSHOTS
+   refStatements / notices / reminders used to live only in
+   localStorage, which a logout (manual or idle auto sign-out)
+   clears — so they vanished while cloud-backed data restored.
+   Daily snapshots live in IndexedDB, which that wipe does NOT
+   touch, so a lost record is often still sitting in one. This
+   scans every snapshot and re-adds anything missing. Additive
+   only: it never removes or overwrites a current record.
+   =========================================================== */
+const RESCUE_COLLECTIONS = ["refStatements","notices","reminders"];
+async function _scanSnapshotsForLost(){
+  const slots = ["snap:pre-restore","snap:0","snap:1","snap:2","snap:3","snap:4","snap:5","snap:6"];
+  const found = {};                       // coll -> Map(id -> record)
+  RESCUE_COLLECTIONS.forEach(c=>found[c]=new Map());
+  const haveNow = {};
+  RESCUE_COLLECTIONS.forEach(c=>haveNow[c]=new Set((DB[c]||[]).map(r=>r&&r.id).filter(Boolean)));
+  let scanned=0;
+  for(const slot of slots){
+    let raw=null;
+    try{ raw=await idbGet(slot); }catch(e){}
+    if(!raw) continue;
+    let snap=null;
+    try{ snap=JSON.parse(raw); }catch(e){ continue; }
+    scanned++;
+    RESCUE_COLLECTIONS.forEach(c=>{
+      (Array.isArray(snap[c])?snap[c]:[]).forEach(rec=>{
+        if(rec && rec.id && !haveNow[c].has(rec.id) && !found[c].has(rec.id)){
+          found[c].set(rec.id, Object.assign({}, rec, {_fromSnapshot:slot, _snapAt:snap._snapAt||""}));
+        }
+      });
+    });
+  }
+  return { scanned, found };
+}
+async function openRescueLost(){
+  openModal("Recover lost records", `<div class="hint">Scanning this device's daily snapshots…</div>`);
+  const {scanned, found} = await _scanSnapshotsForLost();
+  const total = RESCUE_COLLECTIONS.reduce((n,c)=>n+found[c].size,0);
+  if(!scanned){
+    openModal("Recover lost records", `<div class="hint">No snapshots were found on this device, so there is nothing to recover from here. Snapshots are kept for the last seven days and only on the device that made them — if the records were created on another phone or laptop, run this there.</div>
+      <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+    return;
+  }
+  if(!total){
+    openModal("Recover lost records", `<div class="hint">Checked ${scanned} snapshot${scanned!==1?"s":""} on this device — every statement, notice and reminder in them is already present in the app. Nothing to recover.<br><br>If a record is still missing, it was created more than seven days ago (snapshots have rotated past it) or on a different device.</div>
+      <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+    return;
+  }
+  window.__rescueFound = found;
+  const label = {refStatements:"Statements of cases", notices:"Legal notices", reminders:"Reminders"};
+  const body = RESCUE_COLLECTIONS.filter(c=>found[c].size).map(c=>{
+    const rows=[...found[c].values()].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+    return `<div style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--seal);margin:12px 0 6px">${label[c]||c} · ${rows.length}</div>
+      ${rows.map(r=>`<div style="font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line2)">
+        ${esc(r.date?fmtDate(r.date):"—")} — ${esc(r.name||r.no||r.text||r.client||"record")}${(c==="refStatements"&&(r.count||(r.matterIds||[]).length))?` <span class="hint">(${r.count||(r.matterIds||[]).length} cases)</span>`:""}
+      </div>`).join("")}`;
+  }).join("");
+  openModal("Recover lost records", `
+    <div class="hint">Found <b>${total}</b> record${total!==1?"s":""} in this device's snapshots that are no longer in the app. Restoring adds them back — nothing currently in the app is changed or removed.</div>
+    <div style="max-height:46vh;overflow:auto;margin-top:4px">${body}</div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_doRescueLost()">Restore ${total} record${total!==1?"s":""}</button>
+    </div>`);
+}
+function _doRescueLost(){
+  const found=window.__rescueFound; if(!found){ closeModal(); return; }
+  let n=0;
+  RESCUE_COLLECTIONS.forEach(c=>{
+    if(!Array.isArray(DB[c])) DB[c]=[];
+    const have=new Set(DB[c].map(r=>r&&r.id).filter(Boolean));
+    [...found[c].values()].forEach(rec=>{
+      if(have.has(rec.id)) return;
+      const clean=Object.assign({}, rec); delete clean._fromSnapshot; delete clean._snapAt;
+      DB[c].push(clean); n++;
+    });
+  });
+  // Additive push: a restore must never let the deletion-reconciler treat cloud-only
+  // records as removals (same protection the snapshot/import path uses).
+  try{ if(window.__additivePushNext) window.__additivePushNext(); }catch(e){}
+  save(); closeModal();
+  toast(n+" record"+(n!==1?"s":"")+" restored.");
+  try{ renderAll(); }catch(e){}
+}
+window.openRescueLost=openRescueLost; window._doRescueLost=_doRescueLost;
+
 async function downloadSnapshot(slot){
   try{
     const raw=await idbGet(slot);
@@ -3964,12 +4062,31 @@ function _raStatementsCard(a){
   if(!a||!a.id) return "";
   const recs=(DB.refStatements||[]).filter(r=>r.refAdvId===a.id).sort((x,y)=>(y.date||"").localeCompare(x.date||""));
   if(!recs.length) return "";
-  const rows=recs.map(r=>`<tr><td>${fmtDate(r.date)}${r.editedOn?` <span class="hint">(edited ${esc(fmtDate(r.editedOn))})</span>`:""}</td><td class="num">${r.count||(r.matterIds||[]).length}</td><td style="white-space:nowrap"><button class="row-act" onclick="_raViewStatement('${r.id}')">View</button><button class="row-act" onclick="_raEditStatement('${r.id}')">Edit</button><button class="row-act" onclick="_raDeleteStatement('${r.id}')">Delete</button></td></tr>`).join("");
+  const rows=recs.map(r=>`<tr><td>${fmtDate(r.date)}${r.editedOn?` <span class="hint">(edited ${esc(fmtDate(r.editedOn))})</span>`:""}</td><td class="num">${r.count||(r.matterIds||[]).length}</td><td style="font-size:12px;line-height:1.5">${_raBillingChip(r)}</td><td style="white-space:nowrap"><button class="row-act" onclick="_raViewStatement('${r.id}')">View</button><button class="row-act" onclick="_raStatementActions('${r.id}')" aria-label="More actions" title="More actions">⋯</button></td></tr>`).join("");
   return `<div class="card">
-    <div class="card-head"><div><h2>Statements sent</h2><div class="hint">Every statement of cases generated for ${esc(a.name)} — so nothing is repeated next time.</div></div></div>
-    <div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Date</th><th class="num">Cases</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="card-head"><div><h2>Statements sent</h2><div class="hint">Every statement of cases generated for ${esc(a.name)} — so nothing is repeated next time, and what was billed and received against each is shown here.</div></div></div>
+    <div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Date</th><th class="num">Cases</th><th>Billing</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
   </div>`;
 }
+// Actions for one statement row — kept in a ⋯ menu so the row stays readable.
+function _raStatementActions(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r){ toast("Statement not found.",true); return; }
+  const {inv, rec}=_raStatementBilling(r);
+  const rows=[{t:"View cases",f:`_raViewStatement('${sid}')`,seal:1}];
+  if(!inv) rows.push({t:"Raise invoice for these cases",f:`_raBillStatement('${sid}')`,seal:1});
+  else {
+    rows.push({t:"View invoice "+inv.no,f:`_previewGenDoc('invoice','${inv.id}')`});
+    if(!_invoicePaid(inv)) rows.push({t:"Record payment (receipt)",f:`_raStatementReceipt('${sid}')`,seal:1});
+    else if(rec) rows.push({t:"View receipt "+rec.no,f:`_previewGenDoc('receipt','${rec.id}')`});
+  }
+  rows.push({t:"Edit statement",f:`_raEditStatement('${sid}')`});
+  rows.push({t:"Delete statement record",f:`_raDeleteStatement('${sid}')`,danger:1});
+  const btns=rows.map(a=>`<button class="btn ${a.seal?'seal':'ghost'}" ${a.danger?'style="color:#8c2f39;border-color:#e2b8b8"':''} onclick="closeModal();${a.f}">${esc(a.t)}</button>`).join("");
+  openModal("Statement dated "+fmtDate(r.date), `
+    <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">${btns}</div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+window._raStatementActions=_raStatementActions;
 function _raEditStatement(sid){
   const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
   const a=_buildRefAdvs().find(x=>x.id===r.refAdvId);
@@ -3998,11 +4115,120 @@ function _raViewStatement(sid){
   const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
   const n=r.count||(r.cases||[]).length;
   const rows=(r.cases||[]).map((c,i)=>`<tr><td style="text-align:center">${i+1}</td><td class="mono">${esc(c.code||"")}</td><td><b>${esc(c.parties||"")}</b></td><td>${esc(c.num||"—")}</td></tr>`).join("");
+  const {inv:sInv, rec:sRec}=_raStatementBilling(r);
+  const billLine = sInv
+    ? `<div class="note" style="margin-top:8px">Invoice <b>${esc(sInv.no)}</b> dated ${fmtDate(sInv.date)} — <b>${fmtINR(invoiceTotal(sInv))}</b>${
+        _invoicePaid(sInv)
+          ? ` · <span style="color:var(--green,#2e7d32);font-weight:700">Received</span>${sRec?` against receipt <b>${esc(sRec.no)}</b> dated ${fmtDate(sRec.date)}`:""}`
+          : ` · <span style="color:var(--seal);font-weight:700">Payment pending</span>`}</div>`
+    : `<div class="hint" style="margin-top:8px">No invoice raised for this statement yet.</div>`;
   openModal("Statement dated "+fmtDate(r.date), `
     <div class="hint">${n} case${n!==1?"s":""} sent to <b>${esc(r.name||"")}</b> on ${fmtDate(r.date)}.${(r.prevLabels&&r.prevLabels.length)?" Plus previous list(s): "+esc(r.prevLabels.join(", "))+".":""}</div>
+    ${billLine}
     <div class="tbl-wrap" style="margin-top:8px;max-height:50vh;overflow:auto"><table class="sr-num"><thead><tr><th>#</th><th>File no.</th><th>Cause title</th><th>Case / Diary no.</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="empty" style="padding:12px">No cases recorded.</td></tr>`}</tbody></table></div>
     <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
+/* ===========================================================
+   BILLING A STATEMENT OF CASES
+   A statement lists the cases sent to a referring advocate. This
+   raises ONE invoice for that statement (a line per case, or a
+   single consolidated line) billed to the advocate, and links the
+   two both ways — so the statement then shows what was billed and,
+   once the payment receipt is recorded, what was received.
+   =========================================================== */
+function _raStatementBilling(r){
+  if(!r) return {inv:null, rec:null};
+  const inv = r.invoiceId ? (DB.invoices||[]).find(v=>v.id===r.invoiceId && !isVoided(v)) : null;
+  const rec = inv && inv.paidReceiptId ? (DB.receipts||[]).find(x=>x.id===inv.paidReceiptId && !isVoided(x)) : null;
+  return {inv, rec};
+}
+// Compact status shown on the statement row / in the statement view.
+function _raBillingChip(r){
+  const {inv, rec} = _raStatementBilling(r);
+  if(!inv) return `<span class="hint">Not billed</span>`;
+  const tot=invoiceTotal(inv);
+  const paid=_invoicePaid(inv);
+  return `<span class="mono" style="font-size:11.5px">${esc(inv.no)}</span> · ${fmtINR(tot)}<br>`
+    + (paid
+        ? `<span class="tag" style="background:var(--green,#2e7d32);color:#fff;border:none">Received</span>${rec?` <span class="hint mono" style="font-size:11px">${esc(rec.no)}</span>`:""}`
+        : `<span class="tag" style="color:var(--seal);border-color:#e2b8b8">Payment pending</span>`);
+}
+function _raBillStatement(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r){ toast("Statement not found.",true); return; }
+  const {inv}=_raStatementBilling(r);
+  if(inv){ toast("This statement is already billed under "+inv.no+".",true); _docActions("invoice",inv.id); return; }
+  const cases=r.cases||[];
+  const rows=cases.map((c,i)=>`<div style="display:flex;gap:9px;align-items:center;margin-bottom:7px">
+      <div style="flex:1;min-width:0;font-size:12.5px;line-height:1.3">${esc(c.parties||c.code||"Case")}${c.num?` <span class="hint">· ${esc(c.num)}</span>`:""}</div>
+      <input class="in rsFee" data-i="${i}" inputmode="numeric" placeholder="0" style="flex:0 0 110px;text-align:right;font-size:13px">
+    </div>`).join("");
+  openModal("Raise invoice — statement dated "+fmtDate(r.date), `
+    <div class="hint">Bills <b>${esc(r.name||"the advocate")}</b> for the ${cases.length} case${cases.length!==1?"s":""} in this statement. Enter a fee per case, or use one figure for all.</div>
+    <div style="display:flex;gap:8px;align-items:center;margin:12px 0 10px">
+      <input class="in" id="rsAll" inputmode="numeric" placeholder="Same fee for every case" style="flex:1;font-size:13px">
+      <button class="btn ghost sm" onclick="_rsApplyAll()">Apply</button>
+    </div>
+    <div style="max-height:38vh;overflow:auto">${rows}</div>
+    <div style="border-top:1px solid var(--line);margin:12px 0 10px"></div>
+    <label class="fld" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink)">
+      <input type="checkbox" id="rsConsolidated"> Show as a single consolidated line (not case-wise)</label>
+    <div class="note" id="rsTotal" style="margin-top:10px">Total: ₹0</div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_doRaBillStatement('${sid}')">Raise invoice</button>
+    </div>`);
+  setTimeout(()=>{ document.querySelectorAll(".rsFee").forEach(i=>i.addEventListener("input",_rsTotal)); },30);
+}
+function _rsApplyAll(){
+  const v=(document.getElementById("rsAll")||{}).value||"";
+  document.querySelectorAll(".rsFee").forEach(i=>{ i.value=v; });
+  _rsTotal();
+}
+function _rsTotal(){
+  let t=0; document.querySelectorAll(".rsFee").forEach(i=>{ t+=_raNum(i.value); });
+  const el=document.getElementById("rsTotal"); if(el) el.textContent="Total: "+fmtINR(t);
+}
+function _doRaBillStatement(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
+  const a=_buildRefAdvs().find(x=>x.id===r.refAdvId) || {};
+  const cases=r.cases||[];
+  const fees=[...document.querySelectorAll(".rsFee")].map(i=>_raNum(i.value));
+  const total=fees.reduce((s,v)=>s+v,0);
+  if(total<=0){ toast("Enter the fee for at least one case.",true); return; }
+  const consolidated=!!(document.getElementById("rsConsolidated")||{}).checked;
+  const date=todayISO();
+  const db=defaultBank(), du=defaultUpi();
+  const lines = consolidated
+    ? [{desc:`Professional fees — statement of ${cases.length} case${cases.length!==1?"s":""} dated ${fmtDate(r.date)}`, amount:total}]
+    : cases.map((c,i)=>({desc:`${c.parties||c.code||"Case"}${c.num?" — "+c.num:""}`, amount:fees[i]||0})).filter(l=>l.amount>0);
+  const inv={ id:uid(), no:nextInvoiceNo(date), date, matterId:"",
+    noMatter:true, to:a.name||r.name||"", toAddr:a.addr||"", toPhone:a.phone||"", toEmail:a.email||"",
+    refAdvBill:true, refAdvId:r.refAdvId||"",
+    statementId:r.id,
+    style: consolidated?"consolidated":"itemised",
+    dueMode:"days", due:15,
+    bankId: db?db.id:"", upiId: du?du.id:"", showQr: !!du,
+    lines, expenses:[], notes: consolidated?`Per statement of cases dated ${fmtDate(r.date)}`:"", status:"raised" };
+  DB.invoices.push(inv);
+  r.invoiceId=inv.id;
+  logActivity("invoice", `Invoice ${inv.no} — ${fmtINR(total)} to ${inv.to} (statement ${fmtDate(r.date)})`, {ownerOnly:true, refId:inv.id});
+  save(); closeModal();
+  printInvoice(inv);
+  try{ if(r.refAdvKey) openRefAdvDetail(encodeURIComponent(r.refAdvKey)); }catch(e){}
+  toast(`Invoice ${inv.no} raised for this statement.`);
+}
+// Record the payment for a statement's invoice (reuses the invoice receipt flow).
+function _raStatementReceipt(sid){
+  const r=(DB.refStatements||[]).find(x=>x.id===sid); if(!r) return;
+  const {inv}=_raStatementBilling(r);
+  if(!inv){ toast("Raise the invoice for this statement first.",true); return; }
+  if(_invoicePaid(inv)){ toast("Payment for "+inv.no+" is already recorded.",true); return; }
+  _recordInvoicePayment(inv.id);
+}
+window._raBillStatement=_raBillStatement; window._doRaBillStatement=_doRaBillStatement;
+window._raStatementReceipt=_raStatementReceipt; window._rsApplyAll=_rsApplyAll; window._rsTotal=_rsTotal;
+window._raStatementBilling=_raStatementBilling;
+
 // After the statement is generated, offer the attached previous-list PDF(s) so the user
 // can send them alongside it.
 function _raEnclosuresPrompt(d){
@@ -5737,6 +5963,9 @@ function _doRecordInvoicePayment(invId){
     remarks: remarks || ("Against Invoice "+inv.no),
     invoiceId: inv.id };
   if(!inv.matterId){ rec.noMatter=true; rec.payer=inv.to||""; rec.payerLoc=inv.toAddr||""; rec.clientPhone=inv.toPhone||""; rec.clientEmail=inv.toEmail||""; }
+  // Carry the referring-advocate attribution across, so the receipt lands in that
+  // advocate's account (Billing & payments) exactly like the invoice it settles.
+  if(inv.refAdvBill||inv.refAdvId){ rec.refAdvBill=true; rec.refAdvId=inv.refAdvId||""; }
   DB.receipts.push(rec);
   if(!Array.isArray(DB.cash)) DB.cash=[];
   const label = inv.matterId?matterLabel(inv.matterId):(inv.to||"General");
@@ -14529,6 +14758,9 @@ function renderData(){
       <h2>Automatic snapshots</h2>
       <div class="hint">The app quietly saves a full snapshot of your data on this device once a day (the last several are kept). This is an automatic safety net — no action needed. You can download or restore any snapshot below. For an <b>off-device</b> copy, still use the monthly backup above.</div>
       <div id="snapList" class="note">Loading snapshots…</div>
+      <div style="border-top:1px solid var(--line);margin:14px 0 12px"></div>
+      <div class="hint" style="margin-bottom:8px"><b>Missing a statement, legal notice or reminder?</b> Until recently these were saved only on the device that created them, so signing out could lose them. This searches this device's snapshots and puts back anything missing — it never changes or removes what's already in the app.</div>
+      <button class="btn ghost sm" onclick="openRescueLost()">Recover lost records…</button>
     </div>
 
     <div class="card" style="border-color:var(--brass)">
@@ -18304,7 +18536,11 @@ const FB = {
 
   // ---- SYNC CONTROLLER ----
   // record collections that mirror DB arrays
-  COLLECTIONS: ["matters","receipts","expenses","cash","docsIn","docsFiled","invoices","advances","staff","trash","filings","appointments","todos","activity","staffRoster","salaryAdvances","salarySlips"],
+  // NOTE: refStatements / notices / reminders were LOCAL-ONLY until Aug 2026 — they never
+  // reached the cloud, so a logout (manual or the idle auto sign-out) wiped localStorage and
+  // destroyed them permanently while everything else restored from the cloud. They are
+  // owner-private, so they route to accounts/{uid}/… and need NO Firestore rules change.
+  COLLECTIONS: ["matters","receipts","expenses","cash","docsIn","docsFiled","invoices","advances","staff","trash","filings","appointments","todos","activity","staffRoster","salaryAdvances","salarySlips","refStatements","notices","reminders"],
   // SHARED collections live in a common chamber space both owner & staff use.
   // OWNER-ONLY collections (receipts, invoices, salary*) live in the owner's private account.
   SHARED: ["matters","expenses","cash","docsIn","docsFiled","advances","staff","trash","filings","appointments","todos","activity"],
@@ -18484,7 +18720,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.29-0100";
+  window.APP_VERSION = "2026.08.29-0200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
