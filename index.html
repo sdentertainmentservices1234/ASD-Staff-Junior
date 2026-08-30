@@ -295,6 +295,29 @@
   /* legacy (unused) */
   .lh,.doc-band,.doc-meta,.lh-rule,.doc-thanks,.doc-stamp{display:none}
 
+  /* ===== VAKALATNAMA — plain court-pleading look, deliberately NOT on the
+     chamber letterhead (no logo, no colour, no footer band). ===== */
+  .vak-doc{width:720px;background:#fff;color:#111;font-family:"Times New Roman",Georgia,serif;
+    font-size:14.5px;line-height:1.65;padding:14px 6px}
+  .vak-ct{text-align:center;font-weight:700;font-size:15.5px;letter-spacing:.01em;text-transform:uppercase}
+  .vak-jur{text-align:center;font-weight:700;font-size:13.5px;margin-top:2px}
+  .vak-type{text-align:center;font-weight:700;font-size:14.5px;margin-top:10px}
+  .vak-mtr{margin-top:22px;font-weight:700}
+  .vak-party{margin-top:14px;text-align:center;font-weight:700}
+  .vak-partylbl{text-align:right;font-style:italic;margin-top:2px}
+  .vak-versus{text-align:center;font-weight:700;margin-top:14px}
+  .vak-h1{text-align:center;font-weight:700;font-size:16px;letter-spacing:.3em;margin:28px 0 18px}
+  .vak-body{text-align:justify;margin-top:6px}
+  .vak-adv{text-align:center;font-weight:700;margin:16px 0}
+  .vak-adv-desig{font-weight:400;margin-top:2px}
+  .vak-adv-code{font-weight:400;margin-top:2px}
+  .vak-dated{margin-top:22px}
+  .vak-sign{margin-top:30px}
+  .vak-sign-line{margin-top:10px}
+  .vak-sign-rule{border-bottom:1px solid #111;margin-top:34px;width:100%}
+  .vak-memo{break-before:page;page-break-before:always;margin-top:40px}
+  @media print{ .vak-doc{width:100%} }
+
   /* ===== RECEIPT ===== */
   .rcpt-body{font-size:15px;line-height:1.9;color:#3a352e;margin:0;font-weight:400;max-width:560px}
   .rcpt-body b{color:#1a1a18;font-weight:600}
@@ -2397,6 +2420,7 @@ const DEFAULTS = () => ({
   myAppointments: [], // PERSONAL appointments (private to this account)
   invoices: [],    // fee invoices/memos {id,no,date,matterId,style,lines[],expenses[],notes,status}
   notices: [],     // legal notices {id,no,date,client,noticee,noticeeAddr,body}
+  vakalatnamas: [], // {id,date,matterId,forum,matterType,courtHeading,jurisdictionLine,typeLine,partyA/B(+Label),role,executants[],otherAdvocates,includeMemo,memoAddressee}
   counters: { receipt: 0, matter: 0, voucher: 0, invoice: 0, query: 0, pastcase: 0, staffRoster: 0, salarySlip: 0, notice: 0 },
   staff: [],       // roster: {uid, email, name, status:'pending'|'approved'|'blocked', addedAt, approvedAt}
   advances: [],    // float ledger: {id, staffUid, staffName, date, type:'advance'|'return'|'expense', amount, note, expenseId?, mode}
@@ -5621,8 +5645,8 @@ function _openPrintView(title){
       // Scale the whole document down to fit the device width via zoom on #receiptArea
       // (collapses layout cleanly, unlike transform:scale) so EVERY page shows — not just
       // the first. Multi-doc prints (e.g. invoice + receipt) stack and are all visible.
-      ".tpl,.tpl-list{box-shadow:0 4px 24px rgba(0,0,0,.12);margin:0 auto 18px !important}"+
-      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}body{background:#fff;padding:0}.tpl,.tpl-list{box-shadow:none;margin:0 auto !important}.__pbar{display:none !important}.__pgwrap{display:block}#receiptArea{zoom:1 !important}}"+
+      ".tpl,.tpl-list,.vak-doc{box-shadow:0 4px 24px rgba(0,0,0,.12);margin:0 auto 18px !important}"+
+      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}body{background:#fff;padding:0}.tpl,.tpl-list,.vak-doc{box-shadow:none;margin:0 auto !important}.__pbar{display:none !important}.__pgwrap{display:block}#receiptArea{zoom:1 !important}}"+
       ".__pbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;"+
       "padding:12px;background:#fff;border-top:1px solid #e7e0d4;z-index:9}"+
       ".__pbar button{border:none;border-radius:8px;padding:12px 20px;font-size:15px;font-weight:600;cursor:pointer}"+
@@ -5633,7 +5657,7 @@ function _openPrintView(title){
       "<button class='__pbtn-close' onclick='window.close()'>Close</button>"+
       "</div>"+
       "<script>(function(){function fit(){try{var area=document.getElementById('receiptArea');if(!area)return;"+
-      "var first=area.querySelector('.tpl,.tpl-list');if(!first)return;"+
+      "var first=area.querySelector('.tpl,.tpl-list,.vak-doc');if(!first)return;"+
       "area.style.zoom='';var w=first.offsetWidth||794;var avail=document.documentElement.clientWidth-16;"+
       "var s=avail<w?(avail/w):1;area.style.zoom=s;"+
       "}catch(e){}}window.addEventListener('load',fit);window.addEventListener('resize',fit);setTimeout(fit,60);})();</"+"script>"+
@@ -5655,6 +5679,9 @@ function _tplReserveForPrint(){
     // Table-based documents (tableised at print time) repeat header/footer via
     // thead/tfoot and reserve their own space — just give the page a plain margin.
     if(area.querySelector(".tpl-paged")){ st0.textContent="@media print{@page{margin:7mm;size:A4;}}"; return; }
+    // Plain court-pleading documents (vakalatnama): no running header/footer at all, so
+    // just give the page normal, generous pleading margins — no measured-band dance needed.
+    if(area.querySelector(".vak-doc")){ st0.textContent="@media print{@page{margin:25mm 20mm;size:A4;}}"; return; }
     var foot=area.querySelector(".tpl-foot");
     var rh=area.querySelector(".tpl-run-head");
     var isNotice=!!area.querySelector(".tpl-notice");
@@ -6742,6 +6769,386 @@ function _delNotice(id){
   save();
   _renderNoticeRegister();
 }
+
+/* ===========================================================
+   VAKALATNAMA — plain, not on letterhead (real court pleading look).
+   Every field the document prints is stored VERBATIM on the record at
+   save time (auto-suggested from the linked matter / case type, but
+   always user-editable before saving) — render() just plugs those
+   strings into the fixed skeleton, so what was approved in the form
+   is exactly what prints, with no re-derivation drift.
+   =========================================================== */
+const VK_APPELLATE_TYPES=["SLP (Civil)","SLP (Criminal)","Civil Appeal","Criminal Appeal",
+  "Transfer Petition (Civil)","Transfer Petition (Criminal)","Transferred Case (Civil)","Transferred Case (Criminal)",
+  "Review Petition (Civil)","Review Petition (Criminal)","Curative Petition (Civil)","Curative Petition (Criminal)",
+  "Contempt Petition (Civil)","Contempt Petition (Criminal)"];
+const VK_TYPE_FULLNAME={
+  "SLP (Civil)":"SPECIAL LEAVE PETITION (CIVIL)","SLP (Criminal)":"SPECIAL LEAVE PETITION (CRIMINAL)",
+  "Civil Appeal":"CIVIL APPEAL","Criminal Appeal":"CRIMINAL APPEAL",
+  "Writ Petition (Civil)":"WRIT PETITION (CIVIL)","Writ Petition (Criminal)":"WRIT PETITION (CRIMINAL)",
+  "Transfer Petition (Civil)":"TRANSFER PETITION (CIVIL)","Transfer Petition (Criminal)":"TRANSFER PETITION (CRIMINAL)",
+  "Transferred Case (Civil)":"TRANSFERRED CASE (CIVIL)","Transferred Case (Criminal)":"TRANSFERRED CASE (CRIMINAL)",
+  "Review Petition (Civil)":"REVIEW PETITION (CIVIL)","Review Petition (Criminal)":"REVIEW PETITION (CRIMINAL)",
+  "Curative Petition (Civil)":"CURATIVE PETITION (CIVIL)","Curative Petition (Criminal)":"CURATIVE PETITION (CRIMINAL)",
+  "Contempt Petition (Civil)":"CONTEMPT PETITION (CIVIL)","Contempt Petition (Criminal)":"CONTEMPT PETITION (CRIMINAL)",
+  "Arbitration Petition":"ARBITRATION PETITION","Interim Application (Impleadment/Intervention)":"INTERIM APPLICATION",
+  "Original Suit":"ORIGINAL SUIT","Election Petition":"ELECTION PETITION",
+  "Special Reference Case":"SPECIAL REFERENCE CASE","Tax Reference Case":"TAX REFERENCE CASE"
+};
+const VK_ROLE_PLURAL={"Petitioner":"Petitioners","Appellant":"Appellants","Applicant":"Applicants","Complainant":"Complainants",
+  "Plaintiff":"Plaintiffs","Revisionist":"Revisionists","Respondent":"Respondents","Defendant":"Defendants",
+  "Opposite Party":"Opposite Parties","Caveator":"Caveators","Accused":"Accused","Intervenor":"Intervenors",
+  "Impleaded Party":"Impleaded Parties","Proforma Respondent":"Proforma Respondents","Other":"Others"};
+// Court heading — courts get "IN THE …"; regulatory/other bodies (Bar Council etc.) are cited as-is.
+function _vkCourtHeading(forum){
+  const f=(forum||"Supreme Court of India").trim();
+  if(/^Supreme Court|^High Court/i.test(f)) return "IN THE "+f.toUpperCase();
+  return f.toUpperCase();
+}
+function _vkJurisdictionLine(type){
+  if(!type || VK_APPELLATE_TYPES.indexOf(type)<0) return "";
+  return /Criminal/.test(type) ? "(CRIMINAL APPELLATE JURISDICTION)" : "(CIVIL APPELLATE JURISDICTION)";
+}
+function _vkTypeLine(type, caseNo, dateISO){
+  const yr = dateISO ? new Date(dateISO+"T00:00:00").getFullYear() : new Date().getFullYear();
+  const full = VK_TYPE_FULLNAME[type] || (type||"").toUpperCase() || "PETITION";
+  const numPart = (caseNo||"").trim();
+  return full+" NO. "+(numPart ? numPart.replace(/^[A-Za-z.()\/ ]*?(?=\d)/,"") : "       OF "+yr);
+}
+function _vkDocNoun(type){ return /Appeal/.test(type||"") ? "Appeal" : "Petition"; }
+function _vkPartyLabels(type){
+  return /Appeal/.test(type||"") ? {a:"Appellant(s)",b:"Respondent(s)"} : {a:"Petitioner(s)",b:"Respondent(s)"};
+}
+// Split "X v. Y" / "X vs Y" / "X versus Y" style cause titles into two sides.
+function _vkSplitParties(parties){
+  const s=String(parties||"").trim();
+  const m=s.match(/^(.*?)\s+(?:v\.?s?\.?|versus)\s+(.*)$/i);
+  return m ? {a:m[1].trim(), b:m[2].trim()} : {a:s, b:""};
+}
+function _vkRoleWord(role, n){
+  role = role||"Petitioner";
+  return (n>1) ? (VK_ROLE_PLURAL[role]||role+"s") : role;
+}
+// Renders "___" (person) or "(1) A, residing at X, (2) B, residing at Y" for 2+.
+function _vkExecList(execs){
+  const list=(execs||[]).filter(e=>e && (e.name||e.address));
+  if(!list.length) return `<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>, residing at <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>`;
+  if(list.length===1) return `<b>${esc(list[0].name||"—")}</b>, residing at ${esc(list[0].address||"—")}`;
+  return list.map((e,i)=>`(${i+1}) <b>${esc(e.name||"—")}</b>, residing at ${esc(e.address||"—")}`).join(", ");
+}
+function vakalatnamas(){ return DB.vakalatnamas||[]; }
+// ---- Form (gate overlay, matches the legal-notice / notice-register visual pattern) ----
+function _vkF(l,id,v,ph){ return `<div style="margin-top:10px"><label style="display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">${l}</label><input id="${id}" value="${esc(v||"")}" placeholder="${esc(ph||"")}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff"></div>`; }
+function _vkSel(l,id,opts,v,onchange){ return `<div style="margin-top:10px"><label style="display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">${l}</label><select id="${id}" ${onchange?`onchange="${onchange}"`:""} style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff">${opts.map(o=>`<option value="${esc(o)}" ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`; }
+// A single-line <input> silently strips newlines from its value — use this for any field
+// (like the Memo of Appearance addressee) that needs to keep line breaks.
+function _vkA(l,id,v,rows){ return `<div style="margin-top:10px"><label style="display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">${l}</label><textarea id="${id}" rows="${rows||3}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;resize:vertical">${esc(v||"")}</textarea></div>`; }
+function openVakalatnama(existingId){
+  const ed = existingId ? (DB.vakalatnamas||[]).find(x=>x.id===existingId) : null;
+  window._vkEditId = ed ? ed.id : null;
+  const preM = ed && ed.matterId ? matterById(ed.matterId) : null;
+  const g=document.getElementById("vkGate"); if(g) g.remove();
+  const ov=document.createElement("div"); ov.id="vkGate";
+  ov.style.cssText="position:fixed;inset:0;z-index:8600;background:rgba(30,24,18,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto";
+  const matterOpts=`<option value="">— Not yet filed / no case selected —</option>`+
+    (DB.matters||[]).filter(m=>!isVoided(m)).sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true}))
+      .map(m=>`<option value="${m.id}" ${ed&&ed.matterId===m.id?"selected":""}>${esc(m.code)} · ${esc(m.parties||m.client||"")}</option>`).join("");
+  const v = ed || {};
+  const forum = v.forum || (preM&&preM.court) || "Supreme Court of India";
+  const type = v.matterType || (preM&&preM.matterType) || "SLP (Civil)";
+  const execs = (v.executants&&v.executants.length) ? v.executants : [{name:preM?preM.client:"", address:preM?preM.address:""}];
+  ov.innerHTML=`<div style="background:var(--paper2,#fffdf8);border-top:3px solid var(--brass,#9a7b3f);border-radius:16px;max-width:680px;width:100%;padding:22px 24px;box-shadow:0 24px 60px rgba(12,4,4,.4)">
+    <div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;font-size:17px;font-weight:700;color:var(--ink)">${ed?"Edit vakalatnama":"Vakalatnama"}</div>
+    <div style="font-size:12.5px;color:var(--muted);margin:2px 0 14px">A plain document, not on your letterhead — matches how it will actually be filed. Every field is auto-suggested and editable; check it carefully before printing.</div>
+
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--seal);margin-top:14px">Link to a case (optional)</div>
+    <div style="margin-top:10px"><label style="display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">Matter</label>
+      <select id="vkMatter" onchange="_vkOnMatterChange()" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff">${matterOpts}</select></div>
+    <div class="hint" style="margin-top:4px">Not filed yet? Leave this as "Not yet filed" — you can link it to the case once it is registered, from the Vakalatnama register.</div>
+
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--seal);margin-top:16px">Court / forum &amp; case details</div>
+    <div class="grid g2">${_vkSel("Forum","vkForum",FORUMS,forum,"_vkOnTypeChange()")}${_vkSel("Case type","vkType",typesForForum(forum).length?typesForForum(forum):SC_TYPES,type,"_vkOnTypeChange()")}</div>
+    ${_vkF("Court heading (as it will print)","vkCourtHeading",v.courtHeading||_vkCourtHeading(forum))}
+    ${_vkF("Jurisdiction line (leave blank if none)","vkJurisdictionLine",v.jurisdictionLine!=null?v.jurisdictionLine:_vkJurisdictionLine(type),"e.g. (CIVIL APPELLATE JURISDICTION)")}
+    ${_vkF("Case type &amp; No. line (as it will print)","vkTypeLine",v.typeLine||_vkTypeLine(type, preM?preM.caseNo:"", v.date||todayISO()))}
+    <div class="grid g2" style="margin-top:10px">
+      <div>${_vkF("Petitioner-side name(s)","vkPartyA",v.partyA!=null?v.partyA:(preM?_vkSplitParties(preM.parties).a:""),"Ramesh Patil")}
+        ${_vkF("Label","vkPartyALabel",v.partyALabel||_vkPartyLabels(type).a)}</div>
+      <div>${_vkF("Respondent-side name(s)","vkPartyB",v.partyB!=null?v.partyB:(preM?_vkSplitParties(preM.parties).b:""),"State of Maharashtra")}
+        ${_vkF("Label","vkPartyBLabel",v.partyBLabel||_vkPartyLabels(type).b)}</div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--seal);margin-top:16px">Who is executing this vakalatnama</div>
+    ${_vkSel("Being the","vkRole",PARTY_ROLES,v.role||(preM&&preM.appearFor)||"Petitioner")}
+    <div id="vkExecRows" style="margin-top:8px">${_vkExecRowsHTML(execs)}</div>
+    <button type="button" class="btn ghost sm" style="margin-top:6px" onclick="_vkAddExecutant()">+ Add another executant</button>
+
+    ${_vkF("Also appointing (other advocates) — optional","vkOtherAdv",v.otherAdvocates||"","e.g. Ms. K. Rao, Advocate")}
+    <div class="grid g2" style="margin-top:10px"><div><label class="fld">Date</label><input class="in" type="date" id="vkDate" value="${esc(v.date||todayISO())}"></div>
+      <div><label class="fld" style="display:flex;align-items:center;gap:8px;margin-top:26px"><input type="checkbox" id="vkMemo" ${(v.includeMemo!=null?v.includeMemo:/^Supreme Court|^High Court/i.test(forum))?"checked":""}> Include Memo of Appearance</label></div></div>
+    <div id="vkMemoAddrWrap">${_vkA("Memo of Appearance addressed to","vkMemoAddr",v.memoAddressee||(/^Supreme Court/i.test(forum)?"The Registrar\nSupreme Court of India\nNew Delhi.":"The Registrar\n"+forum+"."),3)}</div>
+
+    <div style="display:flex;gap:9px;margin-top:16px;align-items:center">
+      <button onclick="_vkGo(false)" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--seal,#6b1f1f);color:#f6efe0;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit">${ed?"Save → Print / PDF":"Save → Print / PDF"}</button>
+      <button onclick="document.getElementById('vkGate').remove()" style="padding:12px 14px;border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function _vkExecRowsHTML(execs){
+  return execs.map((e,i)=>`<div class="vkExecRow" data-i="${i}" style="display:flex;gap:8px;margin-bottom:7px;align-items:flex-start">
+    <input class="vkExecName in" value="${esc(e.name||"")}" placeholder="Full name" style="flex:1">
+    <input class="vkExecAddr in" value="${esc(e.address||"")}" placeholder="Residing at (address)" style="flex:2">
+    ${execs.length>1?`<button type="button" class="row-act" onclick="_vkRemoveExecutant(this)" title="Remove">✕</button>`:""}
+  </div>`).join("");
+}
+function _vkCollectExecutants(){
+  return [...document.querySelectorAll(".vkExecRow")].map(r=>({name:r.querySelector(".vkExecName").value.trim(), address:r.querySelector(".vkExecAddr").value.trim()}));
+}
+function _vkAddExecutant(){
+  const list=_vkCollectExecutants(); list.push({name:"",address:""});
+  document.getElementById("vkExecRows").innerHTML=_vkExecRowsHTML(list);
+}
+function _vkRemoveExecutant(btn){
+  const list=_vkCollectExecutants();
+  const idx=+btn.closest(".vkExecRow").getAttribute("data-i");
+  list.splice(idx,1);
+  document.getElementById("vkExecRows").innerHTML=_vkExecRowsHTML(list.length?list:[{name:"",address:""}]);
+}
+// Re-suggest the case-detail fields when the linked matter changes (never overwrites
+// fields the user has already hand-edited beyond what's currently shown as the suggestion).
+function _vkOnMatterChange(){
+  const mid=(document.getElementById("vkMatter")||{}).value;
+  const m=mid?matterById(mid):null;
+  if(!m) return;
+  const set=(id,val)=>{const e=document.getElementById(id); if(e) e.value=val;};
+  set("vkForum", m.court||"Supreme Court of India");
+  const typeSel=document.getElementById("vkType");
+  const opts=typesForForum(m.court||"Supreme Court of India");
+  typeSel.innerHTML=(opts.length?opts:SC_TYPES).map(o=>`<option ${o===(m.matterType||"")?"selected":""}>${esc(o)}</option>`).join("");
+  const sp=_vkSplitParties(m.parties||"");
+  set("vkPartyA", sp.a); set("vkPartyB", sp.b);
+  set("vkRole", m.appearFor||"Petitioner");
+  const execRows=document.getElementById("vkExecRows");
+  if(execRows) execRows.innerHTML=_vkExecRowsHTML([{name:m.client||"", address:m.address||""}]);
+  _vkOnTypeChange();
+}
+function _vkOnTypeChange(){
+  const forum=(document.getElementById("vkForum")||{}).value||"Supreme Court of India";
+  const type=(document.getElementById("vkType")||{}).value||"";
+  const mid=(document.getElementById("vkMatter")||{}).value;
+  const m=mid?matterById(mid):null;
+  const set=(id,val)=>{const e=document.getElementById(id); if(e) e.value=val;};
+  set("vkCourtHeading", _vkCourtHeading(forum));
+  set("vkJurisdictionLine", _vkJurisdictionLine(type));
+  set("vkTypeLine", _vkTypeLine(type, m?m.caseNo:"", (document.getElementById("vkDate")||{}).value||todayISO()));
+  const lbl=_vkPartyLabels(type);
+  set("vkPartyALabel", lbl.a); set("vkPartyBLabel", lbl.b);
+  const memoChk=document.getElementById("vkMemo");
+  if(memoChk) memoChk.checked=/^Supreme Court|^High Court/i.test(forum);
+  set("vkMemoAddr", /^Supreme Court/i.test(forum)?"The Registrar\nSupreme Court of India\nNew Delhi.":"The Registrar\n"+forum+".");
+}
+window._vkOnMatterChange=_vkOnMatterChange; window._vkOnTypeChange=_vkOnTypeChange;
+window._vkAddExecutant=_vkAddExecutant; window._vkRemoveExecutant=_vkRemoveExecutant;
+function _vkGo(bw){
+  const g=id=>{const e=document.getElementById(id); return e?e.value.trim():"";};
+  const matterId=(document.getElementById("vkMatter")||{}).value||"";
+  const execs=_vkCollectExecutants().filter(e=>e.name||e.address);
+  const partyA=g("vkPartyA"), partyB=g("vkPartyB");
+  if(!execs.length){ toast("Enter at least the executant's name.",true); return; }
+  if(!partyA){ toast("Enter the Petitioner-side name.",true); return; }
+  const editId=window._vkEditId||null;
+  const rec = editId ? (DB.vakalatnamas||[]).find(x=>x.id===editId) : { id:uid() };
+  Object.assign(rec, {
+    matterId, date:g("vkDate")||todayISO(),
+    forum:g("vkForum"), matterType:g("vkType"),
+    courtHeading:g("vkCourtHeading"), jurisdictionLine:g("vkJurisdictionLine"), typeLine:g("vkTypeLine"),
+    partyA, partyALabel:g("vkPartyALabel")||"Petitioner(s)", partyB, partyBLabel:g("vkPartyBLabel")||"Respondent(s)",
+    role:g("vkRole")||"Petitioner", executants:execs,
+    otherAdvocates:g("vkOtherAdv"),
+    includeMemo: !!(document.getElementById("vkMemo")||{}).checked,
+    memoAddressee:g("vkMemoAddr")
+  });
+  if(!editId){ DB.vakalatnamas=DB.vakalatnamas||[]; DB.vakalatnamas.push(rec); }
+  else rec.editedOn=todayISO();
+  logActivity && logActivity("vakalatnama", (editId?"Edited":"Generated")+" vakalatnama — "+(partyA||"")+(partyB?" v. "+partyB:""), {ownerOnly:true, refId:rec.id});
+  save();
+  window._vkEditId=null;
+  const gate=document.getElementById("vkGate"); if(gate) gate.remove();
+  printVakalatnama(rec, {bw:!!bw});
+}
+window.openVakalatnama=openVakalatnama; window._vkGo=_vkGo;
+// ---- Render / print (plain document — NOT the chamber letterhead) ----
+function printVakalatnama(v, opts){
+  opts=opts||{};
+  const area=document.getElementById("receiptArea");
+  const s=DB.settings||{};
+  const advName=(s.advName||"Advocate").toUpperCase();
+  const isSC=/^Supreme Court/i.test(v.forum||"");
+  const advDesig = isSC ? "Advocate-on-Record" : (s.designation||"Advocate");
+  const advCode = isSC && s.aorCode ? "CODE-"+String(s.aorCode).replace(/[^0-9A-Za-z-]/g,"")
+                 : (s.barId||s.enrolmentNo) ? "Enrolment No. "+(s.barId||s.enrolmentNo) : "";
+  const n=(v.executants||[]).length;
+  const roleWord=_vkRoleWord(v.role, n);
+  const dt = v.date ? new Date(v.date+"T00:00:00") : new Date();
+  const dateLine = `Dated this the ${dt.getDate()} day of ${dt.toLocaleString("en-IN",{month:"long"})} ${dt.getFullYear()}`;
+  const memoAddr = (v.memoAddressee||"").split("\n").filter(Boolean).map(l=>esc(l)).join("<br>");
+  area.innerHTML = `
+  <div class="vak-doc">
+    <div class="vak-ct">${esc(v.courtHeading||"")}</div>
+    ${v.jurisdictionLine?`<div class="vak-jur">${esc(v.jurisdictionLine)}</div>`:""}
+    <div class="vak-type">${esc(v.typeLine||"")}</div>
+    <div class="vak-mtr">IN THE MATTER OF:-</div>
+    <div class="vak-party">${esc(v.partyA||"")}</div>
+    <div class="vak-partylbl">…${esc(v.partyALabel||"Petitioner(s)")}</div>
+    <div class="vak-versus">Versus</div>
+    <div class="vak-party">${esc(v.partyB||"")}</div>
+    <div class="vak-partylbl">…${esc(v.partyBLabel||"Respondent(s)")}</div>
+    <div class="vak-h1">V A K A L A T N A M A</div>
+    <div class="vak-body">
+      I/We, ${_vkExecList(v.executants)}, being the ${esc(roleWord)}, in the above ${esc(_vkDocNoun(v.matterType))} do hereby appoint and retain
+    </div>
+    <div class="vak-adv">
+      <div class="vak-adv-name">${esc(advName)}</div>
+      <div class="vak-adv-desig">${esc(advDesig)}</div>
+      ${advCode?`<div class="vak-adv-code">${esc(advCode)}</div>`:""}
+      ${v.otherAdvocates?`<div class="vak-adv-code">along with ${esc(v.otherAdvocates)}</div>`:""}
+    </div>
+    <div class="vak-body">
+      of the ${esc(v.forum||"")} to act and appear for me/us in the above ${esc(_vkDocNoun(v.matterType))} and on my/our behalf to conduct (or defend) the same and all proceedings that may be taken in respect of any application connected with the same or any decree or order passed therein, including proceedings in taxation and applications for Review, to file and obtain return of documents and to deposit and receive money on my/our behalf in the said ${esc(_vkDocNoun(v.matterType))} and in application for Review, and to represent me/us and to take all necessary steps on my/our behalf in the above matter. I/We agree to ratify all acts done by the aforesaid Advocates in pursuance of this authority.
+    </div>
+    <div class="vak-dated">${dateLine}</div>
+    <div class="vak-sign">
+      <div>Put Signature(s)/Thumb impression below</div>
+      <div style="margin-top:16px">Accepted &amp; Identified &amp; satisfied:</div>
+      <div class="vak-sign-line">Adv.____________________________</div>
+      <div style="margin-top:26px">Client(s)</div>
+      <div class="vak-sign-rule"></div>
+    </div>
+    ${v.includeMemo?`
+    <div class="vak-memo">
+      <div class="vak-h1">MEMO OF APPEARANCE</div>
+      <div style="margin-top:14px">To</div>
+      <div>${memoAddr}</div>
+      <div style="margin-top:14px">Sir,</div>
+      <div style="margin-top:6px">Please enter an appearance for the above named ${esc(v.partyALabel||"Petitioner(s)")} in the above mentioned ${esc(_vkDocNoun(v.matterType))}-case-appeal-matter.</div>
+      <div style="margin-top:20px">Yours faithfully,</div>
+      <div class="vak-sign-line" style="margin-top:34px">${esc(advName)}</div>
+      ${advCode?`<div>${esc(advCode)}</div>`:""}
+      <div style="margin-top:10px">Dated:</div>
+    </div>`:""}
+  </div>`;
+  if(opts.noPrint) return;
+  _printAs("Vakalatnama"+(v.partyA?(" — "+v.partyA.replace(/[\/\\]/g,"-")):""));
+}
+function _previewVakalatnama(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Not found.",true); return; }
+  printVakalatnama(v,{noPrint:true});
+  _openPrintView("Vakalatnama — "+(v.partyA||""));
+}
+window.printVakalatnama=printVakalatnama; window._previewVakalatnama=_previewVakalatnama;
+// ---- Register ----
+function openVakalatnamaRegister(){
+  const ov0=document.getElementById("vkrGate"); if(ov0) ov0.remove();
+  const ov=document.createElement("div"); ov.id="vkrGate";
+  ov.style.cssText="position:fixed;inset:0;z-index:8500;background:rgba(30,24,18,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto";
+  ov.innerHTML=`<div style="background:var(--paper2,#fffdf8);border-top:3px solid var(--brass,#9a7b3f);border-radius:16px;max-width:820px;width:100%;padding:22px 24px;box-shadow:0 24px 60px rgba(12,4,4,.4)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="flex:1"><div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;font-size:17px;font-weight:700;color:var(--ink)">Vakalatnamas</div>
+      <div style="font-size:12.5px;color:var(--muted)">Every vakalatnama generated from this chamber, most recent first.</div></div>
+      <button onclick="openVakalatnama();document.getElementById('vkrGate').remove()" style="padding:9px 14px;border:none;border-radius:9px;background:var(--seal,#6b1f1f);color:#f6efe0;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ New vakalatnama</button>
+      <button onclick="document.getElementById('vkrGate').remove()" style="padding:9px 12px;border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;font-family:inherit">×</button>
+    </div><div id="vkrBody"></div></div>`;
+  document.body.appendChild(ov);
+  _renderVakalatnamaRegister();
+}
+function _renderVakalatnamaRegister(){
+  const el=document.getElementById("vkrBody"); if(!el) return;
+  const list=[...(DB.vakalatnamas||[])].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+  if(!list.length){ el.innerHTML=`<div style="padding:20px 4px;color:var(--muted);font-size:13.5px">No vakalatnamas generated yet. Use "+ New vakalatnama" to create the first one.</div>`; return; }
+  const rows=list.map(v=>{
+    const m=v.matterId?matterById(v.matterId):null;
+    const linkChip = m ? `<span class="tag active">${esc(m.code)}</span>` : `<span class="hint">Not filed / unlinked</span>`;
+    return `<tr>
+      <td style="white-space:nowrap">${fmtDate(v.date)}${v.editedOn?` <span class="hint">(edited)</span>`:""}</td>
+      <td><b>${esc(v.partyA||"")}</b>${v.partyB?` <span class="hint">v. ${esc(v.partyB)}</span>`:""}
+        <div style="font-size:11.5px;color:var(--muted)">${esc(v.matterType||"")}</div></td>
+      <td>${linkChip}</td>
+      <td style="white-space:nowrap"><button class="row-act" onclick="_previewVakalatnama('${v.id}')">View</button><button class="row-act" onclick="_vkActions('${v.id}')" aria-label="More actions" title="More actions">⋯</button></td>
+    </tr>`;
+  }).join("");
+  el.innerHTML=`<div class="tbl-wrap"><table class="sr-num">
+    <thead><tr><th>Date</th><th>Parties</th><th>Case</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:10px">${list.length} vakalatnama${list.length!==1?"s":""} on record.</div>`;
+}
+function _vkActions(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Not found.",true); return; }
+  const rows=[{t:"View",f:`_previewVakalatnama('${id}')`,seal:1},{t:"Print / Save",f:`printVakalatnama(_vkRec('${id}'))`},
+    {t:"Share",f:`shareVakalatnama('${id}')`},{t:"Edit",f:`openVakalatnama('${id}')`},
+    {t:v.matterId?"Change linked case":"Link to a case",f:`_vkLinkToMatter('${id}')`},
+    {t:"Delete",f:`_delVakalatnama('${id}')`,danger:1}];
+  const btns=rows.map(a=>`<button class="btn ${a.seal?'seal':'ghost'}" ${a.danger?'style="color:#8c2f39;border-color:#e2b8b8"':''} onclick="closeModal();${a.f}">${esc(a.t)}</button>`).join("");
+  openModal("Vakalatnama — "+(v.partyA||""), `<div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">${btns}</div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+}
+function _vkRec(id){ return (DB.vakalatnamas||[]).find(x=>x.id===id); }
+async function shareVakalatnama(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v) return;
+  const text=`Vakalatnama dated ${fmtDate(v.date)}\n${v.partyA||""}${v.partyB?" v. "+v.partyB:""}\n${v.typeLine||""}`;
+  if(_webShareSupported){ try{ await navigator.share({title:"Vakalatnama",text}); return; }catch(e){ if(e&&e.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); toast("Copied — paste it into WhatsApp or email."); }catch(e){}
+}
+function _delVakalatnama(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v) return;
+  if(!confirm("Delete this vakalatnama from the register?")) return;
+  DB.vakalatnamas=(DB.vakalatnamas||[]).filter(x=>x.id!==id);
+  save(); _renderVakalatnamaRegister();
+  try{ renderAll(); }catch(e){}
+}
+function _vkLinkToMatter(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v) return;
+  const opts=`<option value="">— No case (unlink) —</option>`+
+    (DB.matters||[]).filter(m=>!isVoided(m)).sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true}))
+      .map(m=>`<option value="${m.id}" ${v.matterId===m.id?"selected":""}>${esc(m.code)} · ${esc(m.parties||m.client||"")}</option>`).join("");
+  openModal("Link vakalatnama to a case", `<div class="hint">Once the case is filed and numbered, link this vakalatnama to it. The vakalatnama's own text is not changed — this only records where it belongs.</div>
+    <select class="in" id="vkLinkSel" style="margin-top:10px">${opts}</select>
+    <div class="btn-row" style="margin-top:14px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn seal" onclick="_doVkLink('${id}')">Save</button></div>`);
+}
+function _doVkLink(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v) return;
+  v.matterId=(document.getElementById("vkLinkSel")||{}).value||"";
+  save(); closeModal(); toast(v.matterId?"Linked to the case.":"Unlinked.");
+  try{ _renderVakalatnamaRegister(); }catch(e){}
+  try{ renderAll(); }catch(e){}
+}
+window.openVakalatnamaRegister=openVakalatnamaRegister; window._renderVakalatnamaRegister=_renderVakalatnamaRegister;
+window._vkActions=_vkActions; window._vkRec=_vkRec; window.shareVakalatnama=shareVakalatnama;
+window._delVakalatnama=_delVakalatnama; window._vkLinkToMatter=_vkLinkToMatter; window._doVkLink=_doVkLink;
+window.vakalatnamas=vakalatnamas;
+// ---- Matter-detail card: shows any linked vakalatnama(s), or an offer to create one ----
+function _vkMatterCard(m){
+  if(!m||!m.id) return "";
+  const list=(DB.vakalatnamas||[]).filter(v=>v.matterId===m.id).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+  if(!list.length) return `<div class="card">
+    <div class="card-head"><div><h2>Vakalatnama</h2><div class="hint">No vakalatnama linked to this case yet.</div></div>
+      <button class="btn ghost sm" onclick="_vkNewForMatter('${m.id}')">+ Generate</button></div>
+  </div>`;
+  const rows=list.map(v=>`<div class="lrow"><div class="l"><div class="t">${esc(v.executants&&v.executants[0]&&v.executants[0].name||v.partyA||"Executant")}</div>
+    <div class="s">${fmtDate(v.date)} · ${esc(v.matterType||"")}</div></div>
+    <div><button class="row-act" onclick="_previewVakalatnama('${v.id}')">View</button><button class="row-act" onclick="_vkActions('${v.id}')" aria-label="More actions" title="More actions">⋯</button></div></div>`).join("");
+  return `<div class="card">
+    <div class="card-head"><div><h2>Vakalatnama</h2><div class="hint">${list.length} on record for this case.</div></div>
+      <button class="btn ghost sm" onclick="_vkNewForMatter('${m.id}')">+ Add another</button></div>
+    <div class="lrows">${rows}</div>
+  </div>`;
+}
+function _vkNewForMatter(matterId){
+  window._vkEditId=null;
+  openVakalatnama();
+  setTimeout(()=>{ const sel=document.getElementById("vkMatter"); if(sel){ sel.value=matterId; _vkOnMatterChange(); } }, 30);
+}
+window._vkMatterCard=_vkMatterCard; window._vkNewForMatter=_vkNewForMatter;
 
 /* ===========================================================
    EXPENSE VOUCHER (generated for expenses over the threshold)
@@ -12039,6 +12446,7 @@ function renderMatterDetail(){
     </div>
     ${staff?"":_matterFeeStrip(m)}
     ${_matterListingsCard(m)}
+    ${staff?"":_vkMatterCard(m)}
     ${_scLinksCard(m)}
 
     <div class="card">
@@ -17413,6 +17821,7 @@ function renderMoreMenu(){
     item("openClients()",HOME_ICONS.matters,"Clients","Every client — their matters, notices &amp; dues"),
     item("openRefAdvocates()",HOME_ICONS.matters,"Referring advocates","Who sends you work — every matter referred"),
     item("openNoticeRegister()",HOME_ICONS.documents,"Legal notices","Issue &amp; register notices on your letterhead"),
+    item("openVakalatnamaRegister()",HOME_ICONS.documents,"Vakalatnamas","Generate, register &amp; link to a case"),
     item("openSub('pastcases')",HOME_ICONS.pastcases,"Past cases register","Concluded &amp; historical"),
     item("openSub('unassigned')",HOME_ICONS.unassigned,"Unassigned","Records with no case number"),
     item("openSub('archive')",HOME_ICONS.registers,"Archive","By month &amp; year"),
@@ -18540,7 +18949,7 @@ const FB = {
   // reached the cloud, so a logout (manual or the idle auto sign-out) wiped localStorage and
   // destroyed them permanently while everything else restored from the cloud. They are
   // owner-private, so they route to accounts/{uid}/… and need NO Firestore rules change.
-  COLLECTIONS: ["matters","receipts","expenses","cash","docsIn","docsFiled","invoices","advances","staff","trash","filings","appointments","todos","activity","staffRoster","salaryAdvances","salarySlips","refStatements","notices","reminders"],
+  COLLECTIONS: ["matters","receipts","expenses","cash","docsIn","docsFiled","invoices","advances","staff","trash","filings","appointments","todos","activity","staffRoster","salaryAdvances","salarySlips","refStatements","notices","reminders","vakalatnamas"],
   // SHARED collections live in a common chamber space both owner & staff use.
   // OWNER-ONLY collections (receipts, invoices, salary*) live in the owner's private account.
   SHARED: ["matters","expenses","cash","docsIn","docsFiled","advances","staff","trash","filings","appointments","todos","activity"],
@@ -18720,7 +19129,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.29-0200";
+  window.APP_VERSION = "2026.08.29-0300";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
