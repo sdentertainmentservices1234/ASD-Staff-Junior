@@ -244,8 +244,11 @@
   .toast-undo:hover{background:rgba(253,249,240,.15)}
 
   /* ---------- modal ---------- */
+  /* Above the overlay panels (registers/forms sit at 8500–8700), so a menu opened
+     from inside one appears ON TOP of it instead of behind. Still below the blocking
+     system overlays: cloud/access gates (9000–9200), the lock screen and toasts. */
   .modal-bg{position:fixed;inset:0;background:rgba(26,26,24,.42);display:none;
-    place-items:center;z-index:80;padding:18px}
+    place-items:center;z-index:8800;padding:18px}
   .modal-bg.show{display:grid}
   .modal{background:var(--paper2);border-radius:8px;max-width:560px;width:100%;
     max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);border:1px solid var(--line)}
@@ -312,7 +315,7 @@
      overrode every margin-top below, collapsing the document's vertical spacing. */
   .vak-ct{text-align:center;font-weight:bold}
   .vak-jur{text-align:center}                                  /* plain, not bold */
-  .vak-type{text-align:center;font-weight:bold;text-decoration:underline;line-height:2;margin-top:6px}
+  .vak-type{text-align:center;font-weight:bold;text-decoration:underline;line-height:2;margin-top:6px;white-space:pre-wrap}
   .vak-mtr{text-align:justify;font-weight:bold;text-decoration:underline;margin-top:10px}
   .vak-pline{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;margin-top:12px}
   .vak-pname{flex:1;min-width:0}
@@ -366,21 +369,21 @@
     break-before:page;page-break-before:always}
   .aff-doc:first-child{break-before:auto;page-break-before:auto}
   .aff-ct{text-align:center;font-weight:bold}
-  .aff-jur{text-align:center;margin-top:14px}          /* plain — no brackets, not bold */
-  .aff-type{text-align:center;margin-top:4px}          /* plain — NOT bold/underlined */
-  .aff-mtr{text-align:left;font-weight:bold;text-decoration:underline;margin-top:22px}
+  .aff-jur{text-align:center;margin-top:10px}          /* plain — no brackets, not bold */
+  .aff-type{text-align:center;margin-top:4px;white-space:pre-wrap}          /* plain — NOT bold/underlined */
+  .aff-mtr{text-align:left;font-weight:bold;text-decoration:underline;margin-top:16px}
   .aff-pline{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;margin-top:12px}
   .aff-pname{flex:1;min-width:0}
   .aff-plbl{white-space:nowrap;flex:0 0 auto}
   .aff-versus{margin-top:10px;padding-left:288px}       /* ind 3600 + firstLine 720 */
-  .aff-h1{font-weight:bold;margin-top:22px;padding-left:240px}  /* ind 2880 + firstLine 720 */
-  .aff-open{text-align:justify;text-indent:48px;margin-top:22px}
-  .aff-para{text-align:justify;margin-top:14px}
-  .aff-dep{text-align:right;margin-top:56px;letter-spacing:.02em}
-  .aff-verifh{text-align:left;text-decoration:underline;margin-top:26px}
-  .aff-verif{text-align:justify;text-indent:48px;margin-top:12px}
-  .aff-verifat{text-align:justify;text-indent:48px;margin-top:22px}
-  .aff-dep2{text-align:right;margin-top:52px;letter-spacing:.02em}
+  .aff-h1{font-weight:bold;margin-top:16px;padding-left:240px}  /* ind 2880 + firstLine 720 */
+  .aff-open{text-align:justify;text-indent:48px;margin-top:16px}
+  .aff-para{text-align:justify;margin-top:10px}
+  .aff-dep{text-align:right;margin-top:48px;letter-spacing:.02em}
+  .aff-verifh{text-align:left;text-decoration:underline;margin-top:18px}
+  .aff-verif{text-align:justify;text-indent:48px;margin-top:10px}
+  .aff-verifat{text-align:justify;text-indent:48px;margin-top:16px}
+  .aff-dep2{text-align:right;margin-top:44px;letter-spacing:.02em}
   @media print{ .aff-doc{width:100%} }
 
   /* ===== RECEIPT ===== */
@@ -1414,7 +1417,9 @@
   table.arch-tbl td.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--muted)}
 
   /* lock screen */
-  .lock-overlay{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#f4efe3,#ece5d6);
+  /* Must outrank modals (8800) and every gate — an open modal must never remain
+     visible over a locked screen. */
+  .lock-overlay{position:fixed;inset:0;z-index:9500;background:linear-gradient(160deg,#f4efe3,#ece5d6);
     display:flex;align-items:center;justify-content:center;padding:20px}
   .lock-card{background:var(--paper2);border:1px solid var(--line);border-radius:12px;
     box-shadow:0 12px 48px rgba(26,26,24,.16);padding:34px 30px;width:100%;max-width:380px;text-align:center}
@@ -6897,7 +6902,7 @@ function _vkTypeLine(type, caseNo, dateISO){
   const yr = dateISO ? new Date(dateISO+"T00:00:00").getFullYear() : new Date().getFullYear();
   const full = VK_TYPE_FULLNAME[type] || (type||"").toUpperCase() || "PETITION";
   const numPart = (caseNo||"").trim();
-  return full+" NO. "+(numPart ? numPart.replace(/^[A-Za-z.()\/ ]*?(?=\d)/,"") : "       OF "+yr);
+  return full+" NO. "+(numPart ? numPart.replace(/^[A-Za-z.()\/ ]*?(?=\d)/,"") : "            OF "+yr);
 }
 function _vkDocNoun(type){ return /Appeal/.test(type||"") ? "Appeal" : "Petition"; }
 function _vkPartyLabels(type){
@@ -7130,9 +7135,38 @@ function printAffidavit(v, opts){
     <div class="aff-verifat">Verified at ________ on __ day of _____, ${esc(String((v.date||todayISO()).slice(0,4)))}.</div>
     <div class="aff-dep2">DEPONENT</div>
   </div>`;
+  _affFitOnePage(area);
   if(opts.noPrint) return;
   _printAs("Affidavit"+(depName?(" — "+depName.replace(/[\/\\]/g,"-")):""));
 }
+// Keep the affidavit on ONE page. Long party names or a long deponent address change
+// how the paragraphs wrap, so measure the laid-out document at the true print width and,
+// only if it overruns, take the difference out of the two DEPONENT gaps — down to a floor
+// that is still signable. If even the floor won't fit, the full gaps are restored rather
+// than cramping a page it is going to overflow anyway.
+function _affFitOnePage(area){
+  try{
+    const doc=area.querySelector(".aff-doc"); if(!doc) return;
+    const PRINT_W=607, USABLE=949, FLOOR=30;
+    const gaps=[[doc.querySelector(".aff-dep"),48],[doc.querySelector(".aff-dep2"),44]].filter(x=>x[0]);
+    if(!gaps.length) return;
+    const prevW=doc.style.width;
+    doc.style.width=PRINT_W+"px";
+    const over=()=>doc.getBoundingClientRect().height>USABLE;
+    const apply=cut=>gaps.forEach(([el,full])=>{ el.style.marginTop=Math.max(FLOOR, full-cut)+"px"; });
+    apply(0);
+    if(over()){
+      let fitted=false;
+      for(let cut=4; cut<=(48-FLOOR); cut+=4){
+        apply(cut);
+        if(!over()){ fitted=true; break; }
+      }
+      if(!fitted) apply(0);
+    }
+    doc.style.width=prevW;
+  }catch(e){}
+}
+window._affFitOnePage=_affFitOnePage;
 // Vakalatnama + affidavit as ONE print job, the affidavit starting on a fresh page —
 // mirrors how the app already prints an invoice and its receipt together.
 function _vkPrintWithAffidavit(v, bw){
@@ -7297,7 +7331,7 @@ function openVakalatnamaRegister(){
   ov.style.cssText="position:fixed;inset:0;z-index:8500;background:rgba(30,24,18,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto";
   ov.innerHTML=`<div style="background:var(--paper2,#fffdf8);border-top:3px solid var(--brass,#9a7b3f);border-radius:16px;max-width:820px;width:100%;padding:22px 24px;box-shadow:0 24px 60px rgba(12,4,4,.4)">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <div style="flex:1"><div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;font-size:17px;font-weight:700;color:var(--ink)">Vakalatnamas</div>
+      <div style="flex:1"><div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;font-size:17px;font-weight:700;color:var(--ink)">Vakalatnama &amp; Affidavit</div>
       <div style="font-size:12.5px;color:var(--muted)">Every vakalatnama generated from this chamber, most recent first.</div></div>
       <button onclick="openVakalatnama();document.getElementById('vkrGate').remove()" style="padding:9px 14px;border:none;border-radius:9px;background:var(--seal,#6b1f1f);color:#f6efe0;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ New vakalatnama</button>
       <button onclick="document.getElementById('vkrGate').remove()" style="padding:9px 12px;border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;font-family:inherit">×</button>
@@ -18077,7 +18111,7 @@ function renderMoreMenu(){
     item("openClients()",HOME_ICONS.matters,"Clients","Every client — their matters, notices &amp; dues"),
     item("openRefAdvocates()",HOME_ICONS.matters,"Referring advocates","Who sends you work — every matter referred"),
     item("openNoticeRegister()",HOME_ICONS.documents,"Legal notices","Issue &amp; register notices on your letterhead"),
-    item("openVakalatnamaRegister()",HOME_ICONS.documents,"Vakalatnamas","Generate, register &amp; link to a case"),
+    item("openVakalatnamaRegister()",HOME_ICONS.documents,"Vakalatnama &amp; Affidavit","Generate, register &amp; link to a case"),
     item("openSub('pastcases')",HOME_ICONS.pastcases,"Past cases register","Concluded &amp; historical"),
     item("openSub('unassigned')",HOME_ICONS.unassigned,"Unassigned","Records with no case number"),
     item("openSub('archive')",HOME_ICONS.registers,"Archive","By month &amp; year"),
@@ -18438,7 +18472,7 @@ function renderStaffHome(){
     <div class="appgrid">
       <button class="app" onclick="openPastCases()"><span class="ic">${HOME_ICONS.pastcases}</span><span class="t">Past cases</span></button>
       <button class="app" onclick="openNoticeRegister()"><span class="ic">${HOME_ICONS.documents}</span><span class="t">Legal notices</span></button>
-      <button class="app" onclick="openVakalatnamaRegister()"><span class="ic">${HOME_ICONS.documents}</span><span class="t">Vakalatnamas</span></button>
+      <button class="app" onclick="openVakalatnamaRegister()"><span class="ic">${HOME_ICONS.documents}</span><span class="t">Vakalatnama &amp; Affidavit</span></button>
       <button class="app" onclick="staffMyBillTab&&shellGo('s_personal')"><span class="ic">${HOME_ICONS.receipt}</span><span class="t">My billing</span></button>
     </div>
     <div style="text-align:center;margin-top:16px"><button class="btn ghost sm" onclick="cloudLogout()">Log out</button></div>`;
@@ -19390,7 +19424,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0800";
+  window.APP_VERSION = "2026.08.31-0900";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
