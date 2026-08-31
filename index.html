@@ -7235,8 +7235,15 @@ function printVakalatnama(v, opts){
   const s=_chamberDocSettings({});
   const advName=(s.advName||"Advocate").toUpperCase();
   const isSC=/^Supreme Court/i.test(v.forum||"");
-  const advDesig = isSC ? "Advocate-on-Record" : (s.designation||"Advocate");
-  const advCode = isSC && s.aorCode ? "CODE-"+String(s.aorCode).replace(/[^0-9A-Za-z-]/g,"")
+  // Designation and AoR code come from Settings and print on EVERY forum — the owner's
+  // own Bar Council sample carries "Advocate-on-Record / CODE-4096" just as the Supreme
+  // Court ones do. (This was previously gated to Supreme Court forums, which silently
+  // dropped the code from High Court / Bar Council / tribunal vakalatnamas.)
+  const advDesig = s.designation || (isSC ? "Advocate-on-Record" : "Advocate");
+  // Tolerate however the code was typed in Settings — "4096", "AOR 4096", "CODE-4096"
+  // all render as CODE-4096 (the field's own placeholder suggests the "AOR 1234" form).
+  const aorDigits = String(s.aorCode||"").replace(/^\s*(aor|code)[\s.:\-]*/i,"").replace(/[^0-9A-Za-z-]/g,"");
+  const advCode = aorDigits ? "CODE-"+aorDigits
                  : (s.barId||s.enrolmentNo) ? "Enrolment No. "+(s.barId||s.enrolmentNo) : "";
   const n=(v.executants||[]).length;
   const roleWord=_vkRoleWord(v.role, n);
@@ -19449,7 +19456,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-1100";
+  window.APP_VERSION = "2026.08.31-1200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
