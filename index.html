@@ -7003,7 +7003,11 @@ window.openVakalatnama=openVakalatnama; window._vkGo=_vkGo;
 function printVakalatnama(v, opts){
   opts=opts||{};
   const area=document.getElementById("receiptArea");
-  const s=DB.settings||{};
+  // Resolve the advocate's identity the same way every other chamber document does:
+  // on a STAFF device DB.settings is not the owner's, so the name/AoR code must come
+  // from the synced staff profile — otherwise a staff-generated vakalatnama would
+  // print "Advocate" with no code.
+  const s=_chamberDocSettings({});
   const advName=(s.advName||"Advocate").toUpperCase();
   const isSC=/^Supreme Court/i.test(v.forum||"");
   const advDesig = isSC ? "Advocate-on-Record" : (s.designation||"Advocate");
@@ -12465,7 +12469,7 @@ function renderMatterDetail(){
     </div>
     ${staff?"":_matterFeeStrip(m)}
     ${_matterListingsCard(m)}
-    ${staff?"":_vkMatterCard(m)}
+    ${_vkMatterCard(m)}
     ${_scLinksCard(m)}
 
     <div class="card">
@@ -18201,6 +18205,7 @@ function renderStaffHome(){
     <div class="appgrid">
       <button class="app" onclick="openPastCases()"><span class="ic">${HOME_ICONS.pastcases}</span><span class="t">Past cases</span></button>
       <button class="app" onclick="openNoticeRegister()"><span class="ic">${HOME_ICONS.documents}</span><span class="t">Legal notices</span></button>
+      <button class="app" onclick="openVakalatnamaRegister()"><span class="ic">${HOME_ICONS.documents}</span><span class="t">Vakalatnamas</span></button>
       <button class="app" onclick="staffMyBillTab&&shellGo('s_personal')"><span class="ic">${HOME_ICONS.receipt}</span><span class="t">My billing</span></button>
     </div>
     <div style="text-align:center;margin-top:16px"><button class="btn ghost sm" onclick="cloudLogout()">Log out</button></div>`;
@@ -18971,7 +18976,11 @@ const FB = {
   COLLECTIONS: ["matters","receipts","expenses","cash","docsIn","docsFiled","invoices","advances","staff","trash","filings","appointments","todos","activity","staffRoster","salaryAdvances","salarySlips","refStatements","notices","reminders","vakalatnamas"],
   // SHARED collections live in a common chamber space both owner & staff use.
   // OWNER-ONLY collections (receipts, invoices, salary*) live in the owner's private account.
-  SHARED: ["matters","expenses","cash","docsIn","docsFiled","advances","staff","trash","filings","appointments","todos","activity"],
+  // "vakalatnamas" is SHARED so staff can prepare one and it lands in the chamber's
+  // single register (owner-private collections live under accounts/{uid} and a staff
+  // device could never write there). REQUIRES 'vakalatnamas' in isSharedCollection()
+  // in the Firestore rules — until those are published, writes are permission-denied.
+  SHARED: ["matters","expenses","cash","docsIn","docsFiled","advances","staff","trash","filings","appointments","todos","activity","vakalatnamas"],
   OWNER_ONLY: ["receipts","invoices","staffRoster","salaryAdvances","salarySlips"],
   CHAMBER_BASE: "chamber/main",
   role: "owner",   // set by bridge: 'owner' or 'staff'
@@ -19148,7 +19157,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0100";
+  window.APP_VERSION = "2026.08.31-0200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
