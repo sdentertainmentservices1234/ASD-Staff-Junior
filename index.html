@@ -425,6 +425,13 @@
        BLANK pages after the document. #receiptArea is a direct <body> child, so this is safe;
        the mobile print-view window has none of these IDs and is unaffected. */
     #lockScreen,#gate,#appRoot,#toast,#modalBg,#cloudGate{ display:none !important; }
+    /* Every full-screen overlay panel in this app is appended to <body> with an id
+       ending in "Gate" (lnGate, nrGate, vkGate, vkrGate, naGate, cfGate, limGate,
+       ahGate, accessGate…). Printing a document straight from one of those panels —
+       e.g. the vakalatnama register's ⋯ → Print — left the panel open BEHIND the
+       document, so its card printed as an empty box alongside it. Matching on the
+       id suffix hides them all, including any overlay added later. */
+    [id$="Gate"]{ display:none !important; }
     #receiptArea{position:absolute;left:0;top:0;width:100%}
     .doc{width:100%}
     .doc-pad{padding:4mm 3mm}
@@ -19230,7 +19237,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0500";
+  window.APP_VERSION = "2026.08.31-0600";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
