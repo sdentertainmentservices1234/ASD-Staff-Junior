@@ -317,21 +317,27 @@
   .vak-pline{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;margin-top:12px}
   .vak-pname{flex:1;min-width:0}
   .vak-plbl{white-space:nowrap;flex:0 0 auto}
-  .vak-versus{text-align:center;margin-top:12px}
-  .vak-h1{text-align:center;font-weight:bold;text-decoration:underline;margin:34px 0 20px}
-  .vak-body{text-align:justify;margin-top:14px}
-  .vak-adv{text-align:center;font-weight:bold;margin:18px 0}    /* every line bold */
-  .vak-dated{text-align:justify;text-indent:48px;margin-top:26px}
-  .vak-sigright{text-align:right;margin-top:30px}
-  .vak-accepted{text-align:justify;margin-top:16px}
-  .vak-advline{font-weight:bold;margin-top:10px}
+  .vak-versus{text-align:center;margin-top:9px}
+  .vak-h1{text-align:center;font-weight:bold;text-decoration:underline;margin:24px 0 14px}
+  .vak-body{text-align:justify;margin-top:10px}
+  .vak-adv{text-align:center;font-weight:bold;margin:13px 0}    /* every line bold */
+  /* The date and the signing instruction share one row: the date only ever fills the
+     left half, so the instruction moves up into that otherwise-empty right-hand space
+     — which also buys back a whole line towards keeping this to a single page. */
+  .vak-datedrow{display:flex;justify-content:space-between;align-items:baseline;gap:24px;margin-top:18px}
+  .vak-dated{text-align:left;text-indent:48px;flex:0 0 auto}
+  .vak-sigright{text-align:right;flex:0 0 auto}
+  .vak-accepted{text-align:justify;margin-top:18px}
+  .vak-advline{font-weight:bold;margin-top:8px}
   /* Each executant's name sits at the right where the blank form said "Client(s)",
      with the margin above left empty as the space they sign in. Several executants
      stack vertically, each getting their own signing space. */
-  .vak-clientrow{text-align:right;margin-top:58px}
+  .vak-clientrow{text-align:right;margin-top:46px}
   .vak-clientname{font-weight:bold}
   .vak-rule{border-bottom:1px solid #000;margin-top:10px;width:100%}
-  .vak-memo{margin-top:30px}
+  /* The Memo of Appearance is a separate document — start it on its own page so the
+     vakalatnama stays whole on page one and the memo never splits across a break. */
+  .vak-memo{margin-top:30px;break-before:page;page-break-before:always}
   .vak-to{margin-top:14px}
   .vak-sir{margin-top:12px}
   .vak-memobody{margin-top:10px;line-height:1.5}
@@ -6869,7 +6875,11 @@ function _vkClientSignBlock(execs){
   const list=(execs||[]).filter(e=>e && e.name);
   if(!list.length) return `<div class="vak-clientrow"><div class="vak-clientname">Client(s)</div></div>`;
   const many=list.length>1;
-  return list.map((e,i)=>`<div class="vak-clientrow"><div class="vak-clientname">${many?(i+1)+". ":""}${esc(e.name)}</div></div>`).join("");
+  // Keep the vakalatnama on ONE page as far as possible: with only a couple of
+  // executants each gets a generous signing space, but as more are added the space
+  // tightens (never below a usable ~22px) rather than pushing the document onto page 2.
+  const gap = list.length<=2 ? 46 : list.length===3 ? 28 : 22;
+  return list.map((e,i)=>`<div class="vak-clientrow" style="margin-top:${gap}px"><div class="vak-clientname">${many?(i+1)+". ":""}${esc(e.name)}</div></div>`).join("");
 }
 function vakalatnamas(){ return DB.vakalatnamas||[]; }
 // ---- Form (gate overlay, matches the legal-notice / notice-register visual pattern) ----
@@ -7054,8 +7064,10 @@ function printVakalatnama(v, opts){
       ${v.otherAdvocates?`<div>along with ${esc(v.otherAdvocates)}</div>`:""}
     </div>
     <div class="vak-body">${ofCourt}to act and appear for me/us in the above ${esc(_vkDocNoun(v.matterType))} and on my/our behalf to conduct (or defend) the same and all proceedings that may be taken in respect of any application connected with the same or any decree or order passed therein, including proceedings in taxation and applications for Review, to file and obtain return of documents and to deposit and receive money on my/our behalf in the said ${esc(_vkDocNoun(v.matterType))} and in application for Review, and to represent me/us and to take all necessary steps on my/our behalf in the above matter.  I/We agree to ratify all acts done by the aforesaid Advocates in pursuance of this authority.</div>
-    <div class="vak-dated">${dateLine}</div>
-    <div class="vak-sigright">Put Signature(s) Thumb impression below</div>
+    <div class="vak-datedrow">
+      <div class="vak-dated">${dateLine}</div>
+      <div class="vak-sigright">Put Signature(s) Thumb impression below</div>
+    </div>
     <div class="vak-accepted">Accepted &amp; Identified &amp; satisfied:</div>
     <div class="vak-advline">Adv.______________________</div>
     ${_vkClientSignBlock(v.executants)}
@@ -7075,8 +7087,39 @@ function printVakalatnama(v, opts){
       <div class="vak-memodated">Dated:</div>
     </div>`:""}
   </div>`;
+  _vkFitOnePage(area);
   if(opts.noPrint) return;
   _printAs("Vakalatnama"+(v.partyA?(" — "+v.partyA.replace(/[\/\\]/g,"-")):""));
+}
+// Keep the vakalatnama itself on ONE page where it can be. How much room the document
+// needs depends on how long the executants' names are (they change how the opening
+// paragraph wraps), so a fixed guess can't be right for every case — instead measure
+// the laid-out document at the true print width and, while it overruns the page, shave
+// the signing gaps a little at a time. Never goes below ~18px: a signature needs room,
+// so a genuinely long list is allowed to run onto a second page rather than be squeezed
+// into something nobody can sign.
+function _vkFitOnePage(area){
+  try{
+    const doc=area.querySelector(".vak-doc"), rule=area.querySelector(".vak-rule");
+    if(!doc||!rule) return;
+    const PRINT_W=607;            // A4 8.27in − 1.25in left − 0.7in right, at 96dpi
+    const USABLE=949;             // A4 1123px − 0.875in top − 0.94in bottom
+    const MIN_GAP=18;
+    const prevW=doc.style.width;
+    doc.style.width=PRINT_W+"px";
+    const overrun=()=>(rule.getBoundingClientRect().bottom-doc.getBoundingClientRect().top)>USABLE;
+    const rows=[...area.querySelectorAll(".vak-clientrow")];
+    let guard=0;
+    while(rows.length && overrun() && guard++<40){
+      let shrunk=false;
+      rows.forEach(r=>{
+        const m=parseFloat(getComputedStyle(r).marginTop)||0;
+        if(m>MIN_GAP){ r.style.marginTop=Math.max(MIN_GAP,m-4)+"px"; shrunk=true; }
+      });
+      if(!shrunk) break;          // at the floor already — let it flow to page 2
+    }
+    doc.style.width=prevW;
+  }catch(e){}
 }
 function _previewVakalatnama(id){
   const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Not found.",true); return; }
@@ -19171,7 +19214,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0300";
+  window.APP_VERSION = "2026.08.31-0400";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
