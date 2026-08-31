@@ -432,6 +432,10 @@
        document, so its card printed as an empty box alongside it. Matching on the
        id suffix hides them all, including any overlay added later. */
     [id$="Gate"]{ display:none !important; }
+    /* The app paints an ivory page background on html+body. Paper is already white, and
+       if a browser honours that background it prints as a coloured rectangle wherever the
+       document doesn't cover the sheet. Force both back to white for printing. */
+    html,body{ background:#fff !important; }
     #receiptArea{position:absolute;left:0;top:0;width:100%}
     .doc{width:100%}
     .doc-pad{padding:4mm 3mm}
@@ -5690,7 +5694,13 @@ function _openPrintView(title){
       // (collapses layout cleanly, unlike transform:scale) so EVERY page shows — not just
       // the first. Multi-doc prints (e.g. invoice + receipt) stack and are all visible.
       ".tpl,.tpl-list,.vak-doc{box-shadow:0 4px 24px rgba(0,0,0,.12);margin:0 auto 18px !important}"+
-      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}body{background:#fff;padding:0}.tpl,.tpl-list,.vak-doc{box-shadow:none;margin:0 auto !important}.__pbar{display:none !important}.__pgwrap{display:block}#receiptArea{zoom:1 !important}}"+
+      // NOTE: html AND body must both be reset to white here. The viewer paints a beige
+      // (#f2eee6) page backdrop on html+body; print-color-adjust:exact (needed so the
+      // letterhead's oxblood/gold actually print) then forces that backdrop to print as a
+      // real filled rectangle. Resetting only body left html beige, so any part of a sheet
+      // the white document didn't cover — e.g. below the Memo of Appearance on the last
+      // page — came out as a coloured empty box.
+      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}html,body{background:#fff !important;padding:0}.tpl,.tpl-list,.vak-doc{box-shadow:none;margin:0 auto !important}.__pbar{display:none !important}.__pgwrap{display:block}#receiptArea{zoom:1 !important}}"+
       ".__pbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;"+
       "padding:12px;background:#fff;border-top:1px solid #e7e0d4;z-index:9}"+
       ".__pbar button{border:none;border-radius:8px;padding:12px 20px;font-size:15px;font-weight:600;cursor:pointer}"+
@@ -19237,7 +19247,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0600";
+  window.APP_VERSION = "2026.08.31-0700";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
