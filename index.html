@@ -308,7 +308,8 @@
      no page break before it. ===== */
   .vak-doc{width:720px;background:#fff;color:#000;
     font-family:"Times New Roman",Times,Georgia,serif;font-size:16px;line-height:1.5}
-  .vak-doc div{margin:0}
+  /* NOTE: no blanket "div{margin:0}" reset here — its higher specificity silently
+     overrode every margin-top below, collapsing the document's vertical spacing. */
   .vak-ct{text-align:center;font-weight:bold}
   .vak-jur{text-align:center}                                  /* plain, not bold */
   .vak-type{text-align:center;font-weight:bold;text-decoration:underline;line-height:2;margin-top:6px}
@@ -324,7 +325,11 @@
   .vak-sigright{text-align:right;margin-top:30px}
   .vak-accepted{text-align:justify;margin-top:16px}
   .vak-advline{font-weight:bold;margin-top:10px}
-  .vak-client{text-align:right;font-weight:bold;margin-top:30px}
+  /* Each executant's name sits at the right where the blank form said "Client(s)",
+     with the margin above left empty as the space they sign in. Several executants
+     stack vertically, each getting their own signing space. */
+  .vak-clientrow{text-align:right;margin-top:58px}
+  .vak-clientname{font-weight:bold}
   .vak-rule{border-bottom:1px solid #000;margin-top:10px;width:100%}
   .vak-memo{margin-top:30px}
   .vak-to{margin-top:14px}
@@ -6857,6 +6862,15 @@ function _vkExecList(execs){
   if(list.length===1) return `<b>${esc(list[0].name||"—")}</b>, residing at ${esc(list[0].address||"—")}`;
   return list.map((e,i)=>`(${i+1}) <b>${esc(e.name||"—")}</b>, residing at ${esc(e.address||"—")}`).join(", ");
 }
+// Signing block at the foot of the vakalatnama: the executants' own names stand where
+// the blank form printed "Client(s)", each with blank space ABOVE it to sign in.
+// Several executants are numbered and stacked, so each gets their own signing space.
+function _vkClientSignBlock(execs){
+  const list=(execs||[]).filter(e=>e && e.name);
+  if(!list.length) return `<div class="vak-clientrow"><div class="vak-clientname">Client(s)</div></div>`;
+  const many=list.length>1;
+  return list.map((e,i)=>`<div class="vak-clientrow"><div class="vak-clientname">${many?(i+1)+". ":""}${esc(e.name)}</div></div>`).join("");
+}
 function vakalatnamas(){ return DB.vakalatnamas||[]; }
 // ---- Form (gate overlay, matches the legal-notice / notice-register visual pattern) ----
 function _vkF(l,id,v,ph){ return `<div style="margin-top:10px"><label style="display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">${l}</label><input id="${id}" value="${esc(v||"")}" placeholder="${esc(ph||"")}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff"></div>`; }
@@ -7044,7 +7058,7 @@ function printVakalatnama(v, opts){
     <div class="vak-sigright">Put Signature(s) Thumb impression below</div>
     <div class="vak-accepted">Accepted &amp; Identified &amp; satisfied:</div>
     <div class="vak-advline">Adv.______________________</div>
-    <div class="vak-client">Client(s)</div>
+    ${_vkClientSignBlock(v.executants)}
     <div class="vak-rule"></div>
     ${v.includeMemo?`
     <div class="vak-memo">
@@ -19157,7 +19171,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0200";
+  window.APP_VERSION = "2026.08.31-0300";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
