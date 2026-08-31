@@ -1754,6 +1754,7 @@
   .subback button{background:var(--paper2);border:1px solid var(--line);border-radius:20px;padding:7px 14px;
     font-size:13px;color:var(--seal);cursor:pointer;font-family:inherit;font-weight:600}
   .subback span{font-size:13px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:600}
+  .subback .subback-home{margin-left:auto}   /* pushed to the right of the title */
   /* document folders */
   .folders{display:flex;flex-direction:column;gap:10px}
   .folder{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--paper2)}
@@ -1844,6 +1845,8 @@
   <section class="panel" id="panel-ledger"></section>
   <section class="panel" id="panel-invoiceledger"></section>
   <section class="panel" id="panel-income"></section>
+  <section class="panel" id="panel-notices"></section>
+  <section class="panel" id="panel-vakalatnamas"></section>
   <section class="panel" id="panel-advances"></section>
   <section class="panel" id="panel-salary"></section>
   <section class="panel" id="panel-persondetail"></section>
@@ -6554,7 +6557,6 @@ function openLegalNotice(existing){
   window._lnEditId = ed ? ed.id : null;
   var ov=document.getElementById("lnGate");
   if(ov){ ov.remove(); }
-  var nrg=document.getElementById("nrGate"); if(nrg && ed) nrg.remove();
   ov=document.createElement("div"); ov.id="lnGate";
   ov.style.cssText="position:fixed;inset:0;z-index:8600;background:rgba(30,24,18,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto";
   var noLabel = ed ? esc(ed.no||"") : esc(peekNextNoticeNo());
@@ -6808,22 +6810,23 @@ function _lnGo(bw){
   printLegalNotice(rec, {bw:!!bw});
 }
 
-/* Register of notices sent — a simple, searchable list with reprint. */
-function openNoticeRegister(){
-  var ov=document.getElementById("nrGate");
-  if(ov){ ov.remove(); }
-  ov=document.createElement("div"); ov.id="nrGate";
-  ov.style.cssText="position:fixed;inset:0;z-index:8500;background:rgba(30,24,18,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto";
-  ov.innerHTML='<div style="background:var(--paper2,#fffdf8);border-top:3px solid var(--brass,#9a7b3f);border-radius:16px;max-width:760px;width:100%;padding:22px 24px;box-shadow:0 24px 60px rgba(12,4,4,.4)">'+
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
-    '<div style="flex:1"><div style="font-family:\'Iowan Old Style\',Palatino,Georgia,serif;font-size:17px;font-weight:700;color:var(--ink)">Notices sent</div>'+
-    '<div style="font-size:12.5px;color:var(--muted)">Every legal notice issued from this chamber, most recent first.</div></div>'+
-    '<button onclick="openLegalNotice();document.getElementById(\'nrGate\').remove()" style="padding:9px 14px;border:none;border-radius:9px;background:var(--seal,#6b1f1f);color:#f6efe0;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ New notice</button>'+
-    '<button onclick="document.getElementById(\'nrGate\').remove()" style="padding:9px 12px;border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;font-family:inherit">×</button>'+
-    '</div><div id="nrBody"></div></div>';
-  document.body.appendChild(ov);
+/* Register of notices sent — a full-screen section (not a pop-up), so it gets the
+   standard Back/Home bar and the automatic "Sr." numbering that only runs inside
+   the app shell. */
+function openNoticeRegister(){ openSub("notices"); }
+function renderNotices(){
+  const panel=document.getElementById("panel-notices"); if(!panel) return;
+  panel.innerHTML=`
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Notices sent</h2><div class="hint">Every legal notice issued from this chamber, most recent first.</div></div>
+        <button class="btn seal sm" onclick="openLegalNotice()">+ New notice</button>
+      </div>
+      <div id="nrBody"></div>
+    </div>`;
   _renderNoticeRegister();
 }
+window.renderNotices=renderNotices;
 function _renderNoticeRegister(){
   var el=document.getElementById("nrBody"); if(!el) return;
   var list=[...(DB.notices||[])].sort(_byNoAsc);
@@ -6848,7 +6851,6 @@ function _renderNoticeRegister(){
 }
 function _reprintNotice(id){
   var n=(DB.notices||[]).find(x=>x.id===id); if(!n) return;
-  var gate=document.getElementById("nrGate"); if(gate) gate.remove();
   printLegalNotice(n, {});
 }
 function _delNotice(id){
@@ -7338,18 +7340,17 @@ function _previewVakalatnama(id){
 }
 window.printVakalatnama=printVakalatnama; window._previewVakalatnama=_previewVakalatnama;
 // ---- Register ----
-function openVakalatnamaRegister(){
-  const ov0=document.getElementById("vkrGate"); if(ov0) ov0.remove();
-  const ov=document.createElement("div"); ov.id="vkrGate";
-  ov.style.cssText="position:fixed;inset:0;z-index:8500;background:rgba(30,24,18,.45);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto";
-  ov.innerHTML=`<div style="background:var(--paper2,#fffdf8);border-top:3px solid var(--brass,#9a7b3f);border-radius:16px;max-width:820px;width:100%;padding:22px 24px;box-shadow:0 24px 60px rgba(12,4,4,.4)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <div style="flex:1"><div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;font-size:17px;font-weight:700;color:var(--ink)">Vakalatnama &amp; Affidavit</div>
-      <div style="font-size:12.5px;color:var(--muted)">Every vakalatnama generated from this chamber, most recent first.</div></div>
-      <button onclick="openVakalatnama();document.getElementById('vkrGate').remove()" style="padding:9px 14px;border:none;border-radius:9px;background:var(--seal,#6b1f1f);color:#f6efe0;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">+ New vakalatnama</button>
-      <button onclick="document.getElementById('vkrGate').remove()" style="padding:9px 12px;border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;font-family:inherit">×</button>
-    </div><div id="vkrBody"></div></div>`;
-  document.body.appendChild(ov);
+function openVakalatnamaRegister(){ openSub("vakalatnamas"); }
+function renderVakalatnamas(){
+  const panel=document.getElementById("panel-vakalatnamas"); if(!panel) return;
+  panel.innerHTML=`
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Vakalatnama &amp; Affidavit</h2><div class="hint">Every vakalatnama generated from this chamber, most recent first.</div></div>
+        <button class="btn seal sm" onclick="openVakalatnama()">+ New vakalatnama</button>
+      </div>
+      <div id="vkrBody"></div>
+    </div>`;
   _renderVakalatnamaRegister();
 }
 function _renderVakalatnamaRegister(){
@@ -7425,7 +7426,7 @@ function _doVkLink(id){
   try{ _renderVakalatnamaRegister(); }catch(e){}
   try{ renderAll(); }catch(e){}
 }
-window.openVakalatnamaRegister=openVakalatnamaRegister; window._renderVakalatnamaRegister=_renderVakalatnamaRegister;
+window.openVakalatnamaRegister=openVakalatnamaRegister; window._renderVakalatnamaRegister=_renderVakalatnamaRegister; window.renderVakalatnamas=renderVakalatnamas;
 window._vkActions=_vkActions; window._vkRec=_vkRec; window.shareVakalatnama=shareVakalatnama;
 window._delVakalatnama=_delVakalatnama; window._vkLinkToMatter=_vkLinkToMatter; window._doVkLink=_doVkLink;
 window.vakalatnamas=vakalatnamas;
@@ -8624,7 +8625,7 @@ function _renderRegisterInto(body){
         <div><h2>Staff, juniors &amp; interns</h2><div class="hint">Private to you. Tap a person for their full record, borrowings and salary slips.</div></div>
         <button class="btn seal sm" onclick="openAddPerson()">+ Add</button>
       </div>
-      ${roster.length?`<div class="tbl-wrap"><table>
+      ${roster.length?`<div class="tbl-wrap"><table class="sr-num">
         <thead><tr><th>Code</th><th>Name</th><th>Role</th><th class="num">Basic</th><th class="num">Advance due</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr><td colspan="3" style="text-align:right;color:var(--muted)">Totals</td><td class="num"><b>${fmtINR(totalBasic)}</b></td><td class="num"><b>${totalOut>0?fmtINR(totalOut):"—"}</b></td><td></td></tr></tfoot>
@@ -14972,8 +14973,8 @@ function renderIncomeBreakdown(){
 
     <div class="card">
       <div class="card-head"><div><h2>Case-wise breakdown</h2><div class="hint">Every case with an invoice or receipt. Tap a row to open the case.</div></div></div>
-      <div style="overflow-x:auto">
-        <table class="tbl" style="width:100%;border-collapse:collapse">
+      <div class="tbl-wrap">
+        <table class="tbl sr-num" style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th style="text-align:left">Case</th>
             <th style="text-align:right">Received</th>
@@ -14993,8 +14994,8 @@ function renderIncomeBreakdown(){
 
     ${retArr.length?`<div class="card">
       <div class="card-head"><div><h2>Retainer breakdown</h2><div class="hint">Senior-advocate retainer fees.</div></div></div>
-      <div style="overflow-x:auto">
-        <table class="tbl" style="width:100%;border-collapse:collapse">
+      <div class="tbl-wrap">
+        <table class="tbl sr-num" style="width:100%;border-collapse:collapse">
           <thead><tr><th style="text-align:left">Senior</th><th style="text-align:right">Received</th><th style="text-align:right">Billed</th><th style="text-align:right">Outstanding</th></tr></thead>
           <tbody>${retRows}</tbody>
           ${retArr.length>1?`<tfoot><tr style="font-weight:700;border-top:2px solid var(--line)"><td>Total from retainer</td><td class="num" style="color:var(--green,#2e7d5b)">${fmtINR(retReceived)}</td><td class="num">${retBilled>0?fmtINR(retBilled):"—"}</td><td class="num">${Math.max(0,retBilled-retReceived)>0?fmtINR(retBilled-retReceived):"—"}</td></tr></tfoot>`:""}
@@ -15004,8 +15005,8 @@ function renderIncomeBreakdown(){
 
     ${other.items.length?`<div class="card">
       <div class="card-head"><div><h2>Other / unlinked receipts</h2><div class="hint">Receipts not tied to a case or the retainer.</div></div></div>
-      <div style="overflow-x:auto">
-        <table class="tbl" style="width:100%;border-collapse:collapse">
+      <div class="tbl-wrap">
+        <table class="tbl sr-num" style="width:100%;border-collapse:collapse">
           <thead><tr><th style="text-align:left">No.</th><th style="text-align:left">Date</th><th style="text-align:left">Towards</th><th style="text-align:right">Amount</th></tr></thead>
           <tbody>${other.items.sort(_byNoAsc).map(r=>`<tr><td class="mono">${esc(r.no||"")}</td><td>${fmtDate(r.date)}</td><td>${esc(r.towards||"")}</td><td class="num">${fmtINR(r.amount)}</td></tr>`).join("")}</tbody>
         </table>
@@ -16323,7 +16324,7 @@ function renderDocIn(){
           <button class="btn seal sm" onclick="addMDoc('docsIn')">+ Add document</button>
         </div>
       </div>
-      ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Title</th><th>Type</th><th>From</th><th>Case</th><th>Files</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No inward documents yet. Staff log these in the Entry app, or add one here.</div>`}
+      ${list.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Date</th><th>Title</th><th>Type</th><th>From</th><th>Case</th><th>Files</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No inward documents yet. Staff log these in the Entry app, or add one here.</div>`}
     </div>`;
 }
 function renderDocFiled(){
@@ -16346,7 +16347,7 @@ function renderDocFiled(){
           <button class="btn seal sm" onclick="addMDoc('docsFiled')">+ Add filed record</button>
         </div>
       </div>
-      ${list.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Title</th><th>Type</th><th>Case</th><th>Files</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No filed records yet.</div>`}
+      ${list.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>Date</th><th>Title</th><th>Type</th><th>Case</th><th>Files</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No filed records yet.</div>`}
     </div>`;
 }
 function addMDoc(kind){
@@ -16713,6 +16714,8 @@ function showGroup(group, sub, children){
   gn.innerHTML = `<div class="subnav"><button class="subnav-back" onclick="shellGo('more')" title="Back to More" aria-label="Back to More">‹ More</button>`+children.map(c=>`<button class="${c===sub?'on':''}" onclick="subGo('${group}','${c}')">${labels[c]}</button>`).join("")+`</div>`;
   gn.style.display="block";
   const mm=document.getElementById("moreMenu"); if(mm) mm.style.display="none";
+  // Same reason as in openSub(): don't leave the Sr. column to the rAF-driven observer.
+  try{ const ap=document.querySelector("#appRoot .panel.active"); if(ap){ _numberTables(ap); _labelizeTables(ap); } }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function subGo(group, sub){
@@ -17160,6 +17163,8 @@ function openSub(which){
     exadv:{fn:renderLedger,id:"exadv",label:"Expenses & advances"},
     todos:{fn:renderTodos,id:"todos",label:"Tasks & reminders"},
     reminders:{fn:renderTodos,id:"todos",label:"Tasks & reminders"},
+    notices:{fn:renderNotices,id:"notices",label:"Legal notices register"},
+    vakalatnamas:{fn:renderVakalatnamas,id:"vakalatnamas",label:"Vakalatnama & Affidavit register"},
     activity:{fn:renderActivity,id:"activity",label:"Activity"},
     access:{fn:renderAccess,id:"access",label:"Access control"},
     appts:{fn:renderAppointments,id:"appts",label:"Appointments & meetings"},
@@ -17180,8 +17185,15 @@ function openSub(which){
   if(panel){
     const old=panel.querySelector(":scope > .subback"); if(old) old.remove();
     const bar=document.createElement("div"); bar.className="subback";
-    bar.innerHTML=`<button onclick="_navBack()" aria-label="Back">‹ Back</button><span>${esc(m.label)}</span>`;
+    // Back returns to the previous screen; Home jumps straight out to the home menu —
+    // both on every sub-page/register so you're never stranded deep in the app.
+    bar.innerHTML=`<button onclick="_navBack()" aria-label="Back">‹ Back</button><span>${esc(m.label)}</span>`
+      +`<button class="subback-home" onclick="shellGo('home')" aria-label="Go to home menu" title="Home menu">⌂ Home</button>`;
     panel.insertBefore(bar, panel.firstChild);
+    // Number/label this register NOW rather than waiting on the MutationObserver, whose
+    // requestAnimationFrame never fires while the document is hidden (background tab, or a
+    // PWA resumed from the background) — the Sr. column would then be silently missing.
+    try{ _numberTables(panel); _labelizeTables(panel); }catch(e){}
   }
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -17878,7 +17890,7 @@ function renderAdvances(target){
     <div class="card" style="border-color:var(--brass)">
       <h2>Pending review · ${pend.length}</h2>
       <div class="hint">Staff entries awaiting your acceptance. Accepting an expense posts it to your books and updates that person's balance.</div>
-      <div class="tbl-wrap"><table>
+      <div class="tbl-wrap"><table class="sr-num">
         <thead><tr><th>Date</th><th>Staff</th><th>Type</th><th>Detail</th><th class="num">Amount</th><th></th></tr></thead>
         <tbody>${pend.map(a=>`<tr>
           <td>${fmtDate(a.date)}</td>
@@ -19437,7 +19449,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-1000";
+  window.APP_VERSION = "2026.08.31-1100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
