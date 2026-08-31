@@ -295,27 +295,46 @@
   /* legacy (unused) */
   .lh,.doc-band,.doc-meta,.lh-rule,.doc-thanks,.doc-stamp{display:none}
 
-  /* ===== VAKALATNAMA — plain court-pleading look, deliberately NOT on the
-     chamber letterhead (no logo, no colour, no footer band). ===== */
-  .vak-doc{width:720px;background:#fff;color:#111;font-family:"Times New Roman",Georgia,serif;
-    font-size:14.5px;line-height:1.65;padding:14px 6px}
-  .vak-ct{text-align:center;font-weight:700;font-size:15.5px;letter-spacing:.01em;text-transform:uppercase}
-  .vak-jur{text-align:center;font-weight:700;font-size:13.5px;margin-top:2px}
-  .vak-type{text-align:center;font-weight:700;font-size:14.5px;margin-top:10px}
-  .vak-mtr{margin-top:22px;font-weight:700}
-  .vak-party{margin-top:14px;text-align:center;font-weight:700}
-  .vak-partylbl{text-align:right;font-style:italic;margin-top:2px}
-  .vak-versus{text-align:center;font-weight:700;margin-top:14px}
-  .vak-h1{text-align:center;font-weight:700;font-size:16px;letter-spacing:.3em;margin:28px 0 18px}
-  .vak-body{text-align:justify;margin-top:6px}
-  .vak-adv{text-align:center;font-weight:700;margin:16px 0}
-  .vak-adv-desig{font-weight:400;margin-top:2px}
-  .vak-adv-code{font-weight:400;margin-top:2px}
-  .vak-dated{margin-top:22px}
-  .vak-sign{margin-top:30px}
-  .vak-sign-line{margin-top:10px}
-  .vak-sign-rule{border-bottom:1px solid #111;margin-top:34px;width:100%}
-  .vak-memo{break-before:page;page-break-before:always;margin-top:40px}
+  /* ===== VAKALATNAMA — plain court pleading, NOT on the chamber letterhead.
+     Alignments, weights, underlines and indents are copied from the owner's own
+     Word samples (SLP / Writ / Bar Council), which were measured paragraph by
+     paragraph: Times New Roman 12pt; court heading centred bold; jurisdiction
+     centred PLAIN; case-type line centred bold+underlined at double spacing;
+     "IN THE MATTER OF:-" justified bold+underlined; each party name at the LEFT
+     with its "…Petitioner(s)" label pushed to the RIGHT of the same line;
+     advocate block centred and bold on ALL lines; date line indented 0.5";
+     "Put Signature(s)…", "Yours faithfully," and the memo signature RIGHT-aligned;
+     "Client(s)" at the right. The Memo of Appearance FLOWS ON — the samples carry
+     no page break before it. ===== */
+  .vak-doc{width:720px;background:#fff;color:#000;
+    font-family:"Times New Roman",Times,Georgia,serif;font-size:16px;line-height:1.5}
+  .vak-doc div{margin:0}
+  .vak-ct{text-align:center;font-weight:bold}
+  .vak-jur{text-align:center}                                  /* plain, not bold */
+  .vak-type{text-align:center;font-weight:bold;text-decoration:underline;line-height:2;margin-top:6px}
+  .vak-mtr{text-align:justify;font-weight:bold;text-decoration:underline;margin-top:10px}
+  .vak-pline{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;margin-top:12px}
+  .vak-pname{flex:1;min-width:0}
+  .vak-plbl{white-space:nowrap;flex:0 0 auto}
+  .vak-versus{text-align:center;margin-top:12px}
+  .vak-h1{text-align:center;font-weight:bold;text-decoration:underline;margin:34px 0 20px}
+  .vak-body{text-align:justify;margin-top:14px}
+  .vak-adv{text-align:center;font-weight:bold;margin:18px 0}    /* every line bold */
+  .vak-dated{text-align:justify;text-indent:48px;margin-top:26px}
+  .vak-sigright{text-align:right;margin-top:30px}
+  .vak-accepted{text-align:justify;margin-top:16px}
+  .vak-advline{font-weight:bold;margin-top:10px}
+  .vak-client{text-align:right;font-weight:bold;margin-top:30px}
+  .vak-rule{border-bottom:1px solid #000;margin-top:10px;width:100%}
+  .vak-memo{margin-top:30px}
+  .vak-to{margin-top:14px}
+  .vak-sir{margin-top:12px}
+  .vak-memobody{margin-top:10px;line-height:1.5}
+  .vak-yours{text-align:right;margin-top:22px}
+  /* the samples leave two blank paragraphs between "Yours faithfully," and the name */
+  .vak-memosigblock{margin-top:46px}
+  .vak-memosig{text-align:right;font-weight:bold}
+  .vak-memodated{margin-top:14px}
   @media print{ .vak-doc{width:100%} }
 
   /* ===== RECEIPT ===== */
@@ -5681,7 +5700,9 @@ function _tplReserveForPrint(){
     if(area.querySelector(".tpl-paged")){ st0.textContent="@media print{@page{margin:7mm;size:A4;}}"; return; }
     // Plain court-pleading documents (vakalatnama): no running header/footer at all, so
     // just give the page normal, generous pleading margins — no measured-band dance needed.
-    if(area.querySelector(".vak-doc")){ st0.textContent="@media print{@page{margin:25mm 20mm;size:A4;}}"; return; }
+    // Page margins copied from the owner's Word samples (twips → inches):
+    // top 1260, right 1008, bottom 1354, left 1800.
+    if(area.querySelector(".vak-doc")){ st0.textContent="@media print{@page{margin:0.875in 0.7in 0.94in 1.25in;size:A4;}}"; return; }
     var foot=area.querySelector(".tpl-foot");
     var rh=area.querySelector(".tpl-run-head");
     var isNotice=!!area.querySelector(".tpl-notice");
@@ -6993,49 +7014,47 @@ function printVakalatnama(v, opts){
   const dt = v.date ? new Date(v.date+"T00:00:00") : new Date();
   const dateLine = `Dated this the ${dt.getDate()} day of ${dt.toLocaleString("en-IN",{month:"long"})} ${dt.getFullYear()}`;
   const memoAddr = (v.memoAddressee||"").split("\n").filter(Boolean).map(l=>esc(l)).join("<br>");
+  // "of the <court>" appears only when the forum IS a court — the Bar Council sample
+  // omits it entirely and begins "to act and appear for me/us…".
+  const isCourtForum=/^Supreme Court|^High Court|^District|^National Consumer|^Tribunal/i.test(v.forum||"");
+  const ofCourt = isCourtForum ? `of the ${esc(v.forum||"")} ` : "";
   area.innerHTML = `
   <div class="vak-doc">
     <div class="vak-ct">${esc(v.courtHeading||"")}</div>
     ${v.jurisdictionLine?`<div class="vak-jur">${esc(v.jurisdictionLine)}</div>`:""}
     <div class="vak-type">${esc(v.typeLine||"")}</div>
     <div class="vak-mtr">IN THE MATTER OF:-</div>
-    <div class="vak-party">${esc(v.partyA||"")}</div>
-    <div class="vak-partylbl">…${esc(v.partyALabel||"Petitioner(s)")}</div>
+    <div class="vak-pline"><div class="vak-pname">${esc(v.partyA||"")}</div><div class="vak-plbl">…${esc(v.partyALabel||"Petitioner(s)")}</div></div>
     <div class="vak-versus">Versus</div>
-    <div class="vak-party">${esc(v.partyB||"")}</div>
-    <div class="vak-partylbl">…${esc(v.partyBLabel||"Respondent(s)")}</div>
+    <div class="vak-pline"><div class="vak-pname">${esc(v.partyB||"")}</div><div class="vak-plbl">…${esc(v.partyBLabel||"Respondent(s)")}</div></div>
     <div class="vak-h1">V A K A L A T N A M A</div>
-    <div class="vak-body">
-      I/We, ${_vkExecList(v.executants)}, being the ${esc(roleWord)}, in the above ${esc(_vkDocNoun(v.matterType))} do hereby appoint and retain
-    </div>
+    <div class="vak-body">I/We, ${_vkExecList(v.executants)}, being the ${esc(roleWord)}, in the above ${esc(_vkDocNoun(v.matterType))} do hereby appoint and retain</div>
     <div class="vak-adv">
-      <div class="vak-adv-name">${esc(advName)}</div>
-      <div class="vak-adv-desig">${esc(advDesig)}</div>
-      ${advCode?`<div class="vak-adv-code">${esc(advCode)}</div>`:""}
-      ${v.otherAdvocates?`<div class="vak-adv-code">along with ${esc(v.otherAdvocates)}</div>`:""}
+      <div>${esc(advName)}</div>
+      <div>${esc(advDesig)}</div>
+      ${advCode?`<div>${esc(advCode)}</div>`:""}
+      ${v.otherAdvocates?`<div>along with ${esc(v.otherAdvocates)}</div>`:""}
     </div>
-    <div class="vak-body">
-      of the ${esc(v.forum||"")} to act and appear for me/us in the above ${esc(_vkDocNoun(v.matterType))} and on my/our behalf to conduct (or defend) the same and all proceedings that may be taken in respect of any application connected with the same or any decree or order passed therein, including proceedings in taxation and applications for Review, to file and obtain return of documents and to deposit and receive money on my/our behalf in the said ${esc(_vkDocNoun(v.matterType))} and in application for Review, and to represent me/us and to take all necessary steps on my/our behalf in the above matter. I/We agree to ratify all acts done by the aforesaid Advocates in pursuance of this authority.
-    </div>
+    <div class="vak-body">${ofCourt}to act and appear for me/us in the above ${esc(_vkDocNoun(v.matterType))} and on my/our behalf to conduct (or defend) the same and all proceedings that may be taken in respect of any application connected with the same or any decree or order passed therein, including proceedings in taxation and applications for Review, to file and obtain return of documents and to deposit and receive money on my/our behalf in the said ${esc(_vkDocNoun(v.matterType))} and in application for Review, and to represent me/us and to take all necessary steps on my/our behalf in the above matter.  I/We agree to ratify all acts done by the aforesaid Advocates in pursuance of this authority.</div>
     <div class="vak-dated">${dateLine}</div>
-    <div class="vak-sign">
-      <div>Put Signature(s)/Thumb impression below</div>
-      <div style="margin-top:16px">Accepted &amp; Identified &amp; satisfied:</div>
-      <div class="vak-sign-line">Adv.____________________________</div>
-      <div style="margin-top:26px">Client(s)</div>
-      <div class="vak-sign-rule"></div>
-    </div>
+    <div class="vak-sigright">Put Signature(s) Thumb impression below</div>
+    <div class="vak-accepted">Accepted &amp; Identified &amp; satisfied:</div>
+    <div class="vak-advline">Adv.______________________</div>
+    <div class="vak-client">Client(s)</div>
+    <div class="vak-rule"></div>
     ${v.includeMemo?`
     <div class="vak-memo">
       <div class="vak-h1">MEMO OF APPEARANCE</div>
-      <div style="margin-top:14px">To</div>
-      <div>${memoAddr}</div>
-      <div style="margin-top:14px">Sir,</div>
-      <div style="margin-top:6px">Please enter an appearance for the above named ${esc(v.partyALabel||"Petitioner(s)")} in the above mentioned ${esc(_vkDocNoun(v.matterType))}-case-appeal-matter.</div>
-      <div style="margin-top:20px">Yours faithfully,</div>
-      <div class="vak-sign-line" style="margin-top:34px">${esc(advName)}</div>
-      ${advCode?`<div>${esc(advCode)}</div>`:""}
-      <div style="margin-top:10px">Dated:</div>
+      <div class="vak-to">To</div>
+      <div class="vak-addr">${memoAddr}</div>
+      <div class="vak-sir">Sir,</div>
+      <div class="vak-memobody">Please enter an appearance for the above named ${esc(v.partyALabel||"Petitioner(s)")} in the above mentioned ${esc(_vkDocNoun(v.matterType))}-case-appeal-matter.</div>
+      <div class="vak-yours">Yours faithfully,</div>
+      <div class="vak-memosigblock">
+        <div class="vak-memosig">${esc(advName)}</div>
+        ${advCode?`<div class="vak-memosig">${esc(advCode)}</div>`:""}
+      </div>
+      <div class="vak-memodated">Dated:</div>
     </div>`:""}
   </div>`;
   if(opts.noPrint) return;
@@ -19129,7 +19148,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.29-0300";
+  window.APP_VERSION = "2026.08.31-0100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
