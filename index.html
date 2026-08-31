@@ -355,6 +355,34 @@
   .vak-memodated{margin-top:14px}
   @media print{ .vak-doc{width:100%} }
 
+  /* ===== AFFIDAVIT — measured from the owner's Word samples. Indents are the
+     samples' twip values converted at 96dpi (720tw = 0.5in = 48px; 2880tw = 2in
+     = 192px; 3600tw = 2.5in = 240px) and body paragraphs use the samples'
+     1.5 line spacing (360). Deliberately different from the vakalatnama where
+     the samples differ: plain case-type line, left-aligned "IN THE MATTER OF:-",
+     CAPITALISED party labels, indented "Versus", left-indented title. ===== */
+  .aff-doc{width:720px;background:#fff;color:#000;
+    font-family:"Times New Roman",Times,Georgia,serif;font-size:16px;line-height:1.5;
+    break-before:page;page-break-before:always}
+  .aff-doc:first-child{break-before:auto;page-break-before:auto}
+  .aff-ct{text-align:center;font-weight:bold}
+  .aff-jur{text-align:center;margin-top:14px}          /* plain — no brackets, not bold */
+  .aff-type{text-align:center;margin-top:4px}          /* plain — NOT bold/underlined */
+  .aff-mtr{text-align:left;font-weight:bold;text-decoration:underline;margin-top:22px}
+  .aff-pline{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;margin-top:12px}
+  .aff-pname{flex:1;min-width:0}
+  .aff-plbl{white-space:nowrap;flex:0 0 auto}
+  .aff-versus{margin-top:10px;padding-left:288px}       /* ind 3600 + firstLine 720 */
+  .aff-h1{font-weight:bold;margin-top:22px;padding-left:240px}  /* ind 2880 + firstLine 720 */
+  .aff-open{text-align:justify;text-indent:48px;margin-top:22px}
+  .aff-para{text-align:justify;margin-top:14px}
+  .aff-dep{text-align:right;margin-top:56px;letter-spacing:.02em}
+  .aff-verifh{text-align:left;text-decoration:underline;margin-top:26px}
+  .aff-verif{text-align:justify;text-indent:48px;margin-top:12px}
+  .aff-verifat{text-align:justify;text-indent:48px;margin-top:22px}
+  .aff-dep2{text-align:right;margin-top:52px;letter-spacing:.02em}
+  @media print{ .aff-doc{width:100%} }
+
   /* ===== RECEIPT ===== */
   .rcpt-body{font-size:15px;line-height:1.9;color:#3a352e;margin:0;font-weight:400;max-width:560px}
   .rcpt-body b{color:#1a1a18;font-weight:600}
@@ -5693,14 +5721,14 @@ function _openPrintView(title){
       // Scale the whole document down to fit the device width via zoom on #receiptArea
       // (collapses layout cleanly, unlike transform:scale) so EVERY page shows — not just
       // the first. Multi-doc prints (e.g. invoice + receipt) stack and are all visible.
-      ".tpl,.tpl-list,.vak-doc{box-shadow:0 4px 24px rgba(0,0,0,.12);margin:0 auto 18px !important}"+
+      ".tpl,.tpl-list,.vak-doc,.aff-doc{box-shadow:0 4px 24px rgba(0,0,0,.12);margin:0 auto 18px !important}"+
       // NOTE: html AND body must both be reset to white here. The viewer paints a beige
       // (#f2eee6) page backdrop on html+body; print-color-adjust:exact (needed so the
       // letterhead's oxblood/gold actually print) then forces that backdrop to print as a
       // real filled rectangle. Resetting only body left html beige, so any part of a sheet
       // the white document didn't cover — e.g. below the Memo of Appearance on the last
       // page — came out as a coloured empty box.
-      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}html,body{background:#fff !important;padding:0}.tpl,.tpl-list,.vak-doc{box-shadow:none;margin:0 auto !important}.__pbar{display:none !important}.__pgwrap{display:block}#receiptArea{zoom:1 !important}}"+
+      "@media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important}html,body{background:#fff !important;padding:0}.tpl,.tpl-list,.vak-doc,.aff-doc{box-shadow:none;margin:0 auto !important}.__pbar{display:none !important}.__pgwrap{display:block}#receiptArea{zoom:1 !important}}"+
       ".__pbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;justify-content:center;"+
       "padding:12px;background:#fff;border-top:1px solid #e7e0d4;z-index:9}"+
       ".__pbar button{border:none;border-radius:8px;padding:12px 20px;font-size:15px;font-weight:600;cursor:pointer}"+
@@ -5711,7 +5739,7 @@ function _openPrintView(title){
       "<button class='__pbtn-close' onclick='window.close()'>Close</button>"+
       "</div>"+
       "<script>(function(){function fit(){try{var area=document.getElementById('receiptArea');if(!area)return;"+
-      "var first=area.querySelector('.tpl,.tpl-list,.vak-doc');if(!first)return;"+
+      "var first=area.querySelector('.tpl,.tpl-list,.vak-doc,.aff-doc');if(!first)return;"+
       "area.style.zoom='';var w=first.offsetWidth||794;var avail=document.documentElement.clientWidth-16;"+
       "var s=avail<w?(avail/w):1;area.style.zoom=s;"+
       "}catch(e){}}window.addEventListener('load',fit);window.addEventListener('resize',fit);setTimeout(fit,60);})();</"+"script>"+
@@ -5737,7 +5765,7 @@ function _tplReserveForPrint(){
     // just give the page normal, generous pleading margins — no measured-band dance needed.
     // Page margins copied from the owner's Word samples (twips → inches):
     // top 1260, right 1008, bottom 1354, left 1800.
-    if(area.querySelector(".vak-doc")){ st0.textContent="@media print{@page{margin:0.875in 0.7in 0.94in 1.25in;size:A4;}}"; return; }
+    if(area.querySelector(".vak-doc,.aff-doc")){ st0.textContent="@media print{@page{margin:0.875in 0.7in 0.94in 1.25in;size:A4;}}"; return; }
     var foot=area.querySelector(".tpl-foot");
     var rh=area.querySelector(".tpl-run-head");
     var isNotice=!!area.querySelector(".tpl-notice");
@@ -7042,9 +7070,111 @@ function _vkGo(bw){
   save();
   window._vkEditId=null;
   const gate=document.getElementById("vkGate"); if(gate) gate.remove();
-  printVakalatnama(rec, {bw:!!bw});
+  _vkAskAffidavit(rec, !!bw);
 }
 window.openVakalatnama=openVakalatnama; window._vkGo=_vkGo;
+
+/* ===========================================================
+   AFFIDAVIT — generated from the SAME record as the vakalatnama, so the court,
+   case type, parties and executants never diverge between the two documents.
+   Layout copied paragraph-by-paragraph from the owner's Word samples (SLP and
+   Writ), which are identical to each other except for the case-type name that
+   appears in the heading and in para 1. Differences from the vakalatnama that
+   the samples are explicit about: the case-type line is PLAIN (not bold or
+   underlined), "IN THE MATTER OF:-" is left-aligned, the party labels are in
+   CAPITALS, "Versus" is indented rather than centred, and the "A F F I D A V I T"
+   title is indented left — not centred.
+   =========================================================== */
+// "SLP (Civil)" -> "Special Leave Petition"  (the samples drop the bracketed part)
+function _affTypePhrase(type){
+  const full = VK_TYPE_FULLNAME[type] || String(type||"Petition");
+  const bare = full.replace(/\s*\([^)]*\)\s*/g," ").trim();
+  return bare.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase());
+}
+function _affDeponent(v){
+  const list=(v&&v.executants||[]).filter(e=>e&&e.name);
+  if(!list.length) return null;
+  const want=v.affidavitDeponent;
+  return list.find(e=>e.name===want) || list[0];
+}
+function printAffidavit(v, opts){
+  opts=opts||{};
+  const area=document.getElementById("receiptArea");
+  const dep=_affDeponent(v);
+  const depName = dep ? dep.name : "";
+  const depAddr = dep ? dep.address : "";
+  const role = v.role || "Petitioner";
+  const typePhrase = _affTypePhrase(v.matterType);
+  // The samples print the jurisdiction WITHOUT the brackets the vakalatnama uses.
+  const jur = String(v.jurisdictionLine||"").replace(/^\s*\(|\)\s*$/g,"").trim();
+  const blank = s => s ? esc(s) : "_______________________________";
+  area.innerHTML = `
+  <div class="aff-doc">
+    <div class="aff-ct">${esc(v.courtHeading||"")}</div>
+    ${jur?`<div class="aff-jur">${esc(jur)}</div>`:""}
+    <div class="aff-type">${esc(v.typeLine||"")}</div>
+    <div class="aff-mtr">IN THE MATTER OF:-</div>
+    <div class="aff-pline"><div class="aff-pname">${esc(v.partyA||"")}</div><div class="aff-plbl">…&nbsp;&nbsp;${esc(String(v.partyALabel||"Petitioner(s)").toUpperCase())}</div></div>
+    <div class="aff-versus">Versus</div>
+    <div class="aff-pline"><div class="aff-pname">${esc(v.partyB||"")}</div><div class="aff-plbl">…&nbsp;${esc(String(v.partyBLabel||"Respondent(s)").toUpperCase())}</div></div>
+    <div class="aff-h1">A F F I D A V I T</div>
+    <div class="aff-open">I, <b>${blank(depName)}</b>, residing at ${blank(depAddr)} do hereby solemnly affirm and declare as under:-</div>
+    <div class="aff-para">1.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That I am the ${esc(role)} in the ${esc(typePhrase)} and as such I am fully conversant with the facts and proceedings of the case.</div>
+    <div class="aff-para">2.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That I have read and understood the contents of Para 1 to __ and pages __ to __ of the accompanying petition and List of Dates B to __ Pages and I say that the facts stated therein are true and correct to my knowledge and belief.</div>
+    <div class="aff-para">3.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That I have read and understood the contents of the I.As. and I say that the contents thereof are true and correct to my knowledge and belief.</div>
+    <div class="aff-para">4.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That the Annexures filed with the Petition are true and correct copies of the originals.</div>
+    <div class="aff-para">5.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That I have not filed any other Appeal or Special Leave Petition in this Hon'ble Court against the impugned judgment and order.</div>
+    <div class="aff-dep">DEPONENT</div>
+    <div class="aff-verifh">VERIFICATION:</div>
+    <div class="aff-verif">I, the deponent abovenamed, do hereby state on solemn affirmation that the contents of the paras 1 to 5 are true and correct to my knowledge and I believe the same to be true and that nothing material has been concealed therefrom.</div>
+    <div class="aff-verifat">Verified at ________ on __ day of _____, ${esc(String((v.date||todayISO()).slice(0,4)))}.</div>
+    <div class="aff-dep2">DEPONENT</div>
+  </div>`;
+  if(opts.noPrint) return;
+  _printAs("Affidavit"+(depName?(" — "+depName.replace(/[\/\\]/g,"-")):""));
+}
+// Vakalatnama + affidavit as ONE print job, the affidavit starting on a fresh page —
+// mirrors how the app already prints an invoice and its receipt together.
+function _vkPrintWithAffidavit(v, bw){
+  const area=document.getElementById("receiptArea");
+  if(!area){ printVakalatnama(v,{bw:bw}); return; }
+  printVakalatnama(v,{noPrint:true, bw:bw});
+  const vakHTML=area.innerHTML;
+  printAffidavit(v,{noPrint:true, bw:bw});
+  const affHTML=area.innerHTML;
+  area.innerHTML=vakHTML+affHTML;
+  setTimeout(()=>_printAs("Vakalatnama & Affidavit"+(v.partyA?(" — "+String(v.partyA).replace(/[\/\\]/g,"-")):"")),160);
+}
+// Asked every time a vakalatnama is generated: also produce an affidavit, and if so
+// in whose name — chosen from the executants just entered on the vakalatnama.
+function _vkAskAffidavit(rec, bw){
+  const list=(rec.executants||[]).filter(e=>e&&e.name);
+  if(!list.length){ printVakalatnama(rec,{bw:bw}); return; }
+  const opts=list.map((e,i)=>`<label class="checkline" style="display:flex;align-items:flex-start;gap:9px;margin-top:8px;cursor:pointer">
+      <input type="radio" name="affDep" value="${esc(e.name)}" ${i===0?"checked":""} style="margin-top:3px">
+      <span><b>${esc(e.name)}</b>${e.address?`<div class="hint">${esc(e.address)}</div>`:""}</span></label>`).join("");
+  openModal("Generate an affidavit as well?", `
+    <div class="hint">The affidavit uses this vakalatnama's court, case type and parties. Choose who will depose — it prints after the vakalatnama.</div>
+    <div style="margin-top:10px">${opts}</div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn ghost" onclick="closeModal();_vkAffDecline('${rec.id}',${bw?"true":"false"})">No, vakalatnama only</button>
+      <button class="btn seal" onclick="_vkAffAccept('${rec.id}',${bw?"true":"false"})">Yes, add affidavit</button>
+    </div>`);
+}
+function _vkAffAccept(id, bw){
+  const rec=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!rec){ closeModal(); return; }
+  const sel=document.querySelector('input[name="affDep"]:checked');
+  rec.affidavitDeponent = sel ? sel.value : ((rec.executants||[])[0]||{}).name || "";
+  save(); closeModal();
+  _vkPrintWithAffidavit(rec, !!bw);
+}
+function _vkAffDecline(id, bw){
+  const rec=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!rec) return;
+  printVakalatnama(rec,{bw:!!bw});
+}
+window.printAffidavit=printAffidavit; window._vkPrintWithAffidavit=_vkPrintWithAffidavit;
+window._vkAskAffidavit=_vkAskAffidavit; window._vkAffAccept=_vkAffAccept; window._vkAffDecline=_vkAffDecline;
+window._affDeponent=_affDeponent; window._affTypePhrase=_affTypePhrase;
 // ---- Render / print (plain document — NOT the chamber letterhead) ----
 function printVakalatnama(v, opts){
   opts=opts||{};
@@ -7197,15 +7327,28 @@ function _renderVakalatnamaRegister(){
 }
 function _vkActions(id){
   const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Not found.",true); return; }
+  const dep=_affDeponent(v);
   const rows=[{t:"View",f:`_previewVakalatnama('${id}')`,seal:1},{t:"Print / Save",f:`printVakalatnama(_vkRec('${id}'))`},
-    {t:"Share",f:`shareVakalatnama('${id}')`},{t:"Edit",f:`openVakalatnama('${id}')`},
+    {t:"Share",f:`shareVakalatnama('${id}')`},{t:"Edit",f:`openVakalatnama('${id}')`}]
+    .concat(dep?[
+      {t:"View affidavit ("+dep.name+")",f:`_previewAffidavit('${id}')`},
+      {t:"Print vakalatnama + affidavit",f:`_vkPrintWithAffidavit(_vkRec('${id}'))`},
+      {t:"Change affidavit deponent",f:`_vkAskAffidavit(_vkRec('${id}'),false)`}
+    ]:[{t:"Generate an affidavit",f:`_vkAskAffidavit(_vkRec('${id}'),false)`}])
+    .concat([
     {t:v.matterId?"Change linked case":"Link to a case",f:`_vkLinkToMatter('${id}')`},
-    {t:"Delete",f:`_delVakalatnama('${id}')`,danger:1}];
+    {t:"Delete",f:`_delVakalatnama('${id}')`,danger:1}]);
   const btns=rows.map(a=>`<button class="btn ${a.seal?'seal':'ghost'}" ${a.danger?'style="color:#8c2f39;border-color:#e2b8b8"':''} onclick="closeModal();${a.f}">${esc(a.t)}</button>`).join("");
   openModal("Vakalatnama — "+(v.partyA||""), `<div style="display:flex;flex-direction:column;gap:9px;margin-top:4px">${btns}</div>
     <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
 function _vkRec(id){ return (DB.vakalatnamas||[]).find(x=>x.id===id); }
+function _previewAffidavit(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Not found.",true); return; }
+  printAffidavit(v,{noPrint:true});
+  _openPrintView("Affidavit — "+((_affDeponent(v)||{}).name||""));
+}
+window._previewAffidavit=_previewAffidavit;
 async function shareVakalatnama(id){
   const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v) return;
   const text=`Vakalatnama dated ${fmtDate(v.date)}\n${v.partyA||""}${v.partyB?" v. "+v.partyB:""}\n${v.typeLine||""}`;
@@ -19247,7 +19390,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0700";
+  window.APP_VERSION = "2026.08.31-0800";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
