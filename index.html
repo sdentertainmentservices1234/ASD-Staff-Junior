@@ -6922,8 +6922,8 @@ function _vkRoleWord(role, n){
 function _vkExecList(execs){
   const list=(execs||[]).filter(e=>e && (e.name||e.address));
   if(!list.length) return `<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>, residing at <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>`;
-  if(list.length===1) return `<b>${esc(list[0].name||"—")}</b>, residing at ${esc(list[0].address||"—")}`;
-  return list.map((e,i)=>`(${i+1}) <b>${esc(e.name||"—")}</b>, residing at ${esc(e.address||"—")}`).join(", ");
+  if(list.length===1) return `<b>${esc(list[0].name||"—")}</b>${_vkAgePhrase(list[0])}, residing at ${esc(list[0].address||"—")}`;
+  return list.map((e,i)=>`(${i+1}) <b>${esc(e.name||"—")}</b>${_vkAgePhrase(e)}, residing at ${esc(e.address||"—")}`).join(", ");
 }
 // Signing block at the foot of the vakalatnama: the executants' own names stand where
 // the blank form printed "Client(s)", each with blank space ABOVE it to sign in.
@@ -6996,17 +6996,30 @@ function openVakalatnama(existingId){
   document.body.appendChild(ov);
 }
 function _vkExecRowsHTML(execs){
-  return execs.map((e,i)=>`<div class="vkExecRow" data-i="${i}" style="display:flex;gap:8px;margin-bottom:7px;align-items:flex-start">
-    <input class="vkExecName in" value="${esc(e.name||"")}" placeholder="Full name" style="flex:1">
-    <input class="vkExecAddr in" value="${esc(e.address||"")}" placeholder="Residing at (address)" style="flex:2">
+  return execs.map((e,i)=>`<div class="vkExecRow" data-i="${i}" style="display:flex;gap:8px;margin-bottom:7px;align-items:flex-start;flex-wrap:wrap">
+    <input class="vkExecName in" value="${esc(e.name||"")}" placeholder="Full name" style="flex:2 1 150px">
+    <input class="vkExecAge in" value="${esc(e.age||"")}" placeholder="Age" inputmode="numeric" title="Optional — printed as “aged about NN years”" style="flex:0 0 68px">
+    <input class="vkExecAddr in" value="${esc(e.address||"")}" placeholder="Residing at (address)" style="flex:3 1 180px">
     ${execs.length>1?`<button type="button" class="row-act" onclick="_vkRemoveExecutant(this)" title="Remove">✕</button>`:""}
   </div>`).join("");
 }
 function _vkCollectExecutants(){
-  return [...document.querySelectorAll(".vkExecRow")].map(r=>({name:r.querySelector(".vkExecName").value.trim(), address:r.querySelector(".vkExecAddr").value.trim()}));
+  return [...document.querySelectorAll(".vkExecRow")].map(r=>({
+    name:r.querySelector(".vkExecName").value.trim(),
+    age:(r.querySelector(".vkExecAge")||{value:""}).value.trim(),
+    address:r.querySelector(".vkExecAddr").value.trim()
+  }));
+}
+// Age is OPTIONAL and per-executant. Printed in the conventional pleading form —
+// "aged about 45 years" — between the name and the address; omitted entirely when blank.
+function _vkAgePhrase(e){
+  const raw=String((e&&e.age)||"").trim();
+  if(!raw) return "";
+  const n=(raw.match(/\d+/)||[])[0];
+  return n ? `, aged about ${esc(n)} years` : `, aged ${esc(raw)}`;
 }
 function _vkAddExecutant(){
-  const list=_vkCollectExecutants(); list.push({name:"",address:""});
+  const list=_vkCollectExecutants(); list.push({name:"",age:"",address:""});
   document.getElementById("vkExecRows").innerHTML=_vkExecRowsHTML(list);
 }
 function _vkRemoveExecutant(btn){
@@ -7049,7 +7062,7 @@ function _vkOnTypeChange(){
   set("vkMemoAddr", /^Supreme Court/i.test(forum)?"The Registrar\nSupreme Court of India\nNew Delhi.":"The Registrar\n"+forum+".");
 }
 window._vkOnMatterChange=_vkOnMatterChange; window._vkOnTypeChange=_vkOnTypeChange;
-window._vkAddExecutant=_vkAddExecutant; window._vkRemoveExecutant=_vkRemoveExecutant;
+window._vkAddExecutant=_vkAddExecutant; window._vkRemoveExecutant=_vkRemoveExecutant; window._vkAgePhrase=_vkAgePhrase;
 function _vkGo(bw){
   const g=id=>{const e=document.getElementById(id); return e?e.value.trim():"";};
   const matterId=(document.getElementById("vkMatter")||{}).value||"";
@@ -7123,7 +7136,7 @@ function printAffidavit(v, opts){
     <div class="aff-versus">Versus</div>
     <div class="aff-pline"><div class="aff-pname">${esc(v.partyB||"")}</div><div class="aff-plbl">…&nbsp;${esc(String(v.partyBLabel||"Respondent(s)").toUpperCase())}</div></div>
     <div class="aff-h1">A F F I D A V I T</div>
-    <div class="aff-open">I, <b>${blank(depName)}</b>, residing at ${blank(depAddr)} do hereby solemnly affirm and declare as under:-</div>
+    <div class="aff-open">I, <b>${blank(depName)}</b>${_vkAgePhrase(dep)}, residing at ${blank(depAddr)} do hereby solemnly affirm and declare as under:-</div>
     <div class="aff-para">1.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That I am the ${esc(role)} in the ${esc(typePhrase)} and as such I am fully conversant with the facts and proceedings of the case.</div>
     <div class="aff-para">2.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That I have read and understood the contents of Para 1 to __ and pages __ to __ of the accompanying petition and List of Dates B to __ Pages and I say that the facts stated therein are true and correct to my knowledge and belief.</div>
     <div class="aff-para">3.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;That I have read and understood the contents of the I.As. and I say that the contents thereof are true and correct to my knowledge and belief.</div>
@@ -19424,7 +19437,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0900";
+  window.APP_VERSION = "2026.08.31-1000";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
