@@ -327,7 +327,13 @@
   .vak-datedrow{display:flex;justify-content:space-between;align-items:baseline;gap:24px;margin-top:18px}
   .vak-dated{text-align:left;text-indent:48px;flex:0 0 auto}
   .vak-sigright{text-align:right;flex:0 0 auto}
-  .vak-accepted{text-align:justify;margin-top:18px}
+  /* The advocate's acceptance (left) and the clients' signatures (right) occupy
+     opposite halves of the page, so they sit SIDE BY SIDE — stacking them wasted a
+     whole block of height and was pushing the document onto a second page. */
+  .vak-signarea{display:flex;justify-content:space-between;align-items:flex-start;gap:28px;margin-top:18px}
+  .vak-signleft{flex:0 0 auto}
+  .vak-signright{flex:1;min-width:0}
+  .vak-accepted{text-align:left}
   .vak-advline{font-weight:bold;margin-top:8px}
   /* Each executant's name sits at the right where the blank form said "Client(s)",
      with the margin above left empty as the space they sign in. Several executants
@@ -335,9 +341,10 @@
   .vak-clientrow{text-align:right;margin-top:46px}
   .vak-clientname{font-weight:bold}
   .vak-rule{border-bottom:1px solid #000;margin-top:10px;width:100%}
-  /* The Memo of Appearance is a separate document — start it on its own page so the
-     vakalatnama stays whole on page one and the memo never splits across a break. */
-  .vak-memo{margin-top:30px;break-before:page;page-break-before:always}
+  /* No forced page break: if the vakalatnama does spill slightly, the memo should use
+     the rest of that page rather than skipping to a further one. break-inside keeps
+     the memo whole wherever it lands. */
+  .vak-memo{margin-top:30px;break-inside:avoid;page-break-inside:avoid}
   .vak-to{margin-top:14px}
   .vak-sir{margin-top:12px}
   .vak-memobody{margin-top:10px;line-height:1.5}
@@ -6875,11 +6882,9 @@ function _vkClientSignBlock(execs){
   const list=(execs||[]).filter(e=>e && e.name);
   if(!list.length) return `<div class="vak-clientrow"><div class="vak-clientname">Client(s)</div></div>`;
   const many=list.length>1;
-  // Keep the vakalatnama on ONE page as far as possible: with only a couple of
-  // executants each gets a generous signing space, but as more are added the space
-  // tightens (never below a usable ~22px) rather than pushing the document onto page 2.
-  const gap = list.length<=2 ? 46 : list.length===3 ? 28 : 22;
-  return list.map((e,i)=>`<div class="vak-clientrow" style="margin-top:${gap}px"><div class="vak-clientname">${many?(i+1)+". ":""}${esc(e.name)}</div></div>`).join("");
+  // Always lay out with a full, comfortable signing space. _vkFitOnePage() may tighten
+  // it afterwards, but ONLY if doing so actually saves a page — never otherwise.
+  return list.map((e,i)=>`<div class="vak-clientrow"><div class="vak-clientname">${many?(i+1)+". ":""}${esc(e.name)}</div></div>`).join("");
 }
 function vakalatnamas(){ return DB.vakalatnamas||[]; }
 // ---- Form (gate overlay, matches the legal-notice / notice-register visual pattern) ----
@@ -7068,9 +7073,13 @@ function printVakalatnama(v, opts){
       <div class="vak-dated">${dateLine}</div>
       <div class="vak-sigright">Put Signature(s) Thumb impression below</div>
     </div>
-    <div class="vak-accepted">Accepted &amp; Identified &amp; satisfied:</div>
-    <div class="vak-advline">Adv.______________________</div>
-    ${_vkClientSignBlock(v.executants)}
+    <div class="vak-signarea">
+      <div class="vak-signleft">
+        <div class="vak-accepted">Accepted &amp; Identified &amp; satisfied:</div>
+        <div class="vak-advline">Adv.______________________</div>
+      </div>
+      <div class="vak-signright">${_vkClientSignBlock(v.executants)}</div>
+    </div>
     <div class="vak-rule"></div>
     ${v.includeMemo?`
     <div class="vak-memo">
@@ -7104,20 +7113,27 @@ function _vkFitOnePage(area){
     if(!doc||!rule) return;
     const PRINT_W=607;            // A4 8.27in − 1.25in left − 0.7in right, at 96dpi
     const USABLE=949;             // A4 1123px − 0.875in top − 0.94in bottom
-    const MIN_GAP=18;
+    const FULL=46, FLOOR=34;      // FLOOR is still a signable space, not a token gap
+    const rows=[...area.querySelectorAll(".vak-clientrow")];
+    if(!rows.length) return;
     const prevW=doc.style.width;
     doc.style.width=PRINT_W+"px";
-    const overrun=()=>(rule.getBoundingClientRect().bottom-doc.getBoundingClientRect().top)>USABLE;
-    const rows=[...area.querySelectorAll(".vak-clientrow")];
-    let guard=0;
-    while(rows.length && overrun() && guard++<40){
-      let shrunk=false;
-      rows.forEach(r=>{
-        const m=parseFloat(getComputedStyle(r).marginTop)||0;
-        if(m>MIN_GAP){ r.style.marginTop=Math.max(MIN_GAP,m-4)+"px"; shrunk=true; }
-      });
-      if(!shrunk) break;          // at the floor already — let it flow to page 2
+    const height=()=>rule.getBoundingClientRect().bottom-doc.getBoundingClientRect().top;
+    const apply=g=>rows.forEach((r,i)=>{ r.style.marginTop=g+"px"; });
+    // Step down only as far as needed, and only while it can still win the page.
+    let chosen=FULL;
+    apply(FULL);
+    if(height()>USABLE){
+      let fitted=false;
+      for(let g=FULL-4; g>=FLOOR; g-=4){
+        apply(g);
+        if(height()<=USABLE){ chosen=g; fitted=true; break; }
+      }
+      // Couldn't fit even at the floor — it is going onto a second page regardless,
+      // so give the signatures the full space back rather than cramping for nothing.
+      if(!fitted) chosen=FULL;
     }
+    apply(chosen);
     doc.style.width=prevW;
   }catch(e){}
 }
@@ -19214,7 +19230,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-0400";
+  window.APP_VERSION = "2026.08.31-0500";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
