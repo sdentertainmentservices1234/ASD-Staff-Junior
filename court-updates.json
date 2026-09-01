@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-01T12:47:14.800146Z",
+  "generated_at": "2026-09-01T17:01:26.868087Z",
   "window": [
     "2026-09-01",
     "2026-09-02",
@@ -49,10 +49,11 @@
     "2026-09-02": {
       "lists_found": [
         "Miscellaneous - Main",
+        "Miscellaneous - Supplementary",
         "Registrar - Main",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
       "match_count": 0,
@@ -107,8 +108,80 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-09-09": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
+    },
+    "2026-09-10": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 3,
+      "matches": [
+        {
+          "for_date": "2026-09-10",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "165",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "NISHA MONI DEKA SLP(C) No. Versus THE STATE OF ASSAM AND ORS."
+        },
+        {
+          "for_date": "2026-09-10",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "165",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "VIKASH KUMAR PINCHA SLP(C) No. 2310/2026 Versus THE STATE OF ASSAM AND ANR."
+        },
+        {
+          "for_date": "2026-09-10",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "165",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "DHRUBOJYOTI CHAKRABORTY SLP(C) No. Versus THE STATE OF ASSAM AND ORS."
+        }
+      ]
     }
   },
-  "match_count": 2,
+  "match_count": 5,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
