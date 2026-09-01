@@ -7364,6 +7364,14 @@ function _renderVakalatnamaRegister(){
   const el=document.getElementById("vkrBody"); if(!el) return;
   const list=[...(DB.vakalatnamas||[])].sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
   if(!list.length){ el.innerHTML=`<div style="padding:20px 4px;color:var(--muted);font-size:13.5px">No vakalatnamas generated yet. Use "+ New vakalatnama" to create the first one.</div>`; return; }
+  // Invoice raised against this vakalatnama, and whether it has been paid.
+  const billChip=(v)=>{
+    const iv=_vkInvoiceFor(v);
+    if(!iv) return `<span class="hint">Not invoiced</span>`;
+    return `<span class="mono" style="font-size:11.5px">${esc(iv.no)}</span> · ${fmtINR(invoiceTotal(iv))}<br>`
+      + (_invoicePaid(iv) ? `<span class="tag" style="background:var(--green,#2e7d32);color:#fff;border:none">Paid</span>`
+                          : `<span class="tag" style="color:var(--seal);border-color:#e2b8b8">Pending</span>`);
+  };
   const rows=list.map(v=>{
     const m=v.matterId?matterById(v.matterId):null;
     const linkChip = m ? `<span class="tag active">${esc(m.code)}</span>` : `<span class="hint">Not filed / unlinked</span>`;
@@ -7372,11 +7380,12 @@ function _renderVakalatnamaRegister(){
       <td><b>${esc(v.partyA||"")}</b>${v.partyB?` <span class="hint">v. ${esc(v.partyB)}</span>`:""}
         <div style="font-size:11.5px;color:var(--muted)">${esc(v.matterType||"")}</div></td>
       <td>${linkChip}</td>
+      <td style="font-size:12px;line-height:1.5">${billChip(v)}</td>
       <td style="white-space:nowrap"><button class="row-act" onclick="_previewVakalatnama('${v.id}')">View</button><button class="row-act" onclick="_vkActions('${v.id}')" aria-label="More actions" title="More actions">⋯</button></td>
     </tr>`;
   }).join("");
   el.innerHTML=`<div class="tbl-wrap"><table class="sr-num">
-    <thead><tr><th>Date</th><th>Parties</th><th>Case</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Parties</th><th>Case</th><th>Invoice</th><th></th></tr></thead>
     <tbody>${rows}</tbody></table></div>
     <div style="font-size:11.5px;color:var(--muted);margin-top:10px">${list.length} vakalatnama${list.length!==1?"s":""} on record.</div>`;
 }
@@ -7390,6 +7399,10 @@ function _vkActions(id){
       {t:"Print vakalatnama + affidavit",f:`_vkPrintWithAffidavit(_vkRec('${id}'))`},
       {t:"Change affidavit deponent",f:`_vkAskAffidavit(_vkRec('${id}'),false)`}
     ]:[{t:"Generate an affidavit",f:`_vkAskAffidavit(_vkRec('${id}'),false)`}])
+    .concat((function(){ const iv=_vkInvoiceFor(v);
+      return iv ? [{t:"View invoice "+iv.no,f:`_previewGenDoc('invoice','${iv.id}')`},
+                   {t:"Invoice options…",f:`_docActions('invoice','${iv.id}')`}]
+                : [{t:"Raise an invoice",f:`_vkBillInvoice('${id}')`,seal:1}]; })())
     .concat([
     {t:v.matterId?"Change linked case":"Link to a case",f:`_vkLinkToMatter('${id}')`},
     {t:"Delete",f:`_delVakalatnama('${id}')`,danger:1}]);
@@ -7398,6 +7411,40 @@ function _vkActions(id){
     <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
 function _vkRec(id){ return (DB.vakalatnamas||[]).find(x=>x.id===id); }
+/* ---- Raise a fee invoice off a vakalatnama ----------------------------------
+   Opens the ordinary invoice form pre-filled from the vakalatnama (case or
+   bill-to party, a fee line naming the matter type, and the cause title in the
+   notes), so the fee, expenses and terms are still set the usual way. Saving
+   links the two records together. */
+function _vkInvoiceFor(v){
+  if(!v||!v.invoiceId) return null;
+  return (DB.invoices||[]).find(x=>x.id===v.invoiceId && !isVoided(x)) || null;
+}
+function _vkBillInvoice(id){
+  const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Vakalatnama not found.",true); return; }
+  const existing=_vkInvoiceFor(v);
+  if(existing){ toast("Already invoiced under "+existing.no+".",true); _docActions("invoice",existing.id); return; }
+  const m=v.matterId?matterById(v.matterId):null;
+  const client=(v.executants||[]).filter(e=>e&&e.name)[0]||null;
+  const cause=[v.partyA,v.partyB].filter(Boolean).join(" v. ");
+  const db=defaultBank(), du=defaultUpi();
+  _editingInvoiceId=null;
+  _invFromVak=v.id;
+  _invDraft={
+    matterId: v.matterId||"",
+    to: m?"":((client&&client.name)||v.partyA||""),
+    toAddr: m?"":((client&&client.address)||""),
+    toPhone:"", toEmail:"",
+    dueMode:"days", due:15,
+    bankId: db?db.id:"", upiId: du?du.id:"", showQr: !!du,
+    notes: [cause, v.forum].filter(Boolean).join(" — ")
+  };
+  _invLines=[{desc:"Professional fees — "+_affTypePhrase(v.matterType), amount:""}];
+  _invExpenses=[];
+  openBilling("invoice", true);
+  toast("Invoice pre-filled from the vakalatnama — enter the fee.");
+}
+window._vkBillInvoice=_vkBillInvoice; window._vkInvoiceFor=_vkInvoiceFor;
 function _previewAffidavit(id){
   const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Not found.",true); return; }
   printAffidavit(v,{noPrint:true});
@@ -9017,11 +9064,18 @@ function peekNextInvoiceNo(){
 let _invLines = [];      // [{desc, amount}]
 let _invExpenses = [];   // [{desc, amount}]
 let _editingInvoiceId = null;   // set while editing an existing invoice (vs raising a new one)
+// A draft used ONLY to pre-fill the invoice form (e.g. raised from a vakalatnama). Unlike
+// _editingInvoiceId this still saves as a NEW invoice; _invFromVak records which
+// vakalatnama it came from so the two can be shown as linked afterwards.
+let _invDraft = null, _invFromVak = null;
 
 function renderInvoice(){
   const opts = _billMatterOptions();
   const list=[...DB.invoices].sort(_byNoAsc);
   const editInv = _editingInvoiceId ? (DB.invoices||[]).find(v=>v.id===_editingInvoiceId) : null;
+  // Fields are filled from the invoice being edited, or from a draft when raising a new
+  // invoice off another record (a vakalatnama). Only editInv puts the form in EDIT mode.
+  const fillFrom = editInv || _invDraft || null;
   const histRows=list.map(inv=>{
     const tot=(inv.lines||[]).reduce((s,l)=>s+(+l.amount||0),0)+(inv.expenses||[]).reduce((s,l)=>s+(+l.amount||0),0);
     const voided=isVoided(inv);
@@ -9117,16 +9171,16 @@ function renderInvoice(){
   if(_invLines.length===0) _invLines=[{desc:"Professional fees",amount:""}];
   drawInvLines(); drawInvExpenses(); onInvStyleChange(); onDueModeChange();
   // Edit mode: prefill the fields not carried by template defaults, then sync dependent UI.
-  if(editInv){
+  if(fillFrom){
     const set=(id,val)=>{const el=document.getElementById(id); if(el&&val!=null&&val!=="") el.value=val;};
-    set("ivDueMode", editInv.dueMode||"days");
-    if(editInv.due) set("ivDueDays", editInv.due);
-    set("ivNotes", editInv.notes||"");
-    if(editInv.matterId){ _ivSetKind("case"); set("ivMatter", editInv.matterId); }
-    else { _ivSetKind("general"); set("ivTo", editInv.to||""); set("ivToAddr", editInv.toAddr||""); set("ivToPhone", editInv.toPhone||""); set("ivToEmail", editInv.toEmail||""); }
-    const bankEl=document.getElementById("ivBank"); if(bankEl && editInv.bankId!=null) bankEl.value=editInv.bankId;
-    const upiEl=document.getElementById("ivUpi"); if(upiEl && editInv.upiId!=null) upiEl.value=editInv.upiId;
-    const qr=document.getElementById("ivQr"); if(qr) qr.checked=!!editInv.showQr;
+    set("ivDueMode", fillFrom.dueMode||"days");
+    if(fillFrom.due) set("ivDueDays", fillFrom.due);
+    set("ivNotes", fillFrom.notes||"");
+    if(fillFrom.matterId){ _ivSetKind("case"); set("ivMatter", fillFrom.matterId); }
+    else { _ivSetKind("general"); set("ivTo", fillFrom.to||""); set("ivToAddr", fillFrom.toAddr||""); set("ivToPhone", fillFrom.toPhone||""); set("ivToEmail", fillFrom.toEmail||""); }
+    const bankEl=document.getElementById("ivBank"); if(bankEl && fillFrom.bankId!=null) bankEl.value=fillFrom.bankId;
+    const upiEl=document.getElementById("ivUpi"); if(upiEl && fillFrom.upiId!=null) upiEl.value=fillFrom.upiId;
+    const qr=document.getElementById("ivQr"); if(qr) qr.checked=!!fillFrom.showQr;
     _ivMatterChange(); onDueModeChange();
   }
 }
@@ -9309,6 +9363,13 @@ function saveAndPrintInvoice(){
     style, dueMode, due:dueDays, bankId, upiId, showQr,
     lines, expenses, notes, status:"raised" };
   billFields(inv);
+  // Remember it was raised off a vakalatnama, so each can point at the other.
+  if(_invFromVak){
+    inv.vakalatnamaId=_invFromVak;
+    const vk=(DB.vakalatnamas||[]).find(x=>x.id===_invFromVak);
+    if(vk) vk.invoiceId=inv.id;
+    _invFromVak=null; _invDraft=null;
+  }
   DB.invoices.push(inv);
   logActivity("invoice", `Invoice ${inv.no||""} — ${fmtINR(inv.total||inv.amount||0)}`, {ownerOnly:true, refId:inv.id});
   save();
@@ -17124,7 +17185,7 @@ function shellGo(t){
 function openBilling(which, keepEdit){
   // Any entry into billing that isn't an explicit invoice edit abandons a half-finished
   // edit and clears the form, so a stale edit can't turn a "New invoice" into an overwrite.
-  if(!keepEdit && _editingInvoiceId){ _editingInvoiceId=null; _invLines=[{desc:"Professional fees",amount:""}]; _invExpenses=[]; }
+  if(!keepEdit && (_editingInvoiceId||_invDraft)){ _editingInvoiceId=null; _invDraft=null; _invFromVak=null; _invLines=[{desc:"Professional fees",amount:""}]; _invExpenses=[]; }
   _billingTab = which||"receipt";
   _shellTab="billing"; renderBotNav();
   if(_billingTab==="invoice"){ renderInvoice(); markPanel("invoice"); }
@@ -19456,7 +19517,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-1200";
+  window.APP_VERSION = "2026.08.31-1300";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
