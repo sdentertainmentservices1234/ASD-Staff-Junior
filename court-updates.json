@@ -1,51 +1,16 @@
 {
-  "generated_at": "2026-09-01T17:01:26.868087Z",
+  "generated_at": "2026-09-01T19:48:58.682237Z",
   "window": [
-    "2026-09-01",
     "2026-09-02",
     "2026-09-03",
     "2026-09-04",
     "2026-09-07",
     "2026-09-08",
     "2026-09-09",
-    "2026-09-10"
+    "2026-09-10",
+    "2026-09-11"
   ],
   "by_date": {
-    "2026-09-01": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Regular / Final - Supplementary",
-        "Registrar - Main",
-        "Registrar - Supplementary",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-09-01",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "8",
-          "item": "105",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "105 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
-        }
-      ]
-    },
     "2026-09-02": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -180,8 +145,87 @@
           "text": "DHRUBOJYOTI CHAKRABORTY SLP(C) No. Versus THE STATE OF ASSAM AND ORS."
         }
       ]
+    },
+    "2026-09-11": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 4,
+      "matches": [
+        {
+          "for_date": "2026-09-11",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "236",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "236 Diary No. 66421-2025 RAKESH KUMAR GUPTA Versus SECURITIES AND EXCHANGE BOARD OF INDIA AND ORS."
+        },
+        {
+          "for_date": "2026-09-11",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "702",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "702 SLP(Crl) No. 8841/2026 FAVAS RAHIMT Versus STATE OF KERALA"
+        },
+        {
+          "for_date": "2026-09-11",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1179",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1179 SLP(C) No. 27751/2025 SHAIKH PASHU S/O SHAIKH RAHEEM AND ORS. Versus SHAIKH RAFIK S/O SHAIKH MAHEBOOB AND ORS."
+        },
+        {
+          "for_date": "2026-09-11",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1618",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1618 SLP(C) No. 38281/2025 WEST KHANDESH DALIT SHIKSHAN PRASARAK MANDAL, DHULE Versus THE STATE OF MAHARASHTRA AND ORS."
+        }
+      ]
     }
   },
-  "match_count": 5,
+  "match_count": 8,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
