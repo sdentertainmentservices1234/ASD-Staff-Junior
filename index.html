@@ -5393,7 +5393,7 @@ function _printBoth(inv, rec){
   printReceipt(rec, {noPrint:true});
   const recHTML=area.innerHTML;
   area.innerHTML=invHTML+recHTML;
-  setTimeout(()=>_printAs("ASDC Invoice "+String(inv.no||"").replace(/[\/\\]/g,"-")+" and Receipt "+String(rec.no||"").replace(/[\/\\]/g,"-")), 160);
+  setTimeout(()=>_printAs(_docPrintTitle("invoice", inv)+" and Receipt "+safeName(String(rec.no||"").replace(/[\/\\]/g,"-"))), 160);
 }
 
 /* ---------- build printable receipt ---------- */
@@ -5895,8 +5895,11 @@ function _previewGenDoc(kind, id){
   else if(kind==="voucher"){ obj=(DB.expenses||[]).find(x=>x.id===id); if(obj) printVoucher(id,{noPrint:true}); }
   if(!obj){ toast("Document not found.",true); return; }
   try{ _tplTableizeForPrint(); }catch(e){}
+  // Same name here as when printing, so a PDF saved from the viewer matches.
   const lbl={invoice:"Invoice",receipt:"Receipt",voucher:"Voucher"}[kind]||"Document";
-  _openPrintView(lbl+" "+String(obj.no||obj.voucherNo||"").replace(/[\/\\]/g,"-"));
+  _openPrintView(kind==="voucher"
+    ? lbl+" "+safeName(String(obj.voucherNo||obj.no||"").replace(/[\/\\]/g,"-"))
+    : _docPrintTitle(kind, obj));
 }
 window._previewGenDoc=_previewGenDoc;
 // Compact row actions: the register row shows View + ⋯; ⋯ opens this menu with the
@@ -5962,6 +5965,18 @@ function _partyNameOf(o){
   const m = o.matterId ? matterById(o.matterId) : null;
   return (m && m.client) || o.to || o.payer || o.from || "";
 }
+/* The name a saved PDF gets. Browsers use document.title as the default filename, so
+   putting the billed party first makes a folder of invoices/receipts sort and scan by
+   client — e.g. "Anjali Nagapure — Invoice INV-2026-27-001". Slashes in a document
+   number would break the filename, so everything runs through safeName(). */
+function _docPrintTitle(kind, obj){
+  const label = kind==="invoice" ? "Invoice" : kind==="receipt" ? "Receipt" : String(kind||"Document");
+  const who = safeName(_partyNameOf(obj));
+  const no  = safeName(String((obj&&obj.no)||"").replace(/[\/\\]/g,"-"));
+  const doc = label + (no ? " "+no : "");
+  return who ? who+" — "+doc : doc;
+}
+window._docPrintTitle=_docPrintTitle;
 function _dateGapDays(aISO,bISO){
   if(!aISO||!bISO) return null;
   const a=new Date(aISO+"T00:00:00"), b=new Date(bISO+"T00:00:00");
@@ -6434,7 +6449,7 @@ function printReceipt(rec, opts){
      </div>
      ${_tplFoot(s)}
    </div>`;
-  if(!opts.noPrint) setTimeout(()=>_printAs("ASDC Receipt number "+String(rec.no||"").replace(/[\/\\]/g,"-")), 150);
+  if(!opts.noPrint) setTimeout(()=>_printAs(_docPrintTitle("receipt", rec)), 150);
 }
 
 
@@ -9555,7 +9570,7 @@ function printInvoice(inv, opts){
      </div>
      ${_tplFoot(s)}
    </div>`;
-  if(!opts.noPrint) setTimeout(()=>_printAs("ASDC Invoice number "+String(inv.no||"").replace(/[\/\\]/g,"-")),150);
+  if(!opts.noPrint) setTimeout(()=>_printAs(_docPrintTitle("invoice", inv)),150);
 }
 
 /* ===========================================================
@@ -19517,7 +19532,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.08.31-1300";
+  window.APP_VERSION = "2026.09.01-0100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
