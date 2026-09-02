@@ -1111,6 +1111,12 @@
   .cl-title2{font-size:11px;font-weight:700;color:#1e1a15;line-height:1.28}
   .cl-fixed{display:inline-block;margin-top:3px;font-size:8.5px;font-weight:700;color:#6b1f1f;background:#f3e6e6;
     border:1px solid #e0c4c4;border-radius:3px;padding:1px 6px}
+  .cl-advnote{font-size:9px;color:#8a6a1f;text-align:center;margin:0 0 7px;letter-spacing:.01em}
+  .cause-list.bw .cl-advnote{color:#333}
+  .cl-advtag{display:inline-block;margin-top:3px;margin-right:5px;font-size:8px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;color:#8a6a1f;border:1px solid #c8ab68;
+    border-radius:3px;padding:0 4px;line-height:1.5;vertical-align:middle}
+  .cause-list.bw .cl-advtag{color:#000;border-color:#888}
   .cl-subline{font-size:8.5px;color:#7a7264;margin-top:3px;line-height:1.4}
   .cl-teamline{color:#1f6b4a}
   .cl-subdot{margin:0 5px;color:#c9bda6}
@@ -8329,6 +8335,7 @@ function openCauseList(){
     const iso=(document.getElementById("clDate")||{}).value||defDate;
     const mtg=!!(document.getElementById("clMeetings")||{}).checked;
     const incF=!!(document.getElementById("clIncFetched")||{}).checked;
+    const incA=!!(document.getElementById("clIncAdvance")||{}).checked;
     // Collect referring-advocate selections: persist each typed name on its matter,
     // and include in the printed last column only the ones the user ticked.
     const refMap={};
@@ -8341,13 +8348,15 @@ function openCauseList(){
       if(cb.checked && nm) refMap[m.id]=nm;
     });
     save();
-    printCauseList(iso, mtg, {bw:bw, includeFetched:incF, refAdvMap:refMap});
+    printCauseList(iso, mtg, {bw:bw, includeFetched:incF, includeAdvance:incA, refAdvMap:refMap});
   };
   openModal("Cause list", `
     <label class="fld">Cause list for which day?</label>
     <input class="in" type="date" id="clDate" value="${defDate}" onchange="_clRenderRefList(this.value)">
     <label class="checkline" style="margin-top:12px"><input type="checkbox" id="clMeetings" checked> Include Meetings &amp; Conferences below the table</label>
     <label class="checkline" style="margin-top:8px"><input type="checkbox" id="clIncFetched" checked> Include Supreme Court listings found for this day <span style="color:var(--muted)">(from the auto-fetch — verify before relying)</span></label>
+    <label class="checkline" style="margin-top:8px"><input type="checkbox" id="clIncAdvance"> Include advance-list matters <span style="color:var(--muted)">(off by default — the advance list is tentative until the court publishes the main list)</span></label>
+    <div id="clAdvHint" style="margin-top:6px"></div>
     <div class="hint" style="margin-top:8px">Shows every case with a hearing on the chosen day. Fill each case's cause-list details (court no., coram, timings, sequence) from its <b>Add date</b> screen for the fullest list.</div>
     <div id="clRefBox" style="border-top:1px solid var(--line);margin:14px 0 4px;padding-top:12px"></div>
     <div id="clAutoBox" style="border-top:1px solid var(--line);margin:14px 0 4px;padding-top:12px">
@@ -8368,7 +8377,20 @@ function openCauseList(){
 // Referring-advocate picker inside the Cause-list dialog: lists YOUR matters heard
 // on the chosen day, each with a tick + editable name. Ticked matters print their
 // referring advocate in the last column; the name is remembered on the matter.
+// Tell the user, for the day they picked, whether the court has published the main list
+// yet and how many listings the advance-list option actually affects — so the checkbox is
+// a concrete choice rather than an abstract one.
+function _clAdvHint(iso){
+  const box=document.getElementById("clAdvHint"); if(!box) return;
+  const day=(window.__cuCache&&window.__cuCache.days||[]).find(d=>d.date===iso);
+  if(!day || day.hasMain!==false){ box.innerHTML=""; return; }
+  const n=(day.matches||[]).filter(m=>m.conf!=="low").length;
+  box.innerHTML=`<div class="hint" style="color:var(--brass)"><b>This day has no main list yet.</b> `+
+    (n ? `${n} Supreme Court listing${n===1?"":"s"} found for it ${n===1?"is":"are"} from the advance list and ${n===1?"is":"are"} left out unless you tick the box above.`
+       : `Anything found for it would be from the advance list.`)+`</div>`;
+}
 function _clRenderRefList(iso){
+  try{ _clAdvHint(iso); }catch(e){}
   const box=document.getElementById("clRefBox"); if(!box) return;
   const day=(DB.matters||[]).filter(m=>!isVoided(m) && (m.nextDate===iso || (m.dates||[]).some(d=>d.date===iso)));
   if(!day.length){ box.innerHTML=`<div class="hint">No matters of yours are listed on this day, so there's no referring advocate to add.</div>`; return; }
@@ -8686,6 +8708,15 @@ function printCauseList(iso, includeMeetings, opts){
   const staff=isStaffView();
   const rows=[];
   const shownIds=new Set();   // matters already printed, so a fetched listing that links to one isn't repeated
+  // The Supreme Court publishes an ADVANCE list before the main list for a day. Those
+  // listings are tentative — a matter on the advance list may not appear on the final
+  // list at all. `has_main` is a property of the DAY: while it is false, nothing fetched
+  // for that date is confirmed. So a row counts as advance-list if it CAME FROM THE FETCH
+  // (either a fetched row, or one auto-tracked onto a matter with src "cl") and the day
+  // still has no main list. A hearing the user typed in themselves is never suppressed —
+  // that is their own record, not the court's tentative one.
+  const _fday=(window.__cuCache&&window.__cuCache.days||[]).find(d=>d.date===iso);
+  const dayAdvance = !!_fday && _fday.hasMain===false;
   (DB.matters||[]).forEach(m=>{
     if(isVoided(m)) return;
     const de=(m.dates||[]).find(d=>d.date===iso);
@@ -8700,6 +8731,7 @@ function printCauseList(iso, includeMeetings, opts){
         coram:d.coram||"", caseNo:m.caseNo||"", diaryNo:m.diaryNo||"", title:m.parties||m.client||"", team:d.team||"",
         mainTotal:d.mainTotal||"", mainFresh:d.mainFresh||"", suppTotal:d.suppTotal||"",
         suppFresh:d.suppFresh||"", seqPos:d.seqPos||"",
+        __adv: dayAdvance && d.src==="cl",
         // referring advocate — only for matters the user ticked in the print dialog
         refAdv:(opts.refAdvMap&&opts.refAdvMap[m.id])||""
       });
@@ -8713,7 +8745,7 @@ function printCauseList(iso, includeMeetings, opts){
     const _n=s=>String(s||"").replace(/[^0-9]/g,"");
     const have=new Set();
     rows.forEach(r=>{ const n=_n(r.caseNo)||_n(r.diaryNo); if(n) have.add(n); });
-    const fday=(window.__cuCache.days||[]).find(d=>d.date===iso);
+    const fday=_fday;
     (fday?fday.matches:[]).forEach(m=>{
       if(m.conf==="low") return;
       const info=_parseListing(m.title);
@@ -8735,9 +8767,18 @@ function printCauseList(iso, includeMeetings, opts){
         coram:m.coram||"", caseNo:(matched&&matched.caseNo)||info.caseNo||"", diaryNo:(matched&&matched.diaryNo)||info.diaryNo||"",
         title:info.party||(matched&&(matched.parties||matched.client))||String(m.title||"").replace(/^\s*\d+\s*/,""), team:"",
         refAdv:refAdv,
-        mainTotal:"", mainFresh:"", suppTotal:"", suppFresh:"", seqPos:"", __fetched:true, __linked:!!matched });
+        mainTotal:"", mainFresh:"", suppTotal:"", suppFresh:"", seqPos:"", __fetched:true, __linked:!!matched,
+        __adv: dayAdvance });
     });
   }
+  // Advance-list listings are held back unless the user ticks them in. Counted, never
+  // silently dropped — omitting a listing from a cause list is not a quiet matter, so the
+  // count is reported to the user and noted under the printed title.
+  let advHeld=0;
+  if(!opts.includeAdvance){
+    for(let i=rows.length-1;i>=0;i--){ if(rows[i].__adv){ rows.splice(i,1); advHeld++; } }
+  }
+  const advShown = opts.includeAdvance && rows.some(r=>r.__adv);
   // Final safety net: never print the same case twice. Rows are in order (your own matter
   // rows first, fetched drafting-aid rows after). A later row is dropped when it's the same
   // case as one already kept — exact normalized number for any row, plus overlapping number
@@ -8844,13 +8885,15 @@ function printCauseList(iso, includeMeetings, opts){
         const subBits=[];
         if(anyTeam && r.team) subBits.push(`<span class="cl-teamline">Appearing: ${esc(r.team)}</span>`);
         const fixed = r.specialTime ? `<span class="cl-fixed">⏱ ${esc(_cl12h(r.specialTime))}</span>` : "";
+        // A printed advance-list matter must never be mistaken for a confirmed listing.
+        const advTag = r.__adv ? `<span class="cl-advtag">Advance</span>` : "";
         const numCell = `${r.diaryNo?`<div class="cl-diary">D.${esc(r.diaryNo)}</div>`:""}<div class="cl-caseno">${esc(r.caseNo||"—")}</div>`;
         const itemDisp = (r.court && r.item) ? (esc(r.court)+"/"+esc(r.item))
                         : (r.item ? esc(r.item) : (r.court ? esc(r.court)+"/—" : "—"));
         return `<tr>
           <td class="cl-c-item">${itemDisp}</td>
           <td class="cl-c-num">${numCell}</td>
-          <td class="cl-c-case"><div class="cl-title2">${esc(r.title||"—")}</div>${fixed}${subBits.length?`<div class="cl-subline">${subBits.join('<span class="cl-subdot">·</span>')}</div>`:""}</td>
+          <td class="cl-c-case"><div class="cl-title2">${esc(r.title||"—")}</div>${advTag}${fixed}${subBits.length?`<div class="cl-subline">${subBits.join('<span class="cl-subdot">·</span>')}</div>`:""}</td>
           <td class="cl-c-seq cl-c-adv">${esc(r.refAdv||"")}</td>
         </tr>`;
       }).join("");
@@ -8899,7 +8942,12 @@ function printCauseList(iso, includeMeetings, opts){
     }
   }
   const area=document.getElementById("receiptArea");
-  area.innerHTML=`<div class="tpl-list cause-list${opts.bw?" bw":""}">${_causeListHeader("Cause List · "+dstr)}${tbl}${meetingsHtml}</div>`;
+  const advNote = advShown
+    ? `<div class="cl-advnote">Includes advance-list matters, marked <b>Advance</b> — tentative until the court publishes the main list for this day.</div>`
+    : "";
+  area.innerHTML=`<div class="tpl-list cause-list${opts.bw?" bw":""}">${_causeListHeader("Cause List · "+dstr)}${advNote}${tbl}${meetingsHtml}</div>`;
+  // Say plainly what was left out, so a held-back listing is never a silent omission.
+  if(advHeld) try{ toast(advHeld+" advance-list "+(advHeld===1?"listing":"listings")+" not printed — tick “Include advance list” to add "+(advHeld===1?"it":"them")+"."); }catch(e){}
   setTimeout(()=>_printAs("Cause list dated "+String(iso||"").split("-").reverse().join("-")),150);
 }
 function reprintSalarySlip(id){
@@ -19896,7 +19944,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.02-0700";
+  window.APP_VERSION = "2026.09.02-0800";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
