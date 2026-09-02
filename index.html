@@ -694,8 +694,9 @@
   .tpl-dl .caze b{line-height:1.35}
   /* line-item table */
   table.tpl-tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
-  table.tpl-tbl thead th{background:var(--tpx-ox);color:#fff;text-align:left;padding:10px 13px;
-    font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+  table.tpl-tbl thead th{background:transparent;color:var(--tpx-ox);text-align:left;padding:7px 13px;
+    font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+    border-top:1.5px solid var(--tpx-ox);border-bottom:1px solid var(--tpx-ox)}
   table.tpl-tbl thead th.r{text-align:right}
   table.tpl-tbl tbody td{padding:10px 13px;border-bottom:1px solid var(--tpx-line);vertical-align:top}
   table.tpl-tbl tbody td.r{text-align:right;color:var(--tpx-ox);font-variant-numeric:tabular-nums}
@@ -706,13 +707,21 @@
   .tpl-tot td{padding:5px 0}
   .tpl-tot td.k{color:var(--tpx-muted);padding-right:40px;text-align:left}
   .tpl-tot td.r{width:240px;text-align:right;padding-right:13px;color:var(--tpx-ink);font-variant-numeric:tabular-nums}
-  .tpl-tot tr.grand td{background:var(--tpx-ox);color:#fff;font-weight:700;font-size:14px;padding-top:11px;padding-bottom:11px}
-  .tpl-tot tr.grand td.k{padding-left:14px}
-  .tpl-tot tr.grand td.r{color:#fff;padding-right:13px}
+  /* No fill: the total is set off by a rule above and a double rule below, and the
+     figure carries the weight instead — the same serif oxblood numeral the receipt
+     uses for its amount, so the two documents read as one stationery set. Large
+     enough that the amount due is still the first thing found on the page. */
+  .tpl-tot tr.grand td{background:transparent;color:var(--tpx-ink);font-weight:700;font-size:13px;
+    padding-top:10px;padding-bottom:11px;border-top:1.5px solid var(--tpx-ox);
+    border-bottom:3px double var(--tpx-ox)}
+  .tpl-tot tr.grand td.k{padding-left:0;color:var(--tpx-muted);font-size:11px;font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;vertical-align:middle}
+  .tpl-tot tr.grand td.r{color:var(--tpx-ox);padding-right:13px;
+    font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:27px;line-height:1.05;letter-spacing:.005em}
   /* Amount in words sits INSIDE the highlighted total row, under its label, so the
      figure and the words read as one line of the bill instead of two. */
-  .tpl-words-in{font-size:10.5px;font-style:italic;font-weight:400;color:rgba(255,255,255,.85);margin-top:2px;letter-spacing:.01em;font-variant-numeric:normal;line-height:1.35}
-  .tpl.bw .tpl-words-in{color:rgba(255,255,255,.92)}
+  .tpl-words-in{font-size:10.5px;font-style:italic;font-weight:400;color:var(--tpx-muted);margin-top:4px;letter-spacing:.01em;font-variant-numeric:normal;line-height:1.35;font-family:inherit}
+  .tpl.bw .tpl-words-in{color:#5a554c}
   .tpl-words{font-size:11.5px;font-style:italic;color:var(--tpx-muted);text-align:right;margin-top:8px}
   .tpl-payable{font-size:11.5px;color:var(--tpx-ox);font-weight:600;text-align:right;margin-top:3px}
   /* ---- Invoice refinements: same template and palette, better craft ----
@@ -726,16 +735,10 @@
   .tpl-cols.solo .tpl-col + .tpl-col{border-left:none;padding-left:0}
   .tpl-lbl{letter-spacing:.16em;margin-bottom:6px}
   .tpl-bigname{letter-spacing:.005em}
-  table.tpl-tbl{border:1px solid var(--tpx-line)}
-  table.tpl-tbl thead th{letter-spacing:.12em}
   table.tpl-tbl tbody td{border-bottom:1px solid #efe9de}
-  table.tpl-tbl tbody tr:last-child td{border-bottom:none}
-  table.tpl-tbl tbody tr:nth-child(even) td{background:#fbf8f2}
+  table.tpl-tbl tbody tr:last-child td{border-bottom:1px solid var(--tpx-line)}
   table.tpl-tbl tbody td.r{font-weight:600}
   .tpl-tot table{min-width:430px}
-  .tpl-tot tr.grand td{border-top:2px solid var(--tpx-gold)}
-  .tpl-tot tr.grand td.k{font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
-  .tpl-tot tr.grand td.r{font-size:15.5px;letter-spacing:.01em}
   .tpl-words-in{text-transform:none;letter-spacing:.01em}
   .tpl-payable{letter-spacing:.02em;padding-right:13px}
   /* receipt amount box + payment particulars */
@@ -812,15 +815,19 @@
   /* keep a section heading with its table, and never split a fee row across pages */
   table.tpl-tbl tbody tr{break-inside:avoid;page-break-inside:avoid}
   /* footer band */
-  .tpl-foot{margin-top:auto;background:var(--tpx-ox);color:#f0e9df;padding:0}
-  .tpl-foot .fbar{height:3px;background:var(--tpx-gold)}
-  .tpl-foot .frow{display:flex;align-items:flex-start;justify-content:space-between;gap:40px;padding:18px 54px 20px}
+  /* A solid band at the foot of every sheet was ~9% of the page in heavy ink for the
+     least important content on it, and photocopied as muddy grey. A gold rule does the
+     same job of closing the page. */
+  .tpl-foot{margin-top:auto;background:transparent;color:var(--tpx-ink);padding:0;border-top:1px solid #e2dccd}
+  .tpl-foot .fbar{height:0;background:transparent;border-top:2px solid var(--tpx-gold)}
+  .tpl-foot .frow{display:flex;align-items:flex-start;justify-content:space-between;gap:40px;padding:11px 54px 13px}
   .tpl-foot .faddr{flex:1;min-width:0;text-align:left}
   .tpl-foot .fcontact{flex:0 0 auto;text-align:right}
   .tpl-foot .flbl{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
     color:var(--tpx-gold);margin-bottom:4px}
-  .tpl.bw .tpl-foot .flbl{color:#e8dcc2}
-  .tpl-foot .fval{font-size:14px;line-height:1.55;color:#f4eee4}
+  /* both were set for white-on-oxblood; the band is now paper */
+  .tpl.bw .tpl-foot .flbl{color:#6e5320}
+  .tpl-foot .fval{font-size:12px;line-height:1.5;color:#5d574d}
   .tpl-foot .fi{display:block}
   /* Document verification QR (receipt/invoice) */
   .tpl-verify{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:14px}
@@ -19889,7 +19896,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.02-0600";
+  window.APP_VERSION = "2026.09.02-0700";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
