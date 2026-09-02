@@ -228,7 +228,25 @@
       padding-bottom:7px;margin-bottom:5px;border-bottom:1px solid rgba(107,31,31,.2)}
     .tbl-wrap tfoot td[data-label=""]::before{display:none}
     .tbl-wrap tfoot td[data-empty="1"]{display:none}
-    .tbl-wrap tbody td.sr-c{display:none}
+    /* The Sr. cell is INSERTED as the row's first child, so in this card layout it
+       took the card-heading styling and was then hidden outright — leaving a phone with
+       no serial number at all, and demoting the real headline cell (code / no.) to an
+       ordinary labelled line. Show the serial as a small index above the card, and
+       promote the cell that follows it back to the heading. */
+    /* Selectors carry table.sr-num so they outrank the desktop rule
+       `.tbl-wrap table.sr-num td.sr-c` (3 classes), which otherwise pins the cell
+       to width:34px and centres it. */
+    .tbl-wrap table.sr-num tbody td.sr-c{
+      display:block;width:auto;text-align:left;padding:0 0 3px;border:none;
+      font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+    /* display must be restored explicitly: the td:first-child::before rule above
+       hides it, and the Sr. cell IS the row's first child. */
+    .tbl-wrap table.sr-num tbody td.sr-c::before{content:"#";display:inline;margin-right:1px}
+    .tbl-wrap table.sr-num tbody td.sr-c + td{
+      justify-content:flex-start;font-size:15px;font-weight:700;
+      padding-bottom:7px;margin-bottom:6px;border-bottom:1px solid var(--line2)}
+    .tbl-wrap table.sr-num tbody td.sr-c + td::before{display:none}
+    .tbl-wrap table.sr-num tbody td.sr-c + td a{font-size:15px}
   }
   .empty{padding:34px;text-align:center;color:var(--muted);font-size:14px}
 
@@ -1028,8 +1046,15 @@
   .td-due{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;background:#eef2ee;color:#2e7d5b}
   .td-due.td{background:#fff3d6;color:#8a6a00}
   .td-due.od{background:#fbe4e4;color:#a11}
-  .tbl-wrap table.sr-num th.sr-h{width:34px;color:var(--muted);font-weight:600}
-  .tbl-wrap table.sr-num td.sr-c{color:var(--muted);font-variant-numeric:tabular-nums;text-align:center;width:34px}
+  table.sr-num th.sr-h{width:34px;color:var(--muted);font-weight:600}
+  table.sr-num td.sr-c{color:var(--muted);font-variant-numeric:tabular-nums;text-align:center;width:34px}
+  /* the archive's compact month tables carry no header row — keep the serial tight */
+  table.arch-tbl.sr-num td.sr-c{width:22px;padding-left:0;font-size:11.5px}
+  /* Serial numbers for registers that render as CARD LISTS rather than tables —
+     the list counterpart of the table's Sr. column, same muted tabular figures. */
+  .sr-list > * > .sr-n{flex:0 0 auto;align-self:flex-start;min-width:20px;margin-right:9px;
+    color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px;line-height:1.7;text-align:right}
+  .sr-list > * > .sr-n::after{content:"."}
   /* ---- Printable lists (Today / Cause List) ---- */
   .tpl-list{width:794px;min-height:1123px;background:#fff;color:#1e1a15;margin:0 auto;padding:26px 34px;
     font-family:"Inter","Helvetica Neue",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -13389,7 +13414,7 @@ function renderActivity(staffBack){
   panel.innerHTML=`${backBar}
     <div class="card">
       <div class="card-head"><div><h2>Activity</h2><div class="hint">Everything logged in the chamber${staff?"":", including your receipts and invoices"}. Tap an item to open it.</div></div>${clearBtn}</div>
-      <div class="act-list">${rows}</div>
+      <div class="act-list sr-list" data-sr-item=".act-row">${rows}</div>
     </div>`;
 }
 // Which activity types can open an underlying record (needs a refId we can route)
@@ -13730,10 +13755,10 @@ function renderTodos(staffBack){
         <div style="display:flex;gap:6px">${openTasks.length&&!_bulkOn?`<button class="btn ghost sm" onclick="_bulkMode(true)">Select</button>`:""}<button class="btn seal sm" onclick="addTaskOrReminder()">+ New</button></div></div>
       ${bulkBar}
       ${openCount? `
-        ${openTasks.length?`<div class="eyebrow" style="margin:4px 0 8px">To do${openTasks.length>1?" ("+openTasks.length+")":""}</div><div class="td-list">${openTasks.map(taskRow).join("")}</div>`:""}
+        ${openTasks.length?`<div class="eyebrow" style="margin:4px 0 8px">To do${openTasks.length>1?" ("+openTasks.length+")":""}</div><div class="td-list sr-list" data-sr-item=".td-row">${openTasks.map(taskRow).join("")}</div>`:""}
         ${openRem.length?`<div class="eyebrow" style="margin:16px 0 8px">Reminders${openRem.length>1?" ("+openRem.length+")":""}</div><div class="td-list">${openRem.map(remRow).join("")}</div>`:""}
       ` : `<div class="empty" style="padding:18px">Nothing pending. Tap <b>+ New</b> to add a task or reminder.</div>`}
-      ${(doneTasks.length||doneRem.length)?`<div class="eyebrow" style="margin:16px 0 8px">Done</div><div class="td-list">${doneTasks.slice(0,15).map(taskRow).join("")}${doneRem.slice(0,10).map(remRow).join("")}</div>`:""}
+      ${(doneTasks.length||doneRem.length)?`<div class="eyebrow" style="margin:16px 0 8px">Done</div><div class="td-list sr-list" data-sr-item=".td-row">${doneTasks.slice(0,15).map(taskRow).join("")}${doneRem.slice(0,10).map(remRow).join("")}</div>`:""}
     </div>`;
 }
 // One "+" button → choose Task or Reminder.
@@ -14511,7 +14536,7 @@ function renderAppointments(staffBack){
     <div class="card">
       <div class="card-head"><div><h2>Appointments &amp; meetings</h2><div class="hint">Case &amp; business meetings are shared; personal ones are private to you. Shows who added each.</div></div>
         <button class="btn seal sm" onclick="addAppointment()">+ Add</button></div>
-      ${list.length?`<div class="lrows">${list.map(row).join("")}</div>`:`<div class="empty" style="padding:18px">No appointments yet. Add one — it'll appear on your calendar.</div>`}
+      ${list.length?`<div class="lrows sr-list">${list.map(row).join("")}</div>`:`<div class="empty" style="padding:18px">No appointments yet. Add one — it'll appear on your calendar.</div>`}
     </div>`;
 }
 function markConcluded(id){
@@ -16366,19 +16391,25 @@ function renderArchive(){
     </div>
     ${body}`;
 }
-function toggleArchMonth(ym){ _archiveOpen[ym]=!_archiveOpen[ym]; renderArchive(); go("archive"); }
+function toggleArchMonth(ym){
+  _archiveOpen[ym]=!_archiveOpen[ym]; renderArchive(); go("archive");
+  // Number the month's tables NOW. The MutationObserver would otherwise do it on a
+  // requestAnimationFrame, which never fires while the document is hidden (background
+  // tab, or a PWA resumed from the background) — the serials would silently go missing.
+  try{ const p=document.getElementById("panel-archive"); if(p){ _numberTables(p); _numberLists(p); } }catch(e){}
+}
 
 function renderArchMonthDetail(m){
   let out = `<div class="arch-detail">`;
   if(m.receipts.length){
-    out += `<div class="arch-sec"><div class="arch-sec-t">Receipts</div><table class="arch-tbl"><tbody>`;
+    out += `<div class="arch-sec"><div class="arch-sec-t">Receipts</div><table class="arch-tbl sr-num"><tbody>`;
     m.receipts.sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(r=>{
       out += `<tr><td class="mono">${esc(r.no||"")}</td><td>${fmtDate(r.date)}</td><td>${esc(matterLabel(r.matterId))}</td><td class="num">${fmtINR(r.amount)}</td></tr>`;
     });
     out += `</tbody></table></div>`;
   }
   if(m.invoices.length){
-    out += `<div class="arch-sec"><div class="arch-sec-t">Invoices</div><table class="arch-tbl"><tbody>`;
+    out += `<div class="arch-sec"><div class="arch-sec-t">Invoices</div><table class="arch-tbl sr-num"><tbody>`;
     m.invoices.sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(v=>{
       const t=(v.lines||[]).reduce((s,l)=>s+(+l.amount||0),0)+(v.expenses||[]).reduce((s,l)=>s+(+l.amount||0),0);
       out += `<tr><td class="mono">${esc(v.no||"")}</td><td>${fmtDate(v.date)}</td><td>${esc(matterLabel(v.matterId))}</td><td class="num">${fmtINR(t)}</td></tr>`;
@@ -16386,14 +16417,14 @@ function renderArchMonthDetail(m){
     out += `</tbody></table></div>`;
   }
   if(m.expenses.length){
-    out += `<div class="arch-sec"><div class="arch-sec-t">Expenses</div><table class="arch-tbl"><tbody>`;
+    out += `<div class="arch-sec"><div class="arch-sec-t">Expenses</div><table class="arch-tbl sr-num"><tbody>`;
     m.expenses.sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(e=>{
       out += `<tr><td class="mono">${esc(e.voucherNo||"")}</td><td>${fmtDate(e.date)}</td><td>${esc(e.head||"")}${e.payee?" · "+esc(e.payee):""}</td><td class="num">${fmtINR(e.amount)}</td></tr>`;
     });
     out += `</tbody></table></div>`;
   }
   if(m.docsIn.length || m.docsFiled.length){
-    out += `<div class="arch-sec"><div class="arch-sec-t">Documents</div><table class="arch-tbl"><tbody>`;
+    out += `<div class="arch-sec"><div class="arch-sec-t">Documents</div><table class="arch-tbl sr-num"><tbody>`;
     [...m.docsIn.map(d=>({d,k:"Inward"})), ...m.docsFiled.map(d=>({d,k:"Filed"}))]
       .sort((a,b)=>((a.d.date||"")).localeCompare(b.d.date||"")).forEach(({d,k})=>{
       out += `<tr><td>${esc(k)}</td><td>${fmtDate(d.date)}</td><td>${esc(d.title||d.desc||"—")}</td><td>${esc(matterLabel(d.matterId)||"")}</td></tr>`;
@@ -16401,7 +16432,7 @@ function renderArchMonthDetail(m){
     out += `</tbody></table></div>`;
   }
   if(m.imports.length){
-    out += `<div class="arch-sec"><div class="arch-sec-t">Staff imports</div><table class="arch-tbl"><tbody>`;
+    out += `<div class="arch-sec"><div class="arch-sec-t">Staff imports</div><table class="arch-tbl sr-num"><tbody>`;
     m.imports.forEach(l=>{ out += `<tr><td>${fmtDate(l.at.slice(0,10))}</td><td>${esc(l.station||"")}</td><td>${l.nr} receipts, ${l.ne} expenses</td><td></td></tr>`; });
     out += `</tbody></table></div>`;
   }
@@ -17031,7 +17062,7 @@ function showGroup(group, sub, children){
   gn.style.display="block";
   const mm=document.getElementById("moreMenu"); if(mm) mm.style.display="none";
   // Same reason as in openSub(): don't leave the Sr. column to the rAF-driven observer.
-  try{ const ap=document.querySelector("#appRoot .panel.active"); if(ap){ _numberTables(ap); _labelizeTables(ap); } }catch(e){}
+  try{ const ap=document.querySelector("#appRoot .panel.active"); if(ap){ _numberTables(ap); _numberLists(ap); _labelizeTables(ap); } }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function subGo(group, sub){
@@ -17465,10 +17496,7 @@ function openBilling(which, keepEdit){
 }
 function markPanel(id){ document.querySelectorAll("#appRoot .panel").forEach(p=>p.classList.remove("active")); const el=document.getElementById("panel-"+id); if(el) el.classList.add("active"); }
 /* open a full-screen sub-page from More, with a back button */
-function openSub(which){
-  _navEnter(()=>openSub(which));
-  document.getElementById("groupNav").style.display="none";
-  const map={
+const SUB_PAGES={
     invoice:{fn:renderInvoice,id:"invoice",label:"Fee invoice"},
     matters:{fn:renderMatters,id:"matters",label:"Matters"},
     archive:{fn:renderArchive,id:"archive",label:"Archive"},
@@ -17489,30 +17517,60 @@ function openSub(which){
     salary:{fn:renderSalary,id:"salary",label:"People"},
     data:{fn:renderData,id:"data",label:"Backup & export"},
     settings:{fn:renderSettings,id:"settings",label:"Chamber & settings"}
-  };
-  const m=map[which]; if(!m) return;
+};
+// Which sub-page is on screen, so an in-place re-render can restore its chrome.
+var _curSub=null;
+// (Re)insert the back bar as the panel's FIRST child and (re)number the register.
+// Render functions rebuild innerHTML wholesale, so both have to be reapplied after
+// every render — not just when the page is first opened.
+function _subChrome(id,label){
+  const panel=document.getElementById("panel-"+id); if(!panel) return;
+  const old=panel.querySelector(":scope > .subback"); if(old) old.remove();
+  const bar=document.createElement("div"); bar.className="subback";
+  // Back returns to the previous screen; Home jumps straight out to the home menu —
+  // both on every sub-page/register so you're never stranded deep in the app.
+  bar.innerHTML=`<button onclick="_navBack()" aria-label="Back">‹ Back</button><span>${esc(label||"")}</span>`
+    +`<button class="subback-home" onclick="shellGo('home')" aria-label="Go to home menu" title="Home menu">⌂ Home</button>`;
+  panel.insertBefore(bar, panel.firstChild);
+  // Number/label NOW rather than waiting on the MutationObserver, whose
+  // requestAnimationFrame never fires while the document is hidden (background tab, or a
+  // PWA resumed from the background) — the Sr. column would then be silently missing.
+  try{ _numberTables(panel); _numberLists(panel); _labelizeTables(panel); }catch(e){}
+}
+function openSub(which){
+  _navEnter(()=>openSub(which));
+  document.getElementById("groupNav").style.display="none";
+  const m=SUB_PAGES[which]; if(!m) return;
+  _curSub={id:m.id,label:m.label};
   m.fn && m.fn();
   markPanel(m.id);
-  // ALWAYS (re)insert a back bar as the panel's first child. Render fns rebuild
-  // innerHTML, so we add it after rendering and remove any stale one first.
-  // Back returns to whatever the user was on before this sub-page opened
-  // (defaults to Home), so it's a reliable, standard control on every sub-page.
-  const panel=document.getElementById("panel-"+m.id);
-  if(panel){
-    const old=panel.querySelector(":scope > .subback"); if(old) old.remove();
-    const bar=document.createElement("div"); bar.className="subback";
-    // Back returns to the previous screen; Home jumps straight out to the home menu —
-    // both on every sub-page/register so you're never stranded deep in the app.
-    bar.innerHTML=`<button onclick="_navBack()" aria-label="Back">‹ Back</button><span>${esc(m.label)}</span>`
-      +`<button class="subback-home" onclick="shellGo('home')" aria-label="Go to home menu" title="Home menu">⌂ Home</button>`;
-    panel.insertBefore(bar, panel.firstChild);
-    // Number/label this register NOW rather than waiting on the MutationObserver, whose
-    // requestAnimationFrame never fires while the document is hidden (background tab, or a
-    // PWA resumed from the background) — the Sr. column would then be silently missing.
-    try{ _numberTables(panel); _labelizeTables(panel); }catch(e){}
-  }
+  _subChrome(m.id,m.label);
   window.scrollTo({top:0,behavior:"smooth"});
 }
+// Every register re-renders IN PLACE after an add / edit / delete, and those render
+// functions rebuild the panel's innerHTML — which wiped the Back/Home bar and the
+// serial numbers until the user navigated away and came back. Wrap each register
+// renderer once so its chrome is restored the moment it finishes.
+(function _wrapSubRenderers(){
+  const seen=new Set();
+  Object.keys(SUB_PAGES).forEach(function(k){
+    const m=SUB_PAGES[k], fn=m.fn;
+    if(!fn || !fn.name || seen.has(fn.name)) return;
+    seen.add(fn.name);
+    const orig=window[fn.name];
+    if(typeof orig!=="function" || orig.__subWrapped) return;
+    const wrapped=function(){
+      const r=orig.apply(this,arguments);
+      // Only restore when this renderer's own panel is the sub-page on screen —
+      // a background renderAll() must not steal the chrome onto another panel.
+      try{ if(_curSub && _curSub.id===m.id) _subChrome(_curSub.id,_curSub.label); }catch(e){}
+      return r;
+    };
+    wrapped.__subWrapped=true;
+    window[fn.name]=wrapped;
+    SUB_PAGES[k].fn=wrapped;
+  });
+})();
 // remembers where a sub-page was opened from, so its Back button goes there
 var _subBackTo="home";
 
@@ -17521,10 +17579,36 @@ var _subBackTo="home";
 // Idempotent and defensive: does nothing if there's no table/thead. Scoped to
 // .tbl-wrap tables only, leaving print templates (table.inv/.tpl-tbl) alone.
 // Add a "Sr." column to any register table marked .sr-num. Idempotent.
+// Serial numbers for registers that render as a CARD LIST rather than a <table>
+// (expenses, appointments, tasks, activity, staff sub-registers). _numberTables
+// handles <table class="sr-num">; this is its list counterpart. Mark the container
+// .sr-list, optionally with data-sr-item to name the item selector (default .lrow),
+// and every direct child gets a serial. Re-numbers on every call rather than using
+// an "already done" guard: list contents change far more often than table headers,
+// and a stale badge is worse than a redundant pass.
+function _numberLists(root){
+  if(!root) return;
+  try{
+    root.querySelectorAll(".sr-list").forEach(function(box){
+      var sel=box.getAttribute("data-sr-item")||".lrow";
+      var n=0;
+      box.querySelectorAll(":scope > "+sel).forEach(function(el){
+        var old=el.querySelector(":scope > .sr-n"); if(old) old.remove();
+        n++;
+        var b=document.createElement("span");
+        b.className="sr-n"; b.setAttribute("aria-hidden","true"); b.textContent=n;
+        el.insertBefore(b, el.firstChild);
+      });
+      box.setAttribute("data-sr","1");
+    });
+  }catch(e){}
+}
 function _numberTables(root){
   if(!root) return;
   try{
-    root.querySelectorAll(".tbl-wrap table.sr-num").forEach(function(tbl){
+    // Opt-in is the .sr-num class itself; a .tbl-wrap ancestor is incidental (the
+    // archive's month tables are register content but sit outside one).
+    root.querySelectorAll("table.sr-num").forEach(function(tbl){
       if(tbl.getAttribute("data-sr")==="1") return; // already numbered
       var thead=tbl.querySelector("thead tr");
       if(thead && !thead.querySelector("th.sr-h")){
@@ -17593,11 +17677,11 @@ function _labelizeTables(root){
 function _startTableLabeler(){
   try{
     var root=document.getElementById("appRoot")||document.body;
-    _labelizeTables(root); _numberTables(root);
+    _labelizeTables(root); _numberTables(root); _numberLists(root);
     var scheduled=false;
     var obs=new MutationObserver(function(){
       if(scheduled) return; scheduled=true;
-      requestAnimationFrame(function(){ scheduled=false; _numberTables(root); _labelizeTables(root); });
+      requestAnimationFrame(function(){ scheduled=false; _numberTables(root); _numberLists(root); _labelizeTables(root); });
     });
     obs.observe(root,{childList:true,subtree:true});
   }catch(e){}
@@ -18170,7 +18254,7 @@ function renderLedger(staffBack){
         <div class="bento-tile"><div class="bt-lbl">Expenses (FY)</div><div class="bt-val">${fmtINR(totExp)}</div></div>
         <div class="bento-tile"><div class="bt-lbl">${staff?"Advances to me":"Advances given"}</div><div class="bt-val">${fmtINR(totAdv)}</div></div>
       </div>
-      <div class="lrows">${rows}</div>
+      <div class="lrows sr-list">${rows}</div>
     </div>`;
 }
 function _advancesRefresh(){
@@ -18855,7 +18939,7 @@ function renderStaffDocs(){
   home.innerHTML=`
     <div class="hello">Documents &amp; files</div>
     <div class="home-actions" style="grid-template-columns:1fr"><button class="ha-btn" onclick="staffAddDocGeneral()">${NAV_ICONS.upload}<span>Add a document</span></button></div>
-    ${all.length?`<div class="scard compact" style="margin-top:12px"><div class="lrows">${all.map(d=>`<div class="lrow"><div class="l"><div class="t">${esc(d.title||"Document")}</div><div class="s">${d._k==="docsFiled"?"Court file":"Inward"} · ${fmtDate(d.date)}${matterCodeFor(d.matterId)?" · "+esc(matterCodeFor(d.matterId)):""}</div></div><div style="white-space:nowrap">${d.link?`<a class="row-act" href="${esc(d.link)}" target="_blank" rel="noopener">Open</a>`:""}<button class="row-act" onclick="delMatterDoc('${d._k}','${d.id}');staffGo('s_docs')">Delete</button></div></div>`).join("")}</div></div>`:`<div class="empty" style="margin-top:12px;padding:18px">No documents yet.</div>`}`;
+    ${all.length?`<div class="scard compact" style="margin-top:12px"><div class="lrows sr-list">${all.map(d=>`<div class="lrow"><div class="l"><div class="t">${esc(d.title||"Document")}</div><div class="s">${d._k==="docsFiled"?"Court file":"Inward"} · ${fmtDate(d.date)}${matterCodeFor(d.matterId)?" · "+esc(matterCodeFor(d.matterId)):""}</div></div><div style="white-space:nowrap">${d.link?`<a class="row-act" href="${esc(d.link)}" target="_blank" rel="noopener">Open</a>`:""}<button class="row-act" onclick="delMatterDoc('${d._k}','${d.id}');staffGo('s_docs')">Delete</button></div></div>`).join("")}</div></div>`:`<div class="empty" style="margin-top:12px;padding:18px">No documents yet.</div>`}`;
 }
 function matterCodeFor(id){ const m=DB.matters.find(x=>x.id===id); return m?m.code:""; }
 function staffAddDocGeneral(){
@@ -18914,7 +18998,7 @@ function renderStaffExpenses(){
       <button class="ha-btn" onclick="staffRecordReturn()">${NAV_ICONS.books}<span>Return cash</span></button>
       <button class="ha-btn" onclick="staffRecordAdvance()">${NAV_ICONS.person}<span>Cash received</span></button>
     </div>
-    ${exps.length?`<div class="scard compact" style="margin-top:12px"><div class="sc-head"><h3>Recent expenses</h3></div><div class="lrows">${exps.map(e=>{const rej=isRejected(e);return `<div class="lrow"${rej?' style="opacity:.55"':''}><div class="l"><div class="t">${esc(e.head||"Expense")}${e.payee?" · "+esc(e.payee):""}${rej?` <span class="tag">Rejected${e.rejectReason?" ("+esc(e.rejectReason)+")":""}</span>`:""}</div><div class="s">${fmtDate(e.date)}${matterCodeFor(e.matterId)?" · "+esc(matterCodeFor(e.matterId)):""}${e.createdBy?" · "+esc(e.createdBy):""}</div></div><div class="amt">${fmtINR(e.amount)} ${e.billLink?`<a class="row-act" href="${esc(e.billLink)}" target="_blank" rel="noopener">Bill</a>`:""}${needsVoucher(e.amount)?`<button class="row-act" onclick="printVoucher('${e.id}')">Voucher</button>`:""}${(!isRejected(e)&&_canEditEntry(e))?`<button class="row-act" onclick="editCaseExpense('${e.id}')">Edit</button>`:""}${_canDeleteOwn(e)?`<button class="row-act" onclick="delCaseExpense('${e.id}');staffGo('s_exp')">Delete</button>`:""}</div></div>`;}).join("")}</div></div>`:`<div class="empty" style="margin-top:12px;padding:18px">No expenses yet.</div>`}`;
+    ${exps.length?`<div class="scard compact" style="margin-top:12px"><div class="sc-head"><h3>Recent expenses</h3></div><div class="lrows sr-list">${exps.map(e=>{const rej=isRejected(e);return `<div class="lrow"${rej?' style="opacity:.55"':''}><div class="l"><div class="t">${esc(e.head||"Expense")}${e.payee?" · "+esc(e.payee):""}${rej?` <span class="tag">Rejected${e.rejectReason?" ("+esc(e.rejectReason)+")":""}</span>`:""}</div><div class="s">${fmtDate(e.date)}${matterCodeFor(e.matterId)?" · "+esc(matterCodeFor(e.matterId)):""}${e.createdBy?" · "+esc(e.createdBy):""}</div></div><div class="amt">${fmtINR(e.amount)} ${e.billLink?`<a class="row-act" href="${esc(e.billLink)}" target="_blank" rel="noopener">Bill</a>`:""}${needsVoucher(e.amount)?`<button class="row-act" onclick="printVoucher('${e.id}')">Voucher</button>`:""}${(!isRejected(e)&&_canEditEntry(e))?`<button class="row-act" onclick="editCaseExpense('${e.id}')">Edit</button>`:""}${_canDeleteOwn(e)?`<button class="row-act" onclick="delCaseExpense('${e.id}');staffGo('s_exp')">Delete</button>`:""}</div></div>`;}).join("")}</div></div>`:`<div class="empty" style="margin-top:12px;padding:18px">No expenses yet.</div>`}`;
 }
 function staffAddExpenseGeneral(){
   const opts=DB.matters.filter(m=>!isVoided(m)).map(m=>`<option value="${m.id}">${esc(m.code)} — ${esc(m.client||"")}</option>`).join("");
@@ -19765,7 +19849,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.02-0400";
+  window.APP_VERSION = "2026.09.02-0500";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
