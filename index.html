@@ -684,16 +684,16 @@
   table.tpl-tbl tbody tr:nth-child(even) td{background:#faf7f0}
   /* totals — amount column aligned to line items */
   .tpl-tot{display:flex;justify-content:flex-end;margin-top:10px}
-  .tpl-tot table{border-collapse:collapse;font-size:12.5px;min-width:330px}
+  .tpl-tot table{border-collapse:collapse;font-size:12.5px;min-width:430px}
   .tpl-tot td{padding:5px 0}
   .tpl-tot td.k{color:var(--tpx-muted);padding-right:40px;text-align:left}
-  .tpl-tot td.r{width:130px;text-align:right;padding-right:13px;color:var(--tpx-ink);font-variant-numeric:tabular-nums}
+  .tpl-tot td.r{width:240px;text-align:right;padding-right:13px;color:var(--tpx-ink);font-variant-numeric:tabular-nums}
   .tpl-tot tr.grand td{background:var(--tpx-ox);color:#fff;font-weight:700;font-size:14px;padding-top:11px;padding-bottom:11px}
   .tpl-tot tr.grand td.k{padding-left:14px}
   .tpl-tot tr.grand td.r{color:#fff;padding-right:13px}
   /* Amount in words sits INSIDE the highlighted total row, under its label, so the
      figure and the words read as one line of the bill instead of two. */
-  .tpl-words-in{font-size:10.5px;font-style:italic;font-weight:400;color:rgba(255,255,255,.85);margin-top:3px;letter-spacing:.01em}
+  .tpl-words-in{font-size:10.5px;font-style:italic;font-weight:400;color:rgba(255,255,255,.85);margin-top:2px;letter-spacing:.01em;font-variant-numeric:normal;line-height:1.35}
   .tpl.bw .tpl-words-in{color:rgba(255,255,255,.92)}
   .tpl-words{font-size:11.5px;font-style:italic;color:var(--tpx-muted);text-align:right;margin-top:8px}
   .tpl-payable{font-size:11.5px;color:var(--tpx-ox);font-weight:600;text-align:right;margin-top:3px}
@@ -714,7 +714,7 @@
   table.tpl-tbl tbody tr:last-child td{border-bottom:none}
   table.tpl-tbl tbody tr:nth-child(even) td{background:#fbf8f2}
   table.tpl-tbl tbody td.r{font-weight:600}
-  .tpl-tot table{min-width:340px}
+  .tpl-tot table{min-width:430px}
   .tpl-tot tr.grand td{border-top:2px solid var(--tpx-gold)}
   .tpl-tot tr.grand td.k{font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
   .tpl-tot tr.grand td.r{font-size:15.5px;letter-spacing:.01em}
@@ -5551,6 +5551,11 @@ function _regFirstSeen(){
   const note=(map,id,d)=>{ if(!id) return; d=d||"9999-99-99"; if(!map[id]||d<map[id]) map[id]=d; };
   (DB.matters||[]).forEach(m=>{ if(isVoided(m)) return; const d=m.opened||m.concludedAt||""; note(cl,m.clientId,d); note(ra,m.refAdvId,d); });
   (DB.notices||[]).forEach(n=>{ note(cl,n.clientId,n.date||""); });
+  // A vakalatnama is usually the FIRST document for a client — signed at engagement,
+  // before any case is filed. Without these two sources a client who came in through a
+  // vakalatnama (and was billed off it) never got a CL- number at all.
+  (DB.vakalatnamas||[]).forEach(v=>{ if(isVoided(v)) return; note(cl,v.clientId,v.date||""); });
+  (DB.invoices||[]).forEach(i=>{ if(isVoided(i)) return; note(cl,i.clientId,i.date||""); });
   return {cl,ra};
 }
 function _assignRegCodes(seen, prefix){
@@ -6411,6 +6416,17 @@ function _tplCaseBlock(m){
     <div class="tpl-lbl">Case Details</div>
     <div class="tpl-dl">${rows.join("")}</div>
   </div>`;
+}
+// Case details carried ON an invoice itself, for invoices not linked to a matter.
+// Shaped like a matter so _tplCaseBlock renders it identically. A bare "12345/2026"
+// with no case-type prefix is a DIARY number, not a case number — label it correctly.
+function _invCaseObj(inv){
+  if(!inv) return null;
+  const num=String(inv.caseNo||"").trim();
+  const isDiary = !!inv.diaryNo || /^\d{3,6}\s*[\/-]\s*\d{4}$/.test(num);
+  const o={ parties:inv.caseParties||"", court:inv.caseCourt||"",
+            caseNo: isDiary?"":num, diaryNo: inv.diaryNo || (isDiary?num:"") };
+  return (o.parties||o.court||o.caseNo||o.diaryNo) ? o : null;
 }
 // Date formatter -> DD.MM.YYYY
 function _tplDate(d){
@@ -7578,14 +7594,33 @@ function _vkBillInvoice(id){
   const db=defaultBank(), du=defaultUpi();
   _editingInvoiceId=null;
   _invFromVak=v.id;
+  // Register the executant as a client NOW, so the invoice carries a CL- number even
+  // though no matter exists yet. Resolution is by name, so if this client is later
+  // opened as a matter they keep the SAME number rather than getting a second one.
+  const clientName=(client&&client.name)||v.partyA||"";
+  let clientId="";
+  try{ clientId=_resolveClientId(clientName,{addr:(client&&client.address)||""})||""; }catch(e){}
+  if(clientId && !v.clientId){ v.clientId=clientId; save(); }
+  _invalidateRegCodes();
   _invDraft={
     matterId: v.matterId||"",
-    to: m?"":((client&&client.name)||v.partyA||""),
+    to: m?"":clientName,
     toAddr: m?"":((client&&client.address)||""),
     toPhone:"", toEmail:"",
+    clientId,
+    // Case details belong in the Case Details column beside the name, NOT in the fee
+    // particulars — "notes" is what the single-line style prints as the particulars,
+    // so putting the cause title there displaced "Professional fees" entirely.
+    caseParties: m?"":cause,
+    caseCourt:   m?"":(v.forum||""),
+    // A vakalatnama carries a printed type line ("S.L.P. (C) No. ____ of 2026"), not a
+    // number. Use it only once the number is actually filled in — an invoice showing a
+    // row of blanks is worse than showing no number at all, and for an unfiled matter
+    // the cause title and forum alone are the correct case details.
+    caseNo:      m?"":(v.caseNo || v.diaryNo || (/_{3,}/.test(String(v.typeLine||"")) ? "" : (v.typeLine||""))),
     dueMode:"days", due:15,
     bankId: db?db.id:"", upiId: du?du.id:"", showQr: !!du,
-    notes: [cause, v.forum].filter(Boolean).join(" — ")
+    notes: ""
   };
   _invLines=[{desc:"Professional fees — "+_affTypePhrase(v.matterType), amount:""}];
   _invExpenses=[];
@@ -9256,7 +9291,12 @@ function renderInvoice(){
           <div><label class="fld">Phone <span style="color:var(--muted);font-weight:400">(optional)</span></label><input class="in" id="ivToPhone" placeholder="Phone"></div>
           <div><label class="fld">Email <span style="color:var(--muted);font-weight:400">(optional)</span></label><input class="in" id="ivToEmail" placeholder="Email"></div>
         </div>
-        <div class="hint" style="margin-top:6px">Used when the invoice isn't tied to a case.</div>
+        <div class="grid g3" style="margin-top:8px">
+          <div><label class="fld">Case / cause title <span style="color:var(--muted);font-weight:400">(optional)</span></label><input class="in" id="ivCaseParties" placeholder="A v. B"></div>
+          <div><label class="fld">Court / forum <span style="color:var(--muted);font-weight:400">(optional)</span></label><input class="in" id="ivCaseCourt" placeholder="Supreme Court of India"></div>
+          <div><label class="fld">Case / diary no. <span style="color:var(--muted);font-weight:400">(optional)</span></label><input class="in" id="ivCaseNo" placeholder="SLP(C) No. 1234/2026"></div>
+        </div>
+        <div class="hint" style="margin-top:6px">Used when the invoice isn't tied to a case. Any case details entered here print beside the name, in the same Case Details column a case-linked invoice uses — not in the fee particulars.</div>
       </div>
       <div style="margin-top:11px"><label class="fld">Invoice no.</label><input class="in mono" id="ivNo" value="${editInv?esc(editInv.no):esc(peekNextInvoiceNo())}" readonly style="background:#f1ece0;color:var(--muted);max-width:220px"></div>
       ${(banksList().length||upisList().length)?`<div class="grid g3" style="margin-top:11px">
@@ -9325,7 +9365,9 @@ function renderInvoice(){
     if(fillFrom.due) set("ivDueDays", fillFrom.due);
     set("ivNotes", fillFrom.notes||"");
     if(fillFrom.matterId){ _ivSetKind("case"); set("ivMatter", fillFrom.matterId); }
-    else { _ivSetKind("general"); set("ivTo", fillFrom.to||""); set("ivToAddr", fillFrom.toAddr||""); set("ivToPhone", fillFrom.toPhone||""); set("ivToEmail", fillFrom.toEmail||""); }
+    else { _ivSetKind("general"); set("ivTo", fillFrom.to||""); set("ivToAddr", fillFrom.toAddr||""); set("ivToPhone", fillFrom.toPhone||""); set("ivToEmail", fillFrom.toEmail||"");
+           set("ivCaseParties", fillFrom.caseParties||""); set("ivCaseCourt", fillFrom.caseCourt||"");
+           set("ivCaseNo", fillFrom.caseNo||fillFrom.diaryNo||""); }
     const bankEl=document.getElementById("ivBank"); if(bankEl && fillFrom.bankId!=null) bankEl.value=fillFrom.bankId;
     const upiEl=document.getElementById("ivUpi"); if(upiEl && fillFrom.upiId!=null) upiEl.value=fillFrom.upiId;
     const qr=document.getElementById("ivQr"); if(qr) qr.checked=!!fillFrom.showQr;
@@ -9490,7 +9532,17 @@ function saveAndPrintInvoice(){
       o.toAddr=(document.getElementById("ivToAddr")||{}).value||"";
       o.toPhone=(document.getElementById("ivToPhone")||{}).value||"";
       o.toEmail=(document.getElementById("ivToEmail")||{}).value||"";
-    } else { delete o.noMatter; delete o.to; delete o.toAddr; delete o.toPhone; delete o.toEmail; }
+      // Case details ride on the invoice itself so they print beside the name.
+      const g=id=>((document.getElementById(id)||{}).value||"").trim();
+      o.caseParties=g("ivCaseParties"); o.caseCourt=g("ivCaseCourt"); o.caseNo=g("ivCaseNo"); o.diaryNo="";
+      // Register the party being billed in the client registry, so an invoice raised
+      // without a matter (e.g. off a vakalatnama) still carries a CL- client number.
+      // Resolution is by name, so the same person billed here and later opened as a
+      // matter resolves to the SAME id and keeps one number.
+      try{ o.clientId=_resolveClientId(billTo,{addr:o.toAddr,phone:o.toPhone,email:o.toEmail})||""; }catch(e){}
+      _invalidateRegCodes();
+    } else { delete o.noMatter; delete o.to; delete o.toAddr; delete o.toPhone; delete o.toEmail;
+      delete o.caseParties; delete o.caseCourt; delete o.caseNo; delete o.diaryNo; delete o.clientId; }
   };
   // ---- EDIT an existing invoice: keep id / number / paid status / linked receipt ----
   if(_editingInvoiceId){
@@ -9675,14 +9727,18 @@ function printInvoice(inv, opts){
   const billEmail = isGeneral ? (inv.toEmail||"") : (toRef ? m.refEmail : m.email);
   const billMeta=[billAddr, billPhone, billEmail].filter(Boolean).map(x=>`<div>${esc(x)}</div>`).join("");
   // Register ID of the party being billed — client (CL-) or advocate (RA-).
-  const billId = isGeneral ? "" : (toRef ? _regCode(m.refAdvId) : _regCode(m.clientId));
+  const billId = isGeneral ? _regCode(inv.clientId) : (toRef ? _regCode(m.refAdvId) : _regCode(m.clientId));
   const billBlock = `<div class="tpl-col">
         <div class="tpl-lbl">${isRetainer?"Bill To (Senior Advocate)":(toRef?"Bill To ("+advLabel+")":"Bill To")}</div>
         <div class="tpl-bigname">${esc(billName)}</div>
         ${billId?`<div class="tpl-meta"><b class="mono">${esc(billId)}</b></div>`:""}
         ${billMeta?`<div class="tpl-meta">${billMeta}</div>`:""}
       </div>`;
-  const caseBlock = isGeneral ? "" : _tplCaseBlock(m);
+  // An invoice with no linked matter (typically raised off a vakalatnama, before the
+  // case is filed and numbered) still carries its own case details. Print them in the
+  // Case Details column beside Bill To — exactly like a case-linked invoice — instead
+  // of burying the cause title in the fee particulars.
+  const caseBlock = isGeneral ? _tplCaseBlock(_invCaseObj(inv)) : _tplCaseBlock(m);
 
   document.getElementById("receiptArea").innerHTML=`
    <div class="tpl${opts.bw?" bw":""}">
@@ -9701,9 +9757,9 @@ function printInvoice(inv, opts){
        <div class="tpl-tot"><table>
          ${exp?`<tr><td class="k">Professional fees</td><td class="r">${fmtINR(fees)}</td></tr>
          <tr><td class="k">Expenses / out-of-pocket</td><td class="r">${fmtINR(exp)}</td></tr>`:""}
-         <tr class="grand"><td class="k">Total Amount Due
-           <div class="tpl-words-in">(Rupees ${esc(numToWords(grand))} only)</div></td>
-           <td class="r">${fmtINR(grand)}</td></tr>
+         <tr class="grand"><td class="k">Total Amount Due</td>
+           <td class="r">${fmtINR(grand)}
+             <div class="tpl-words-in">(Rupees ${esc(numToWords(grand))} only)</div></td></tr>
        </table></div>
        ${payableText?`<div class="tpl-payable">${esc(payableText)}</div>`:""}
        ${noteBlock}
@@ -19673,7 +19729,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.02-0200";
+  window.APP_VERSION = "2026.09.02-0300";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
