@@ -5546,21 +5546,57 @@ function _mergeClients(idKeep, idDrop){
    the SYNCED matters/notices (the registry objects themselves don't sync), so the same
    person shows the SAME code on every device — owner and staff alike. */
 function _fyYY(dateISO){ return fyStartOf(dateISO||"").slice(2,4); }
+/* ---- Sticky register numbers ------------------------------------------------
+   A CL- number goes out on bills, so once issued it must never change. It cannot
+   simply be STORED on the client registry: that object is local-only (it never syncs,
+   and a sign-out rebuilds it from scratch), which is precisely why the code is derived
+   from the SHARED records instead — so the owner and every staff device agree, and a
+   wipe rebuilds the same numbers.
+
+   So we keep deriving it, but from a sort key that can only ever grow. Every record id
+   is `Date.now().toString(36) + random`, so each record already carries an immutable
+   creation time — no new field, no new storage, no rules change. Records entered
+   BEFORE the cutover keep their original key (the user-set date), which leaves every
+   number already issued byte-for-byte as it was. Anything entered after is keyed by
+   WHEN IT WAS ENTERED, and era "1" sorts after every era "0", so a newly registered
+   client always lands at the end of its year and can never push an existing client's
+   serial along — however far back its vakalatnama or matter is dated.               */
+const CODE_STICKY_FROM = Date.parse("2026-09-02T00:00:00Z");
+function _recBornMs(rec){
+  if(!rec) return 0;
+  const c = rec.createdAt ? Date.parse(rec.createdAt) : NaN;
+  if(!isNaN(c) && c>0) return c;
+  const m = /^[0-9a-z]{8}/.exec(String(rec.id||""));
+  if(!m) return 0;
+  const t = parseInt(m[0],36);
+  return (t>946684800000 && t<2811974400000) ? t : 0;   // sane 2000..2059, else not a time
+}
+function _regSortKey(rec, userDate){
+  const born=_recBornMs(rec);
+  // FULL creation instant plus the record id, so the key is unique and orders strictly
+  // by when the record was entered. A day-granular key made every client registered on
+  // the same day tie, and the tie then broke on the RANDOM client id — which reshuffled
+  // (and duplicated) numbers as soon as the next client was added.
+  if(born && born>=CODE_STICKY_FROM) return "1:"+new Date(born).toISOString()+":"+String(rec.id||"");
+  return "0:"+(userDate||"9999-99-99");
+}
+// YYYY-MM-DD out of either era's key, for the financial-year bucket.
+function _regKeyDate(k){ return String(k||"").slice(2,12); }
 function _regFirstSeen(){
   const cl={}, ra={};
-  const note=(map,id,d)=>{ if(!id) return; d=d||"9999-99-99"; if(!map[id]||d<map[id]) map[id]=d; };
-  (DB.matters||[]).forEach(m=>{ if(isVoided(m)) return; const d=m.opened||m.concludedAt||""; note(cl,m.clientId,d); note(ra,m.refAdvId,d); });
-  (DB.notices||[]).forEach(n=>{ note(cl,n.clientId,n.date||""); });
+  const note=(map,id,k)=>{ if(!id) return; k=k||"0:9999-99-99"; if(!map[id]||k<map[id]) map[id]=k; };
+  (DB.matters||[]).forEach(m=>{ if(isVoided(m)) return; const d=m.opened||m.concludedAt||""; const k=_regSortKey(m,d); note(cl,m.clientId,k); note(ra,m.refAdvId,k); });
+  (DB.notices||[]).forEach(n=>{ note(cl,n.clientId,_regSortKey(n,n.date||"")); });
   // A vakalatnama is usually the FIRST document for a client — signed at engagement,
   // before any case is filed. Without these two sources a client who came in through a
   // vakalatnama (and was billed off it) never got a CL- number at all.
-  (DB.vakalatnamas||[]).forEach(v=>{ if(isVoided(v)) return; note(cl,v.clientId,v.date||""); });
-  (DB.invoices||[]).forEach(i=>{ if(isVoided(i)) return; note(cl,i.clientId,i.date||""); });
+  (DB.vakalatnamas||[]).forEach(v=>{ if(isVoided(v)) return; note(cl,v.clientId,_regSortKey(v,v.date||"")); });
+  (DB.invoices||[]).forEach(i=>{ if(isVoided(i)) return; note(cl,i.clientId,_regSortKey(i,i.date||"")); });
   return {cl,ra};
 }
 function _assignRegCodes(seen, prefix){
   const byYear={}, out={};
-  Object.keys(seen).forEach(id=>{ const yy=_fyYY(seen[id]); (byYear[yy]=byYear[yy]||[]).push(id); });
+  Object.keys(seen).forEach(id=>{ const yy=_fyYY(_regKeyDate(seen[id])); (byYear[yy]=byYear[yy]||[]).push(id); });
   Object.keys(byYear).forEach(yy=>{
     byYear[yy].sort((a,b)=>{ const da=seen[a],db=seen[b]; return da<db?-1:da>db?1:(a<b?-1:1); });
     byYear[yy].forEach((id,i)=>{ out[id]=`${prefix}-${yy}-${String(i+1).padStart(3,"0")}`; });
@@ -19729,7 +19765,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.02-0300";
+  window.APP_VERSION = "2026.09.02-0400";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
