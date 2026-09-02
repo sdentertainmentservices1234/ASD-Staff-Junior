@@ -683,14 +683,18 @@
   table.tpl-tbl tbody td.r{text-align:right;color:var(--tpx-ox);font-variant-numeric:tabular-nums}
   table.tpl-tbl tbody tr:nth-child(even) td{background:#faf7f0}
   /* totals — amount column aligned to line items */
-  .tpl-tot{display:flex;justify-content:flex-end;margin-top:14px}
+  .tpl-tot{display:flex;justify-content:flex-end;margin-top:10px}
   .tpl-tot table{border-collapse:collapse;font-size:12.5px;min-width:330px}
-  .tpl-tot td{padding:7px 0}
+  .tpl-tot td{padding:5px 0}
   .tpl-tot td.k{color:var(--tpx-muted);padding-right:40px;text-align:left}
   .tpl-tot td.r{width:130px;text-align:right;padding-right:13px;color:var(--tpx-ink);font-variant-numeric:tabular-nums}
   .tpl-tot tr.grand td{background:var(--tpx-ox);color:#fff;font-weight:700;font-size:14px;padding-top:11px;padding-bottom:11px}
   .tpl-tot tr.grand td.k{padding-left:14px}
   .tpl-tot tr.grand td.r{color:#fff;padding-right:13px}
+  /* Amount in words sits INSIDE the highlighted total row, under its label, so the
+     figure and the words read as one line of the bill instead of two. */
+  .tpl-words-in{font-size:10.5px;font-style:italic;font-weight:400;color:rgba(255,255,255,.85);margin-top:3px;letter-spacing:.01em}
+  .tpl.bw .tpl-words-in{color:rgba(255,255,255,.92)}
   .tpl-words{font-size:11.5px;font-style:italic;color:var(--tpx-muted);text-align:right;margin-top:8px}
   .tpl-payable{font-size:11.5px;color:var(--tpx-ox);font-weight:600;text-align:right;margin-top:3px}
   /* receipt amount box + payment particulars */
@@ -711,21 +715,21 @@
   .tpl-amtbox .pparts .dl .caze{align-items:flex-start;margin-top:2px}
   .tpl-amtbox .pparts .dl .caze b{line-height:1.4}
   /* Payment Details block (invoice) */
-  .tpl-noteblk{margin-top:22px;border:1px solid var(--tpx-line);border-left:3px solid var(--tpx-gold);
-    border-radius:6px;background:var(--tpx-cream);padding:16px 20px}
-  .tpl-noteblk .h{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tpx-ox);margin-bottom:11px}
+  .tpl-noteblk{margin-top:14px;border:1px solid var(--tpx-line);border-left:3px solid var(--tpx-gold);
+    border-radius:6px;background:var(--tpx-cream);padding:11px 16px}
+  .tpl-noteblk .h{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tpx-ox);margin-bottom:7px}
   .tpl-noteblk .paygrid{display:flex;gap:30px}
   .tpl-noteblk .pcol{flex:1}
-  .tpl-noteblk .row{display:flex;gap:8px;font-size:12px;line-height:1.95}
+  .tpl-noteblk .row{display:flex;gap:8px;font-size:11.5px;line-height:1.6}
   .tpl-noteblk .row .k{color:var(--tpx-muted);min-width:104px}
   .tpl-noteblk .row b{color:var(--tpx-ink);font-weight:600}
   .tpl-noteblk .qr{flex:none;text-align:center}
   .tpl-noteblk .qr .cap{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tpx-gold);margin-bottom:5px}
-  .tpl-noteblk .qr svg{display:block;border:1px solid var(--tpx-line);border-radius:4px;width:92px;height:92px}
-  .tpl-noteblk .instr{font-size:11px;color:#6a655c;line-height:1.7;margin-top:12px;padding-top:11px;
+  .tpl-noteblk .qr svg{display:block;border:1px solid var(--tpx-line);border-radius:4px;width:78px;height:78px}
+  .tpl-noteblk .instr{font-size:10px;color:#6a655c;line-height:1.55;margin-top:8px;padding-top:7px;
     border-top:1px dashed var(--tpx-line);text-align:justify}
   /* signature — centered image */
-  .tpl-signrow{display:flex;align-items:flex-end;gap:20px;margin-top:26px}
+  .tpl-signrow{display:flex;align-items:flex-end;gap:20px;margin-top:16px}
   .tpl-signrow .tpl-sign{margin-top:0;flex:0 0 auto;margin-left:auto}
   .tpl-signrow .tpl-verify{margin-top:0;justify-content:flex-start;flex:0 0 auto}
   .tpl-sign{display:flex;justify-content:flex-end;margin-top:26px}
@@ -5862,6 +5866,24 @@ function _tplSizePagedForPrint(){
           Hb=bcell.getBoundingClientRect().height;
       var avail=pageBoxH-Hh-Hf;
       if(avail<80){ t.style.height=""; t.style.width=""; bcell.style.height=""; return; }  // header+footer implausibly large — leave default
+      // A document that only just overruns shouldn't spill onto a second page for the sake
+      // of a few lines. The letterhead, title band and footer alone occupy ~40% of an A4
+      // sheet, so an invoice carrying bill-to, case details, items, totals, payment details
+      // and a signature can tip over by a small margin. Scale the whole document down just
+      // enough to fit — never below MIN_FIT, past which shrinking would hurt legibility more
+      // than a second page does.
+      var MIN_FIT=0.80;
+      if(Hh+Hb+Hf > pageBoxH){
+        var z = pageBoxH/(Hh+Hb+Hf);
+        if(z >= MIN_FIT){
+          t.style.zoom = z;
+          // Re-measure inside the zoomed coordinate system and re-fit to the single page.
+          Hh = thead?thead.getBoundingClientRect().height/z:0;
+          Hf = tfoot?tfoot.getBoundingClientRect().height/z:0;
+          avail = (pageBoxH/z) - Hh - Hf;
+          Hb = bcell.getBoundingClientRect().height/z;
+        } else { t.style.zoom=""; }
+      } else { t.style.zoom=""; }
       var pages=Math.max(1, Math.min(30, Math.ceil((Hb-2)/avail)));   // 2px slack; hard cap guards runaways
       bcell.style.height=(pages*avail-2)+"px";  // exact N pages (−2px so sub-pixel drift never spills to N+1); footer at each page's foot
       t.style.height="auto";                   // let the table be its natural N-page height (inline beats the 100vh rule)
@@ -9636,11 +9658,12 @@ function printInvoice(inv, opts){
          <tbody>${rows}</tbody>
        </table>
        <div class="tpl-tot"><table>
-         <tr><td class="k">Professional fees</td><td class="r">${fmtINR(fees)}</td></tr>
-         ${exp?`<tr><td class="k">Expenses / out-of-pocket</td><td class="r">${fmtINR(exp)}</td></tr>`:""}
-         <tr class="grand"><td class="k">Total Amount Due</td><td class="r">${fmtINR(grand)}</td></tr>
+         ${exp?`<tr><td class="k">Professional fees</td><td class="r">${fmtINR(fees)}</td></tr>
+         <tr><td class="k">Expenses / out-of-pocket</td><td class="r">${fmtINR(exp)}</td></tr>`:""}
+         <tr class="grand"><td class="k">Total Amount Due
+           <div class="tpl-words-in">(Rupees ${esc(numToWords(grand))} only)</div></td>
+           <td class="r">${fmtINR(grand)}</td></tr>
        </table></div>
-       <div class="tpl-words">(Rupees ${esc(numToWords(grand))} only)</div>
        ${payableText?`<div class="tpl-payable">${esc(payableText)}</div>`:""}
        ${noteBlock}
        <div class="tpl-signrow">${_verifyQRBlock("Invoice", inv.no, inv.date, grand)}${_tplSign(s)}</div>
@@ -19609,7 +19632,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.01-0200";
+  window.APP_VERSION = "2026.09.02-0100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
