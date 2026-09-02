@@ -5540,6 +5540,44 @@ function _absorbClientExtra(c, extra){
   if(extra.email && !c.email) c.email=extra.email;
 }
 function _clientRegName(id){ const c=(DB.clientRegistry||{})[id]; return c?c.name:""; }
+// Upgrade invoices raised off a vakalatnama BEFORE case details became first-class
+// fields on the invoice. Back then _vkBillInvoice packed the cause title and forum into
+// `notes` — which the consolidated style prints AS the fee particulars — and never
+// registered the party billed. Those invoices therefore show no Case Details column,
+// no "Professional fees" line, and no CL- client number; and they cannot simply be
+// re-billed, because _vkBillInvoice refuses a vakalatnama that is already invoiced.
+//
+// Conservative by construction:
+//  - skips any invoice tied to a matter (it already draws case details from there)
+//  - skips any invoice whose caseParties key EXISTS, so it runs once per invoice and
+//    a user who deliberately blanks the field is not overridden on the next load
+//  - clears `notes` ONLY when they are exactly the string that old code generated from
+//    this vakalatnama, so a note actually typed by the user is never destroyed
+function _upgradeVakInvoices(){
+  var n=0;
+  (DB.invoices||[]).forEach(function(inv){
+    if(!inv || !inv.vakalatnamaId || inv.matterId) return;
+    if(inv.caseParties!==undefined) return;                 // already upgraded / newer invoice
+    var v=(DB.vakalatnamas||[]).find(function(x){ return x.id===inv.vakalatnamaId; });
+    if(!v) return;
+    var cause=[v.partyA,v.partyB].filter(Boolean).join(" v. ");
+    var generated=[cause, v.forum].filter(Boolean).join(" — ");
+    var tl=String(v.typeLine||"");
+    inv.caseParties = cause;
+    inv.caseCourt   = v.forum||"";
+    inv.caseNo      = v.caseNo || v.diaryNo || (/_{3,}/.test(tl) ? "" : tl);
+    if(String(inv.notes||"").trim()===generated) inv.notes="";
+    if(!inv.clientId){
+      var ex=(v.executants||[]).filter(function(e){ return e && e.name; })[0];
+      var who=inv.to || (ex&&ex.name) || v.partyA || "";
+      try{ inv.clientId=_resolveClientId(who,{addr:inv.toAddr||""})||""; }catch(e){}
+    }
+    if(!v.clientId && inv.clientId) v.clientId=inv.clientId;
+    n++;
+  });
+  if(n){ _invalidateRegCodes(); try{ save(); }catch(e){} }
+  return n;
+}
 function _backfillClientRegistry(){
   _ensureClientRegistry();
   (DB.matters||[]).forEach(m=>{
@@ -7647,6 +7685,7 @@ function _vkInvoiceFor(v){
 }
 function _vkBillInvoice(id){
   const v=(DB.vakalatnamas||[]).find(x=>x.id===id); if(!v){ toast("Vakalatnama not found.",true); return; }
+  try{ _upgradeVakInvoices(); }catch(e){}
   const existing=_vkInvoiceFor(v);
   if(existing){ toast("Already invoiced under "+existing.no+".",true); _docActions("invoice",existing.id); return; }
   const m=v.matterId?matterById(v.matterId):null;
@@ -9436,6 +9475,7 @@ function renderInvoice(){
   }
 }
 function renderInvoiceLedger(){
+  try{ _upgradeVakInvoices(); }catch(e){}
   const list=[...DB.invoices].sort(_byNoAsc);
   const raised = list.filter(i=>!isVoided(i)).reduce((s,inv)=>s+((inv.lines||[]).reduce((x,l)=>x+(+l.amount||0),0)+(inv.expenses||[]).reduce((x,l)=>x+(+l.amount||0),0)),0);
   const rows=list.map(inv=>{
@@ -17211,7 +17251,7 @@ function bootAfterCloud(){
   try{ if(DB.deviceRole!=="staff") setTimeout(autoSnapshotIfDue, 2500); }catch(e){}
   // Finding 12 — backfill the canonical client registry (stamps clientId on
   // matters & notices, building stable identities). Best-effort, one-time-ish.
-  try{ _backfillClientRegistry(); _backfillRefRegistry(); save(); }catch(e){}
+  try{ _backfillClientRegistry(); _backfillRefRegistry(); _upgradeVakInvoices(); save(); }catch(e){}
   // Finding 11 — fire notifications for anything due today (if enabled).
   try{ if(_notifyEnabled()) setTimeout(function(){ _fireDueNotifications(false); }, 3500); }catch(e){}
 }
@@ -19849,7 +19889,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.02-0500";
+  window.APP_VERSION = "2026.09.02-0600";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
