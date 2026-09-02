@@ -7263,7 +7263,11 @@ function printVakalatnama(v, opts){
   const n=(v.executants||[]).length;
   const roleWord=_vkRoleWord(v.role, n);
   const dt = v.date ? new Date(v.date+"T00:00:00") : new Date();
-  const dateLine = `Dated this the ${dt.getDate()} day of ${dt.toLocaleString("en-IN",{month:"long"})} ${dt.getFullYear()}`;
+  // A blank form leaves the day and month to be written in by hand, exactly as the
+  // owner's printed blanks do; a real vakalatnama carries its actual date.
+  const dateLine = v.blank
+    ? `Dated this the ____ day of _____ ${dt.getFullYear()}`
+    : `Dated this the ${dt.getDate()} day of ${dt.toLocaleString("en-IN",{month:"long"})} ${dt.getFullYear()}`;
   const memoAddr = (v.memoAddressee||"").split("\n").filter(Boolean).map(l=>esc(l)).join("<br>");
   // "of the <court>" appears only when the forum IS a court — the Bar Council sample
   // omits it entirely and begins "to act and appear for me/us…".
@@ -7369,7 +7373,10 @@ function renderVakalatnamas(){
     <div class="card">
       <div class="card-head">
         <div><h2>Vakalatnama &amp; Affidavit</h2><div class="hint">Every vakalatnama generated from this chamber, most recent first.</div></div>
-        <button class="btn seal sm" onclick="openVakalatnama()">+ New vakalatnama</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn ghost sm" onclick="_vkBlankForm()" title="Print an empty form to fill in by hand">Blank form</button>
+          <button class="btn seal sm" onclick="openVakalatnama()">+ New vakalatnama</button>
+        </div>
       </div>
       <div id="vkrBody"></div>
     </div>`;
@@ -7426,6 +7433,76 @@ function _vkActions(id){
     <div class="btn-row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
 }
 function _vkRec(id){ return (DB.vakalatnamas||[]).find(x=>x.id===id); }
+/* ---- Blank vakalatnama --------------------------------------------------------
+   The printed form with every party detail left as ruled space to fill in by hand.
+   The court, jurisdiction and case-type heading still have to be right, so those are
+   asked for; everything below them prints blank. Nothing is saved to the register —
+   a blank form is stationery, not a record. */
+function _vkBlankForm(){
+  const forums=FORUMS, types=typesForForum("Supreme Court of India");
+  openModal("Blank vakalatnama", `
+    <div class="hint">Prints the form with open space for the parties, the executant and the date — to be filled in by hand. Choose the court and case type so the heading is right; everything below it is left blank.</div>
+    <div class="grid g2" style="margin-top:12px">
+      <div><label class="fld">Court / forum</label>
+        <select class="in" id="vkbForum" onchange="_vkbForumChange()">${forums.map(f=>`<option ${f==="Supreme Court of India"?"selected":""}>${esc(f)}</option>`).join("")}</select></div>
+      <div><label class="fld">Case type</label>
+        <select class="in" id="vkbType">${types.map(t=>`<option>${esc(t)}</option>`).join("")}</select></div>
+    </div>
+    <label class="checkline" style="display:flex;align-items:center;gap:8px;margin-top:12px">
+      <input type="checkbox" id="vkbMemo" checked> Include the Memo of Appearance</label>
+    <label class="checkline" style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <input type="checkbox" id="vkbAff"> Also print a blank affidavit</label>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn seal" onclick="_vkDoBlank()">Print / Save PDF</button>
+    </div>`);
+}
+function _vkbForumChange(){
+  const f=(document.getElementById("vkbForum")||{}).value||"";
+  const t=document.getElementById("vkbType"); if(!t) return;
+  const list=typesForForum(f); const opts=(list&&list.length)?list:SC_TYPES;
+  t.innerHTML=opts.map(x=>`<option>${esc(x)}</option>`).join("");
+}
+// Build the blank record the two renderers understand. Not stored anywhere.
+function _vkBlankRecord(forum, type, withMemo){
+  const lbl=_vkPartyLabels(type);
+  return {
+    blank:true, date:todayISO(), forum, matterType:type,
+    courtHeading:_vkCourtHeading(forum),
+    jurisdictionLine:_vkJurisdictionLine(type),
+    typeLine:_vkTypeLine(type, "", todayISO()),
+    partyA:"", partyALabel:lbl.a, partyB:"", partyBLabel:lbl.b,
+    // the printed blanks offer the options rather than assuming one
+    role:"Petitioner/Respondent/Intervenor",
+    executants:[], otherAdvocates:"",
+    includeMemo:!!withMemo,
+    memoAddressee: /^Supreme Court/i.test(forum)
+      ? "The Registrar\nSupreme Court of India\nNew Delhi."
+      : "The Registrar\n"+forum+"."
+  };
+}
+function _vkDoBlank(){
+  const forum=(document.getElementById("vkbForum")||{}).value||"Supreme Court of India";
+  const type=(document.getElementById("vkbType")||{}).value||"SLP (Civil)";
+  const withMemo=!!(document.getElementById("vkbMemo")||{}).checked;
+  const withAff=!!(document.getElementById("vkbAff")||{}).checked;
+  const rec=_vkBlankRecord(forum, type, withMemo);
+  closeModal();
+  const area=document.getElementById("receiptArea");
+  const name="Blank Vakalatnama — "+safeName(type);
+  if(withAff && area){
+    printVakalatnama(rec,{noPrint:true});
+    const vak=area.innerHTML;
+    printAffidavit(rec,{noPrint:true});
+    area.innerHTML=vak+area.innerHTML;
+    setTimeout(()=>_printAs("Blank Vakalatnama & Affidavit — "+safeName(type)),160);
+  } else {
+    printVakalatnama(rec,{noPrint:true});
+    setTimeout(()=>_printAs(name),120);
+  }
+}
+window._vkBlankForm=_vkBlankForm; window._vkbForumChange=_vkbForumChange;
+window._vkDoBlank=_vkDoBlank; window._vkBlankRecord=_vkBlankRecord;
 /* ---- Raise a fee invoice off a vakalatnama ----------------------------------
    Opens the ordinary invoice form pre-filled from the vakalatnama (case or
    bill-to party, a fee line naming the matter type, and the cause title in the
@@ -19532,7 +19609,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.01-0100";
+  window.APP_VERSION = "2026.09.01-0200";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
