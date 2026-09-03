@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-03T19:09:21.299048Z",
+  "generated_at": "2026-09-03T21:46:50.073738Z",
   "window": [
     "2026-09-04",
     "2026-09-07",
@@ -239,6 +239,16 @@
           "text": "1618 SLP(C) No. 38281/2025 WEST KHANDESH DALIT SHIKSHAN PRASARAK MANDAL, DHULE Versus THE STATE OF MAHARASHTRA AND ORS."
         }
       ]
+    },
+    "2026-09-15": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
   "match_count": 10,
