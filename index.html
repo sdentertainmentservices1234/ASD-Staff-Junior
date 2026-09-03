@@ -7638,6 +7638,7 @@ function _vkBlankForm(){
       <input type="checkbox" id="vkbAff"> Also print a blank affidavit</label>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="_vkDoBlank('word')">Word (.docx)</button>
       <button class="btn seal" onclick="_vkDoBlank()">Print / Save PDF</button>
     </div>`);
 }
@@ -7665,7 +7666,7 @@ function _vkBlankRecord(forum, type, withMemo){
       : "The Registrar\n"+forum+"."
   };
 }
-function _vkDoBlank(){
+function _vkDoBlank(mode){
   const forum=(document.getElementById("vkbForum")||{}).value||"Supreme Court of India";
   const type=(document.getElementById("vkbType")||{}).value||"SLP (Civil)";
   const withMemo=!!(document.getElementById("vkbMemo")||{}).checked;
@@ -7673,20 +7674,26 @@ function _vkDoBlank(){
   const rec=_vkBlankRecord(forum, type, withMemo);
   closeModal();
   const area=document.getElementById("receiptArea");
-  const name="Blank Vakalatnama — "+safeName(type);
+  const name=(withAff?"Blank Vakalatnama & Affidavit — ":"Blank Vakalatnama — ")+safeName(type);
+  // Render exactly as for the PDF either way; the Word file is then built from what
+  // was rendered, so the two documents can never say different things.
+  printVakalatnama(rec,{noPrint:true});
   if(withAff && area){
-    printVakalatnama(rec,{noPrint:true});
     const vak=area.innerHTML;
     printAffidavit(rec,{noPrint:true});
     area.innerHTML=vak+area.innerHTML;
-    setTimeout(()=>_printAs("Blank Vakalatnama & Affidavit — "+safeName(type)),160);
-  } else {
-    printVakalatnama(rec,{noPrint:true});
-    setTimeout(()=>_printAs(name),120);
   }
+  if(mode==="word"){
+    let ok=false;
+    try{ ok=_docxFromReceiptArea(name); }catch(e){ ok=false; }
+    toast(ok ? "Word file downloaded — open it to fill the blanks."
+             : "Could not build the Word file. Use Print / Save PDF instead.", !ok);
+    return;
+  }
+  setTimeout(()=>_printAs(name), withAff?160:120);
 }
 window._vkBlankForm=_vkBlankForm; window._vkbForumChange=_vkbForumChange;
-window._vkDoBlank=_vkDoBlank; window._vkBlankRecord=_vkBlankRecord;
+window._vkDoBlank=_vkDoBlank; window._docxFromReceiptArea=_docxFromReceiptArea; window._vkBlankRecord=_vkBlankRecord;
 /* ---- Raise a fee invoice off a vakalatnama ----------------------------------
    Opens the ordinary invoice form pre-filled from the vakalatnama (case or
    bill-to party, a fee line naming the matter type, and the cause title in the
@@ -7733,6 +7740,9 @@ function _vkBillInvoice(id){
     caseNo:      m?"":(v.caseNo || v.diaryNo || (/_{3,}/.test(String(v.typeLine||"")) ? "" : (v.typeLine||""))),
     dueMode:"days", due:15,
     bankId: db?db.id:"", upiId: du?du.id:"", showQr: !!du,
+    // A vakalatnama is signed at the START of the engagement — nothing has been rendered
+    // yet, so the past-tense default would be wrong on this bill.
+    particulars: "fees",
     notes: ""
   };
   _invLines=[{desc:"Professional fees — "+_affTypePhrase(v.matterType), amount:""}];
@@ -9472,6 +9482,10 @@ function renderInvoice(){
           <option value="consolidated" ${(!editInv||editInv.style!=="itemised")?"selected":""}>Consolidated (single fee line)</option>
           <option value="itemised" ${editInv&&editInv.style==="itemised"?"selected":""}>Itemised (list each item)</option>
         </select></div>
+        <div id="ivPartWrap"><label class="fld">Particulars</label><select class="in" id="ivParticulars">
+          ${INV_PARTICULARS.map(o=>`<option value="${o.k}">${esc(o.label)}</option>`).join("")}
+          <option value="">Other — use the note below</option>
+        </select></div>
         <div><label class="fld">Payment terms</label>
           <div style="display:flex;gap:8px">
             <select class="in" id="ivDueMode" onchange="onDueModeChange()" style="flex:1">
@@ -9519,6 +9533,12 @@ function renderInvoice(){
     set("ivDueMode", fillFrom.dueMode||"days");
     if(fillFrom.due) set("ivDueDays", fillFrom.due);
     set("ivNotes", fillFrom.notes||"");
+    // NOT via set(): "" is a real choice here ("Other — use the note below"), and set()
+    // deliberately skips empty values.
+    { const pe=document.getElementById("ivParticulars");
+      if(pe) pe.value = (fillFrom.particulars!==undefined && fillFrom.particulars!==null)
+        ? fillFrom.particulars
+        : (fillFrom.notes ? "" : "rendered"); }
     if(fillFrom.matterId){ _ivSetKind("case"); set("ivMatter", fillFrom.matterId); }
     else { _ivSetKind("general"); set("ivTo", fillFrom.to||""); set("ivToAddr", fillFrom.toAddr||""); set("ivToPhone", fillFrom.toPhone||""); set("ivToEmail", fillFrom.toEmail||"");
            set("ivCaseParties", fillFrom.caseParties||""); set("ivCaseCourt", fillFrom.caseCourt||"");
@@ -9561,7 +9581,26 @@ function renderInvoiceLedger(){
       ${list.length?`<div class="tbl-wrap"><table class="sr-num"><thead><tr><th>No.</th><th>Date</th><th>Matter</th><th>Style</th><th class="num">Total</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No invoices raised yet.</div>`}
     </div>`;
 }
+/* Particulars wording for a CONSOLIDATED invoice. The old single default —
+   "…services rendered in the matter" — is past tense, which is simply wrong on a bill
+   raised against a fresh vakalatnama: the engagement has just begun and nothing has been
+   rendered yet. So the wording is now a choice, with a tense-neutral simpliciter option
+   and an explicitly prospective one. */
+const INV_PARTICULARS=[
+  {k:"rendered",    label:"Professional fees for legal services rendered in the matter"},
+  {k:"prospective", label:"Professional fees for legal services to be rendered in the matter"},
+  {k:"fees",        label:"Professional fees (simpliciter)",  text:"Professional fees"},
+  {k:"services",    label:"Professional services"}
+];
+function _invParticularsText(k){
+  const o=INV_PARTICULARS.find(x=>x.k===k);
+  return o ? (o.text||o.label) : "";
+}
 function onInvStyleChange(){
+  try{
+    const w=document.getElementById("ivPartWrap");
+    if(w) w.style.display = (document.getElementById("ivStyle").value==="itemised") ? "none" : "";
+  }catch(e){}
   const style=document.getElementById("ivStyle").value;
   const addBtn=document.getElementById("ivAddLine");
   // consolidated: single locked-ish line; itemised: multiple
@@ -9680,6 +9719,7 @@ function saveAndPrintInvoice(){
   const qrChk=document.getElementById("ivQr");
   const style=document.getElementById("ivStyle").value;
   const notes=document.getElementById("ivNotes").value.trim();
+  const particulars=((document.getElementById("ivParticulars")||{}).value)||"";
   const bankId = bankSel? bankSel.value : (defaultBank()?defaultBank().id:"");
   const upiId = upiSel? upiSel.value : (defaultUpi()?defaultUpi().id:"");
   const showQr = qrChk? qrChk.checked : false;
@@ -9706,6 +9746,7 @@ function saveAndPrintInvoice(){
     if(!inv){ _editingInvoiceId=null; toast("Invoice not found.",true); return; }
     inv.date=date; inv.matterId=matterId; inv.style=style; inv.dueMode=dueMode; inv.due=dueDays;
     inv.bankId=bankId; inv.upiId=upiId; inv.showQr=showQr; inv.lines=lines; inv.expenses=expenses; inv.notes=notes;
+    inv.particulars=particulars;
     billFields(inv);
     inv.editedOn=todayISO();
     logActivity("invoice", `Invoice ${inv.no} edited`, {ownerOnly:true, refId:inv.id});
@@ -9717,7 +9758,7 @@ function saveAndPrintInvoice(){
   }
   const inv={ id:uid(), no:nextInvoiceNo(date), date, matterId,
     style, dueMode, due:dueDays, bankId, upiId, showQr,
-    lines, expenses, notes, status:"raised" };
+    lines, expenses, notes, particulars, status:"raised" };
   billFields(inv);
   // Remember it was raised off a vakalatnama, so each can point at the other.
   if(_invFromVak){
@@ -9814,7 +9855,10 @@ function printInvoice(inv, opts){
   if(inv.style==="itemised"){
     (inv.lines||[]).forEach((l,i)=>{ rows+=`<tr><td>${i+1}</td><td>${esc(l.desc)}</td><td class="r">${fmtINR(l.amount)}</td></tr>`; });
   }else{
-    const desc = inv.notes || "Professional fees for legal services rendered in the matter";
+    // A preset wins; otherwise the free-text note (which is what older invoices used as
+    // their particulars); otherwise the original default.
+    const desc = _invParticularsText(inv.particulars) || inv.notes
+               || "Professional fees for legal services rendered in the matter";
     rows += `<tr><td>1</td><td>${esc(desc)}</td><td class="r">${fmtINR(fees)}</td></tr>`;
   }
   (inv.expenses||[]).forEach((l,i)=>{ rows+=`<tr><td>${(inv.style==="itemised"?((inv.lines||[]).length+i+1):(i+2))}</td><td>${esc(l.desc)} <span style="color:var(--tpx-muted)">(expense)</span></td><td class="r">${fmtINR(l.amount)}</td></tr>`; });
@@ -17074,6 +17118,142 @@ function buildZip(files){ // files:[{path,bytes}]
   ev.setUint32(12,cenSize,true); ev.setUint32(16,offset,true);
   return new Blob([...chunks,...central,end],{type:"application/zip"});
 }
+/* ===== Word (.docx) export for the blank court forms =========================
+   A .docx is a ZIP of XML parts, and buildZip() above already writes STORED
+   (uncompressed) entries — which Word opens perfectly well — so no compression
+   library is needed for this.
+
+   The Word file is generated from the RENDERED document rather than re-templated,
+   so it says exactly what the PDF says: every block element becomes a paragraph and
+   carries its alignment, weight, style, case, size and line spacing across. A flex
+   row (the "Dated this the …" / signature line) becomes a borderless one-row table
+   so its columns stay side by side instead of stacking.
+
+   Page margins are the twip values the print CSS already documents as taken from
+   the owner's own Word samples, so the .docx and the PDF measure the same on paper. */
+const DOCX_PAGE={ w:11906, h:16838, top:1260, right:1008, bottom:1354, left:1800 };
+function _xe(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c])); }
+function _pxHalfPt(px){ const v=parseFloat(px)||16; return Math.max(10, Math.round(v*1.5)); }  // 1px@96dpi = .75pt, w:sz is half-points
+function _pxTw(px){ return Math.max(0, Math.round((parseFloat(px)||0)*15)); }                  // 1px = 15 twips
+function _docxBlockish(el){ return /^(block|flex|grid|list-item|table|table-row|table-cell)$/.test(getComputedStyle(el).display); }
+function _docxFmt(cs, inh){
+  return { b: (inh&&inh.b) || parseInt(cs.fontWeight,10)>=600 || cs.fontWeight==="bold",
+           i: (inh&&inh.i) || cs.fontStyle==="italic",
+           u: (inh&&inh.u) || /underline/.test(cs.textDecorationLine||cs.textDecoration||""),
+           caps: (inh&&inh.caps) || cs.textTransform==="uppercase",
+           sz: _pxHalfPt(cs.fontSize) };
+}
+function _docxRuns(el){
+  const runs=[];
+  (function walk(node, f){
+    node.childNodes.forEach(n=>{
+      if(n.nodeType===3){
+        // Collapse ORDINARY whitespace only. The blanks on these forms are long runs of
+        // U+00A0 inside <u>, and JavaScript's \s matches U+00A0 — collapsing them turned
+        // every fill-in line into a single underlined space.
+        let t=String(n.nodeValue||"").replace(/[ \t\r\n\f\v]+/g," ");
+        if(!t) return;
+        if(f.caps) t=t.toUpperCase();
+        runs.push({text:t, b:f.b, i:f.i, u:f.u, sz:f.sz});
+      } else if(n.nodeType===1){
+        if(n.tagName==="BR"){ runs.push({br:true}); return; }
+        const cs=getComputedStyle(n);
+        if(cs.display==="none" || cs.visibility==="hidden") return;
+        walk(n, _docxFmt(cs, f));
+      }
+    });
+  })(el, _docxFmt(getComputedStyle(el), null));
+  return runs;
+}
+function _docxPara(el){
+  const cs=getComputedStyle(el);
+  const align={left:"left",right:"right",center:"center",justify:"both",start:"left",end:"right"}[cs.textAlign]||"left";
+  const before=_pxTw(cs.marginTop)+_pxTw(cs.paddingTop);
+  const after =_pxTw(cs.marginBottom)+_pxTw(cs.paddingBottom);
+  const fs=parseFloat(cs.fontSize)||16, lh=parseFloat(cs.lineHeight);
+  const line=(lh && !isNaN(lh)) ? Math.max(160, Math.round(lh/fs*240)) : 240;   // 240ths of a line
+  const spacing=`<w:spacing w:before="${before}" w:after="${after}" w:line="${line}" w:lineRule="auto"/>`;
+  const runs=_docxRuns(el);
+  if(!runs.some(r=>r.br || String(r.text||"").trim())) return `<w:p><w:pPr>${spacing}</w:pPr></w:p>`;
+  const body=runs.map(r=>{
+    if(r.br) return `<w:r><w:br/></w:r>`;
+    const rpr=`<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>`+
+      (r.b?`<w:b/>`:``)+(r.i?`<w:i/>`:``)+(r.u?`<w:u w:val="single"/>`:``)+
+      `<w:sz w:val="${r.sz||24}"/><w:szCs w:val="${r.sz||24}"/></w:rPr>`;
+    return `<w:r>${rpr}<w:t xml:space="preserve">${_xe(r.text)}</w:t></w:r>`;
+  }).join("");
+  return `<w:p><w:pPr><w:jc w:val="${align}"/>${spacing}</w:pPr>${body}</w:p>`;
+}
+function _docxCellParas(el){
+  const out=[];
+  (function w(node){
+    const kids=[...node.children].filter(c=>getComputedStyle(c).display!=="none");
+    const bl=kids.filter(_docxBlockish);
+    if(!bl.length){ out.push(_docxPara(node)); return; }
+    bl.forEach(w);
+  })(el);
+  return out.join("")||"<w:p/>";
+}
+function _docxFlexTable(cells){
+  const usable=DOCX_PAGE.w-DOCX_PAGE.left-DOCX_PAGE.right;
+  const w=Math.floor(usable/cells.length);
+  const borders=["top","left","bottom","right","insideH","insideV"]
+    .map(x=>`<w:${x} w:val="none" w:sz="0" w:space="0"/>`).join("");
+  const tcs=cells.map(c=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/></w:tcPr>${_docxCellParas(c)}</w:tc>`).join("");
+  return `<w:tbl><w:tblPr><w:tblW w:w="${usable}" w:type="dxa"/><w:tblBorders>${borders}</w:tblBorders></w:tblPr><w:tr>${tcs}</w:tr></w:tbl>`;
+}
+function _docxBody(root){
+  const out=[];
+  (function walk(el){
+    const kids=[...el.children].filter(c=>getComputedStyle(c).display!=="none");
+    const bl=kids.filter(_docxBlockish);
+    if(!bl.length){ out.push(_docxPara(el)); return; }
+    const cs=getComputedStyle(el);
+    if(cs.display==="flex" && !/column/.test(cs.flexDirection||"") && bl.length>=2){
+      out.push(_docxFlexTable(bl));   // keep the dated / signature columns side by side
+      return;
+    }
+    bl.forEach(walk);
+  })(root);
+  return out.join("");
+}
+function _docxBlob(bodyXml){
+  const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml}`+
+    `<w:sectPr><w:pgSz w:w="${DOCX_PAGE.w}" w:h="${DOCX_PAGE.h}"/>`+
+    `<w:pgMar w:top="${DOCX_PAGE.top}" w:right="${DOCX_PAGE.right}" w:bottom="${DOCX_PAGE.bottom}" w:left="${DOCX_PAGE.left}" w:header="708" w:footer="708" w:gutter="0"/>`+
+    `</w:sectPr></w:body></w:document>`;
+  const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+    `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">`+
+    `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>`+
+    `<Default Extension="xml" ContentType="application/xml"/>`+
+    `<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>`+
+    `</Types>`;
+  const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
+    `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>`+
+    `</Relationships>`;
+  const zip=buildZip([
+    {path:"[Content_Types].xml", bytes:strBytes(ct)},
+    {path:"_rels/.rels",        bytes:strBytes(rels)},
+    {path:"word/document.xml",  bytes:strBytes(doc)}
+  ]);
+  return new Blob([zip], {type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+}
+// Convert whatever court documents are currently rendered in #receiptArea to one .docx.
+function _docxFromReceiptArea(filename){
+  const area=document.getElementById("receiptArea"); if(!area) return false;
+  const docs=[...area.querySelectorAll(".vak-doc,.aff-doc")];
+  if(!docs.length) return false;
+  const parts=docs.map((d,i)=>
+    (i?`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`:``)+_docxBody(d));
+  const blob=_docxBlob(parts.join(""));
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename.replace(/\.docx$/i,"")+".docx";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 2000);
+  return true;
+}
 async function collectFilesForZip(m, sets, rootName){
   const out=[];
   async function add(subName, arr){
@@ -19944,7 +20124,7 @@ window.dispatchEvent(new Event("firebase-ready"));
   // Also drives the auto-update prompt: this build carries a version stamp;
   // the app polls a tiny version.json on the server and, when it differs,
   // shows a "new version available" banner that reloads cleanly on tap.
-  window.APP_VERSION = "2026.09.02-0800";
+  window.APP_VERSION = "2026.09.03-0100";
   window.__APP_VER_PLACEHOLDER = ["__APP","_VERSION__"].join("");  // never matches the stamp
   (function(){
     function showUpdateBar(serverVer){
