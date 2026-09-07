@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-07T07:05:14.033513Z",
+  "generated_at": "2026-09-07T13:33:07.218685Z",
   "window": [
     "2026-09-07",
     "2026-09-08",
@@ -64,11 +64,13 @@
       "lists_found": [
         "Miscellaneous - Main",
         "Regular / Final - Main",
+        "Regular / Final - Supplementary",
         "Registrar - Main",
+        "Registrar - Supplementary",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
       "match_count": 1,
@@ -96,6 +98,8 @@
       "lists_found": [
         "Miscellaneous - Main",
         "Regular / Final - Main",
+        "Registrar - Main",
+        "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
