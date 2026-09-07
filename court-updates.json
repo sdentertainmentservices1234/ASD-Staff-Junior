@@ -1,65 +1,16 @@
 {
-  "generated_at": "2026-09-07T18:26:13.877634Z",
+  "generated_at": "2026-09-07T21:47:07.721730Z",
   "window": [
-    "2026-09-07",
     "2026-09-08",
     "2026-09-09",
     "2026-09-10",
     "2026-09-11",
     "2026-09-14",
     "2026-09-15",
-    "2026-09-16"
+    "2026-09-16",
+    "2026-09-17"
   ],
   "by_date": {
-    "2026-09-07": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Registrar - Main",
-        "Registrar - Supplementary",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 2,
-      "matches": [
-        {
-          "for_date": "2026-09-07",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "11",
-          "item": "48",
-          "coram": "HON'BLE MR. JUSTICE ARAVIND KUMAR; HON'BLE MR. JUSTICE VIPUL M. PANCHOLI",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "48 SLP(C) No. 32702/2025 PUNJAB INFORMATION AND COMMUNICATION TECHNOLOGY EDUCATION SOCIETY (PICTES) AND ORS. Versus COMPUTER TEACHERS WELFARE SOCIETY AND ORS."
-        },
-        {
-          "for_date": "2026-09-07",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "11",
-          "item": "48.1",
-          "coram": "HON'BLE MR. JUSTICE ARAVIND KUMAR; HON'BLE MR. JUSTICE VIPUL M. PANCHOLI",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "PUNJAB INFORMATION AND COMMUNICATION SLP(C) No. TECHNOLOGY EDUCATION SOCIETY (PICTES) AND 16160-16164/2026 ORS. Versus HARCHARAN SINGH AND ORS."
-        }
-      ]
-    },
     "2026-09-08": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -99,7 +50,6 @@
       "lists_found": [
         "Miscellaneous - Main",
         "Regular / Final - Main",
-        "Registrar - Main",
         "Curative & Review (circulation)",
         "Miscellaneous - Advance"
       ],
@@ -269,8 +219,18 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-09-17": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
-  "match_count": 10,
+  "match_count": 8,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
