@@ -1,50 +1,16 @@
 {
-  "generated_at": "2026-09-08T16:36:10.024700Z",
+  "generated_at": "2026-09-08T19:34:29.070883Z",
   "window": [
-    "2026-09-08",
     "2026-09-09",
     "2026-09-10",
     "2026-09-11",
     "2026-09-14",
     "2026-09-15",
     "2026-09-16",
-    "2026-09-17"
+    "2026-09-17",
+    "2026-09-18"
   ],
   "by_date": {
-    "2026-09-08": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Regular / Final - Supplementary",
-        "Registrar - Supplementary",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 1,
-      "matches": [
-        {
-          "for_date": "2026-09-08",
-          "list": "Miscellaneous - Main",
-          "kind": "main",
-          "family": "MJ",
-          "is_supplementary": false,
-          "court": "8",
-          "item": "64",
-          "coram": "HON'BLE MR. JUSTICE SANJAY KUMAR; HON'BLE MR. JUSTICE SANJEEV SACHDEVA",
-          "court_total": "",
-          "court_fresh": "",
-          "matched_on": [
-            "advocate"
-          ],
-          "confidence": "medium",
-          "text": "64 SLP(C) No. 9386/2023 SRI MANNADHESWARAR SRI PANCHAIMMAN TEMPLE Versus HINDU RELIGIOUS AND CHARITABLE ENDOWMENT DEPARTMENT (ADMINISTRATION) AND ORS."
-        }
-      ]
-    },
     "2026-09-09": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -251,6 +217,34 @@
       "has_main": false,
       "match_count": 0,
       "matches": []
+    },
+    "2026-09-18": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-09-18",
+          "list": "Miscellaneous - Advance",
+          "kind": "advance",
+          "family": "MJ",
+          "is_supplementary": false,
+          "court": "",
+          "item": "1364",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "1364 SLP(Crl) No. 15497/2026 MANOJ Versus STATE OF KERALA"
+        }
+      ]
     }
   },
   "match_count": 9,
