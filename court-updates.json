@@ -1,33 +1,16 @@
 {
-  "generated_at": "2026-09-09T16:54:45.016139Z",
+  "generated_at": "2026-09-09T19:40:11.510607Z",
   "window": [
-    "2026-09-09",
     "2026-09-10",
     "2026-09-11",
     "2026-09-14",
     "2026-09-15",
     "2026-09-16",
     "2026-09-17",
-    "2026-09-18"
+    "2026-09-18",
+    "2026-09-21"
   ],
   "by_date": {
-    "2026-09-09": {
-      "lists_found": [
-        "Miscellaneous - Main",
-        "Miscellaneous - Supplementary",
-        "Regular / Final - Main",
-        "Regular / Final - Supplementary",
-        "Registrar - Main",
-        "Registrar - Supplementary",
-        "Curative & Review (circulation)",
-        "Miscellaneous - Advance"
-      ],
-      "has_supplementary": true,
-      "has_advance": true,
-      "has_main": true,
-      "match_count": 0,
-      "matches": []
-    },
     "2026-09-10": {
       "lists_found": [
         "Miscellaneous - Main",
@@ -267,6 +250,16 @@
           "text": "1364 SLP(Crl) No. 15497/2026 MANOJ Versus STATE OF KERALA"
         }
       ]
+    },
+    "2026-09-21": {
+      "lists_found": [
+        "Miscellaneous - Advance"
+      ],
+      "has_supplementary": false,
+      "has_advance": true,
+      "has_main": false,
+      "match_count": 0,
+      "matches": []
     }
   },
   "match_count": 10,
