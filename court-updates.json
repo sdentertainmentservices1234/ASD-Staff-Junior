@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-09T07:08:21.418034Z",
+  "generated_at": "2026-09-09T12:24:36.911842Z",
   "window": [
     "2026-09-09",
     "2026-09-10",
@@ -32,9 +32,10 @@
       "lists_found": [
         "Miscellaneous - Main",
         "Registrar - Main",
+        "Registrar - Supplementary",
         "Miscellaneous - Advance"
       ],
-      "has_supplementary": false,
+      "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
       "match_count": 4,
@@ -190,13 +191,32 @@
     },
     "2026-09-15": {
       "lists_found": [
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
-      "match_count": 0,
-      "matches": []
+      "has_main": true,
+      "match_count": 1,
+      "matches": [
+        {
+          "for_date": "2026-09-15",
+          "list": "Registrar - Main",
+          "kind": "main",
+          "family": "MR",
+          "is_supplementary": false,
+          "court": "2",
+          "item": "28",
+          "coram": "",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "28 SLP(C) No. SANJEEV MALHOTRA AND ANR. Versus USHA SETH AND ORS."
+        }
+      ]
     },
     "2026-09-16": {
       "lists_found": [
@@ -247,6 +267,6 @@
       ]
     }
   },
-  "match_count": 9,
+  "match_count": 10,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
