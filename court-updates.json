@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-10T07:05:00.397047Z",
+  "generated_at": "2026-09-10T12:15:25.985519Z",
   "window": [
     "2026-09-10",
     "2026-09-11",
@@ -22,7 +22,7 @@
       "has_supplementary": true,
       "has_advance": true,
       "has_main": true,
-      "match_count": 4,
+      "match_count": 5,
       "matches": [
         {
           "for_date": "2026-09-10",
@@ -84,6 +84,23 @@
           "court": "9",
           "item": "42",
           "coram": "HON'BLE MR. JUSTICE AHSANUDDIN AMANULLAH; HON'BLE MR. JUSTICE MANMOHAN",
+          "court_total": "",
+          "court_fresh": "",
+          "matched_on": [
+            "advocate"
+          ],
+          "confidence": "medium",
+          "text": "42 SLP(C) No. 4165/2026 JAHERA BANO SAYYED FAOOQUE ALI AND ORS. Versus THE NEW INDIA ASSURANCE CO. LTD. AND ORS."
+        },
+        {
+          "for_date": "2026-09-10",
+          "list": "Miscellaneous - Supplementary",
+          "kind": "supp",
+          "family": "MJ",
+          "is_supplementary": true,
+          "court": "9",
+          "item": "42",
+          "coram": "HON'BLE MR. JUSTICE AHSANUDDIN AMANULLAH; HON'BLE MR. JUSTICE R. MAHADEVAN",
           "court_total": "",
           "court_fresh": "",
           "matched_on": [
@@ -205,11 +222,12 @@
     },
     "2026-09-16": {
       "lists_found": [
+        "Registrar - Main",
         "Miscellaneous - Advance"
       ],
       "has_supplementary": false,
       "has_advance": true,
-      "has_main": false,
+      "has_main": true,
       "match_count": 0,
       "matches": []
     },
@@ -262,6 +280,6 @@
       "matches": []
     }
   },
-  "match_count": 10,
+  "match_count": 11,
   "note": "Drafting aid only. The court's published lists are authoritative. Advance lists publish days ahead; main a few days ahead; supplementary the evening before (sometimes late) - refreshed several times a day."
 }
